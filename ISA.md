@@ -1,8 +1,8 @@
 ---
 project: technicolour-planner
 effort: E3
-phase: verify
-progress: 36/40
+phase: complete
+progress: 37/40
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-09
@@ -127,7 +127,7 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-39: A "Send feedback" control opens a prefilled mailto to Harry including the app version.
 
 ### M6 — Deploy + experiential guarantee
-- [DEFERRED-VERIFY] ISC-40: Live URL serves the real app (not the placeholder) over HTTPS with `noindex` intact. (Build complete + locally verified; deploy gated on Harry's go since pushing publishes Sarah's real data — follow-up: FU-2 push v1.0.0 + curl live URL.)
+- [x] ISC-40: Live URL serves the real app (not the placeholder) over HTTPS with `noindex` intact. (Deployed 2026-06-09 on Harry's go; FU-2 closed.)
 - [x] ISC-41: Antecedent: on first install Sarah sees HER projects in HER colours, in an own-window offline app — the recognition + "it's a real app" that makes it land.
 
 ## Test Strategy
@@ -235,8 +235,12 @@ ported verbatim from the 16/16-verified prototype, jsdom render clean); ISC-11,1
 (manifest link/theme meta; update-toast wiring; persist() request; auto-backup-before-migrate guard;
 JSON round-trip logic).
 
-**Deferred (require user gesture or the gated deploy):**
+**Live deploy (ISC-40, FU-2 closed):** Deployed 2026-06-09 to `https://harryf.github.io/technicolour-planner/`.
+Live curl: real title/brand, `noindex` meta present, manifest link + SW registration present, old
+placeholder text gone, onboarding markup live. All 8 shell resources HTTP 200 (manifest, SW, 2 icons,
+src/export.js, 3 vendor libs). manifest valid (display:standalone, 3 icons). GitHub Release `v1.0.0` cut.
+
+**Deferred (require Sarah's real machine):**
 - ISC-20/21/22 [DEFERRED-VERIFY → FU-1]: File System Access picker/persist/reconnect — needs a real
-  user gesture; code inspection-verified. Harry's real-install folder-pick test closes these.
-- ISC-40 [DEFERRED-VERIFY → FU-2]: live deploy — build complete + locally verified; the push that
-  publishes (and ships Sarah's real seed data publicly) is gated on Harry's explicit go.
+  user gesture on a real install; code inspection-verified + conflict-aware. Closes on Sarah/Harry's
+  first install folder-pick test (the one hands-on acceptance check left).
