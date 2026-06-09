@@ -432,9 +432,9 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.3";
-const CHANGELOG_LATEST = "The app now updates itself, so reopening it always gives you the latest. " +
-  "This version also fixes the install screen layout and tidies the wording.";
+const VERSION = "1.0.4";
+const CHANGELOG_LATEST = "If you point the app at a folder that already has your planner file, it now " +
+  "loads that file instead of replacing it.";
 const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
 
 const TARGETS = {
@@ -665,7 +665,13 @@ const Store = {
     const dir = await window.showDirectoryPicker({mode:"readwrite"});
     this.dir = dir; this.mode = "file";
     await idbSet("dirHandle", dir); await idbSet("mode","file");
-    return true;
+    // If the chosen folder already holds a planner file, load it instead of overwriting it.
+    try{
+      const fh = await dir.getFileHandle(JSON_NAME, {create:false});
+      const raw = JSON.parse(await (await fh.getFile()).text());
+      if(raw && Array.isArray(raw.projects)) return { existing:true, state: migrateState(raw) };
+    }catch(e){ /* no existing file in this folder */ }
+    return { existing:false };
   },
   async backup(state){
     if(this.mode==="file" && this.dir && await this.perm(true)){
@@ -1104,7 +1110,13 @@ async function refreshDataStatus(){
     ps.textContent = p ? "🔒 This browser has promised to keep your data (persistent storage on)." : "ℹ️ Tip: choosing a data folder is the safest way to never lose your work."; } else ps.textContent=""; }catch(e){ ps.textContent=""; }
 }
 document.getElementById("setLocationBtn").onclick=async()=>{
-  try{ await Store.setLocation(); await Store.save(state); hideFileReminder(); hideReconnect(); refreshDataStatus(); updateDataLocation(); alert("Saved! Your data now lives in your folder."); }
+  try{
+    const res = await Store.setLocation();
+    if(res.existing){ state = res.state; renderAll(); }   // folder already has data: load it, don't clobber
+    await Store.save(state);
+    hideFileReminder(); hideReconnect(); refreshDataStatus(); updateDataLocation();
+    alert(res.existing ? "This folder already had a planner file, so I loaded it." : "Saved! Your data now lives in your folder.");
+  }
   catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder."); }
 };
 document.getElementById("backupNowBtn").onclick=async()=>{
@@ -1156,7 +1168,12 @@ document.getElementById("dismissReminder").onclick=()=>{ sessionStorage.setItem(
 function openOnboarding(){ document.getElementById("onbModal").classList.add("open"); }
 function closeOnboarding(){ document.getElementById("onbModal").classList.remove("open"); }
 document.getElementById("onbChoose").onclick=async()=>{
-  try{ await Store.setLocation(); await Store.save(state); localStorage.setItem("onb_seen","1"); closeOnboarding(); refreshDataStatus(); updateDataLocation(); }
+  try{
+    const res = await Store.setLocation();
+    if(res.existing) state = res.state;   // folder already has a planner file: load it instead of seeding over it
+    await Store.save(state);
+    localStorage.setItem("onb_seen","1"); closeOnboarding(); refreshDataStatus(); updateDataLocation(); renderAll();
+  }
   catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder. You can pick one later in Settings."); }
 };
 document.getElementById("onbLater").onclick=()=>{ localStorage.setItem("onb_seen","1"); closeOnboarding(); showFileReminder(); requestPersist(); };

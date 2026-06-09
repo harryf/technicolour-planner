@@ -2,6 +2,11 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.0.4], 2026-06-09
+- **Choosing an existing folder loads it instead of overwriting.** When you point the app (in
+  onboarding or in Settings) at a folder that already contains `Technicolour-Planner-Data.json`, it
+  now reads that file and adopts your data, rather than replacing it with the starter content.
+
 ## [1.0.3], 2026-06-09
 - **Automatic updates.** The app now updates itself: the service worker activates a new version and
   the page reloads once on the next open, so you always get the latest. The old manual "reload to

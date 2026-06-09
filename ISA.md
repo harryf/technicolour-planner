@@ -228,6 +228,11 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   app copy and docs. refuted_by: Harry flagged the em dashes against claude-writing-guide.md.
   learned: rewrote all created text (app strings, comments, docs) to plain sentences with no em
   dashes; left Sarah's own seed-data wording untouched. criterion_now: house style follows the guide.
+- conjectured: on choosing a data folder, writing the current state to it is always safe. refuted_by:
+  a fresh install (or a re-pick) against a folder that already held a planner file would overwrite the
+  real data with the seed, since onboarding state is the seed. learned: setLocation now reads any
+  existing `Technicolour-Planner-Data.json` in the chosen folder and adopts it; the caller loads that
+  instead of saving over it. criterion_now: ISC-20 covers load-existing-on-folder-pick (no clobber).
 
 ## Verification
 
