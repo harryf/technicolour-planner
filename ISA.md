@@ -212,6 +212,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   (the first-load `controllerchange` from `clients.claim()` hit the update-reload handler). learned:
   guard the reload behind an explicit user-accepted-update flag so first-load control never reloads.
   criterion_now: ISC-42 asserts exactly one navigation on first load.
+- conjectured: reusing `class="card"` for the install-gate panel was harmless. refuted_by: Harry's
+  screenshot showed the gate text squished into narrow columns — the panel inherited the project-card
+  rule `.card{display:flex}`, laying its children out as a flex row. learned: never reuse a styled
+  utility/component class name for an unrelated container; renamed to `.gbox` (block, definite width,
+  scrolls if tall). criterion_now: ISC-43 verification includes a rendered-panel screenshot probe
+  (live gbox 520×601, was 520×1251).
 
 ## Verification
 
