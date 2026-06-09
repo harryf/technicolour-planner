@@ -116,11 +116,12 @@ export async function runUnit() {
   s.ok("Store.checkpoint present", ev("typeof Store.checkpoint==='function'"), "startup checkpoint method");
   s.ok("feedback mailto", !!$("#feedbackBtn") && /mailto:/.test(html), "feedback");
   s.ok("office export lazy-loaded", /loadExporter/.test(html) && /import\("\.\/src\/export\.js"\)/.test(html), "dynamic import");
-  s.ok("SW registration guarded", /register\("service-worker\.js"\)/.test(html) && /location\.protocol\.startsWith\("http"\)/.test(html), "guarded");
+  s.ok("SW registration guarded", /register\("service-worker\.js"/.test(html) && /location\.protocol\.startsWith\("http"\)/.test(html), "guarded");
 
   // ---- auto-update mechanism (source-level) ----
-  s.ok("page reload guarded by hadController", /hadController/.test(html), "no first-load reload");
+  s.ok("update reload ignores the first claim only", /firstControllerSeen/.test(html), "no first-load reload, later updates reload");
   s.ok("service worker skipWaiting on install", /self\.skipWaiting\(\)/.test(swSrc), "auto-activate");
+  s.ok("precache bypasses HTTP cache", /cache: "reload"/.test(swSrc) && /updateViaCache: "none"/.test(html), "no stale precache");
   s.ok("update check on refocus + interval", /visibilitychange/.test(html) && /setInterval\(check/.test(html), "auto-update polling");
   s.ok("no em-dashes in app UI strings", checkNoEmDashUi(html), "writing guide");
 

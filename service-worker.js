@@ -6,7 +6,7 @@
    ========================================================================= */
 
 // Bump this string on every release (matches the in-app VERSION constant).
-const VERSION = "1.0.8";
+const VERSION = "1.0.9";
 const CACHE = "technicolour-v" + VERSION;
 
 // The full offline shell. Relative URLs so it works on the /technicolour-planner/ subpath.
@@ -31,9 +31,11 @@ self.addEventListener("install", (event) => {
     caches.open(CACHE).then((cache) =>
       // addAll is atomic; if a single file 404s the whole install fails, so add
       // individually and ignore misses (e.g. a vendor file not yet present in dev).
+      // {cache:"reload"} bypasses the browser HTTP cache so a new version never precaches a stale
+      // shell (GitHub Pages serves these with max-age=600). add individually so one 404 doesn't fail all.
       Promise.all(
         SHELL.map((url) =>
-          cache.add(url).catch((err) => console.warn("[sw] precache miss:", url, err && err.message))
+          cache.add(new Request(url, { cache: "reload" })).catch((err) => console.warn("[sw] precache miss:", url, err && err.message))
         )
       )
     )

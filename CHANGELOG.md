@@ -2,6 +2,13 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.0.9], 2026-06-09
+- **Fixed updates getting stuck on an old version.** GitHub Pages serves files with a 10-minute cache,
+  so when a new version installed, the service worker was precaching a stale `index.html` from the
+  browser cache: the worker updated but the page stayed old. The service worker now fetches shell
+  files with `cache: "reload"` (bypassing the HTTP cache) and registers with `updateViaCache: "none"`,
+  so a new version loads fully. Reproduced the failure and confirmed the fix with an automated test.
+
 ## [1.0.8], 2026-06-09
 - **Checkpoints, and a tidier header.** The live data file already updates on every change, so the
   header's Import/Export buttons were redundant; they moved into Settings. "Save a checkpoint now"

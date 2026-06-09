@@ -20,11 +20,11 @@ function findChrome() {
   return candidates.find(p => existsSync(p)) || null;
 }
 
-export async function launchChrome() {
+export async function launchChrome(portOffset = 0) {
   const bin = findChrome();
   if (!bin) return null;
-  const port = 9000 + (process.pid % 1000); // unlikely to collide for a single test run
-  const userDir = join(tmpdir(), `tcp-test-chrome-${process.pid}`);
+  const port = 9000 + (process.pid % 1000) + portOffset; // offset lets a run launch a second instance
+  const userDir = join(tmpdir(), `tcp-test-chrome-${process.pid}-${portOffset}`);
   const proc = spawn(bin, [
     "--headless=new", `--remote-debugging-port=${port}`, `--user-data-dir=${userDir}`,
     "--no-first-run", "--no-default-browser-check", "--disable-gpu", "--window-size=1100,820", "about:blank",

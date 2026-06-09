@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 50/50
+progress: 51/51
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-09
@@ -145,6 +145,9 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-49: Timestamped checkpoints are written into the chosen folder, both on demand ("Save a checkpoint now") and automatically on app start, keeping the last 20.
 - [x] ISC-50: Import/Export controls live in Settings, not the header (the live JSON + .md already mirror every change); "Restore from a file" and "Download a copy" remain as escape hatches.
 
+### v1.0.9: updates actually land (no stale cached page)
+- [x] ISC-51: Deploying a new version fully loads it: the SW precaches the shell with `cache:"reload"` (no stale page from the `max-age=600` HTTP cache), registers with `updateViaCache:"none"`, and reloads on a real `controllerchange` (ignoring only the first claim). Verified by `tests/upgrade.mjs`, which reproduces the cached-server failure and confirms the fix.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -267,6 +270,14 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   window stayed on 1.0.5 because it was resumed, never cold-launched. learned: also call reg.update()
   on visibilitychange and hourly, so a long-open app self-updates. criterion_now: covered by the
   auto-update polling check in the unit suite.
+- conjectured (v1.0.7/1.0.8): the auto-update path worked. refuted_by: Harry stayed stuck on old
+  versions; a reproduction with a max-age server exposed TWO bugs: (1) the new SW precached a stale
+  index.html from the HTTP cache (SW updated, page didn't), and (2) the `hadController` reload guard,
+  captured once at load, was false on a first-ever load and never reloaded on same-session updates.
+  learned: precache with `cache:"reload"`, register `updateViaCache:"none"`, and replace the guard
+  with `firstControllerSeen` (ignore only the initial claim). criterion_now: ISC-51 + a committed
+  upgrade test that reproduces the failure and proves the fix. Lesson: an update mechanism needs a
+  real cross-version test, not version-bump-and-hope.
 
 ## Verification
 

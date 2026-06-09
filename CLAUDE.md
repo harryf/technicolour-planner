@@ -118,11 +118,14 @@ it runs standalone, plus `navigator.getInstalledRelatedApps()`), the gate's butt
 a tab, so that button shows a short "open it from your Desktop" note; it does not auto-launch.
 
 Note: updates are automatic. The service worker calls `skipWaiting()` on install and `clients.claim()`
-on activate. The page calls `reg.update()` at launch, when the app regains focus (`visibilitychange`),
-and hourly, so a long-open installed window still picks up new versions. It reloads once on
-`controllerchange`, but only if it already had a controller at load (a real update), so the first open
-never reloads. There is no manual update prompt. Keep the `hadController` guard if you touch the SW
-update flow (it prevents a first-load reload).
+on activate, and **precaches the shell with `cache: "reload"`** so it never caches a stale page from
+the browser's HTTP cache (GitHub Pages serves with `max-age=600`). The page registers with
+`updateViaCache: "none"` and calls `reg.update()` at launch, on `visibilitychange`, and hourly. It
+reloads once on `controllerchange`, ignoring only the **first** one (the initial claim of an
+uncontrolled page) via `firstControllerSeen`, so the first open never flashes but every later update
+reloads. There is no manual update prompt. These three pieces (reload-precache, updateViaCache:none,
+firstControllerSeen) are what make updates actually land; the upgrade test (`tests/upgrade.mjs`)
+guards them. Two earlier "stuck on old version" bugs came from getting this wrong.
 
 ## Icons
 
