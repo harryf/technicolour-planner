@@ -1,5 +1,5 @@
 User-agent: *
 Disallow: /
 # Note: on a GitHub project site (harryf.github.io/technicolour-planner) this file is served at a
-# subpath and is NOT authoritative for crawlers — the <meta name="robots" content="noindex"> tag in
+# subpath and is NOT authoritative for crawlers, the <meta name="robots" content="noindex"> tag in
 # index.html is what actually keeps the app off search engines. Kept here for a future custom domain.

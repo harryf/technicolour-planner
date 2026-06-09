@@ -1,8 +1,8 @@
-# Feature & Bug Backlog — Technicolour Planner
+# Feature & Bug Backlog, Technicolour Planner
 
 Sarah's requests land here (via Harry). Status: 💡 idea · 🔨 building · ✅ shipped (vN).
 
-## v1 (built 2026-06-09 — verified locally, pending deploy)
+## v1 (built 2026-06-09, verified locally, pending deploy)
 - ✅ Installable PWA, offline after first load
 - ✅ First-run "where to store my data" + file-as-source-of-truth (+ reconnect + graceful fallback)
 - ✅ JSON import/export + human-readable `.md` mirror
@@ -15,7 +15,7 @@ Sarah's requests land here (via Harry). Status: 💡 idea · 🔨 building · �
   likely restart the repo with dummy seed data. (v1 ships as-is with `noindex`; revisit after install.)
 
 ## From Sarah
-_(none yet — add as they come in: date · who · request · status)_
+_(none yet, add as they come in: date · who · request · status)_
 
 ## Bugs
 _(none yet)_

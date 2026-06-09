@@ -1,7 +1,7 @@
 /* =========================================================================
    Office exports for 🌈 Sarah's Amazing Technicolour Planner.
    Browser ES module. Builds .xlsx / .docx / .pptx in the browser and downloads
-   them — nothing is uploaded. Ported from the approach-1 Node generators
+   them, nothing is uploaded. Ported from the approach-1 Node generators
    (build_xlsx.ts, build_doc_and_slides.ts) but driven by the LIVE state.
 
    The three libraries are loaded as UMD globals by the caller BEFORE these run:
@@ -63,7 +63,7 @@ function weekStartOf(state){ return state && state.weekStart ? state.weekStart :
 function projectsOf(state){ return (state && Array.isArray(state.projects)) ? state.projects : []; }
 
 /* ========================================================================
-   XLSX — Projects + Calendar + Hooks + Turn-over, colour-coded.
+   XLSX, Projects + Calendar + Hooks + Turn-over, colour-coded.
    ======================================================================== */
 export async function exportXlsx(state){
   if(!window.ExcelJS) throw new Error("Excel export library not loaded");
@@ -126,7 +126,7 @@ export async function exportXlsx(state){
   for(let i=0;i<7;i++){
     const date=addDays(ws0,i);
     const hits=projects.filter(p=>p.date===date);
-    if(i===5 && hits.length===0){ const c=cal.getCell(3,i+1); c.value="— NO POST —"; c.font={italic:true,color:{argb:"FF9AA0A6"}}; c.alignment={horizontal:"center"}; }
+    if(i===5 && hits.length===0){ const c=cal.getCell(3,i+1); c.value=",  NO POST , "; c.font={italic:true,color:{argb:"FF9AA0A6"}}; c.alignment={horizontal:"center"}; }
     hits.forEach((p,row)=>{ const c=cal.getCell(3+row,i+1);
       c.value=`${TYPE_SHORT[p.type]||"?"} · ${p.title}\n[${(p.targets||[]).map(k=>TARGET_SHORT[k]||k).join("/")}]`;
       c.fill=fill(ARGB[p.type]||ARGB.reel); c.font={bold:true,...(p.type==="post"?{}:white)}; c.alignment={wrapText:true,vertical:"top"}; });
@@ -164,7 +164,7 @@ export async function exportXlsx(state){
 }
 
 /* ========================================================================
-   DOCX — one notes block per project, with her colour language built in.
+   DOCX, one notes block per project, with her colour language built in.
    ======================================================================== */
 export async function exportDocx(state){
   if(!window.docx) throw new Error("Word export library not loaded");
@@ -175,7 +175,7 @@ export async function exportDocx(state){
   const chip = (txt,color)=> new TextRun({ text:" "+txt+" ", bold:true, color:"FFFFFF",
     shading:{ type:ShadingType.SOLID, color, fill:color } });
   const label = (en)=> new Paragraph({ spacing:{before:160,after:40}, children:[ new TextRun({ text:en, bold:true }) ] });
-  const line = (txt)=> new Paragraph({ spacing:{after:40}, children:[ new TextRun({ text: txt || "—", color: txt?"23211E":"B8B2A8" }) ] });
+  const line = (txt)=> new Paragraph({ spacing:{after:40}, children:[ new TextRun({ text: txt || ", ", color: txt?"23211E":"B8B2A8" }) ] });
 
   const block = (p)=>{
     const kids = [
@@ -210,7 +210,7 @@ export async function exportDocx(state){
   };
 
   const head = [
-    new Paragraph({ heading:HeadingLevel.TITLE, children:[ new TextRun("Sarah — Project Notes") ] }),
+    new Paragraph({ heading:HeadingLevel.TITLE, children:[ new TextRun("Sarah, Project Notes") ] }),
     new Paragraph({ spacing:{after:200}, children:[ new TextRun({ text:"One block per project, with your colour language built in. Exported "+today()+".", italics:true, color:"7C776F" }) ] }),
   ];
   const body = projects.length ? projects.flatMap(block) : [ new Paragraph({ children:[ new TextRun("No projects yet.") ] }) ];
@@ -221,7 +221,7 @@ export async function exportDocx(state){
 }
 
 /* ========================================================================
-   PPTX — weekly board (current week), photos drop onto day cards.
+   PPTX, weekly board (current week), photos drop onto day cards.
    ======================================================================== */
 export async function exportPptx(state){
   if(!window.PptxGenJS) throw new Error("Slides export library not loaded");
@@ -237,7 +237,7 @@ export async function exportPptx(state){
   pptx.layout = "BOARD";
   const slide = pptx.addSlide();
   slide.background = { color:"F4F1EC" };
-  slide.addText("Week of "+ws0+" — drop your tattoo photos onto the day cards",
+  slide.addText("Week of "+ws0+", drop your tattoo photos onto the day cards",
     { x:0.3, y:0.15, w:12.7, h:0.4, fontSize:16, bold:true, color:"23211E" });
 
   const cols=7, gap=0.15, x0=0.3, colW=(13.33 - x0*2 - gap*(cols-1))/cols;

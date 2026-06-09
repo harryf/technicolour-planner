@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow" /><!-- keep this off search engines for now -->
 <title>🌈 Sarah's Amazing Technicolour Planner</title>
 <meta name="theme-color" content="#ff9dcd" />
-<meta name="description" content="Colour-first content planner — everything stays yours." />
+<meta name="description" content="Colour-first content planner. Everything stays yours." />
 <link rel="manifest" href="manifest.webmanifest" />
 <link rel="icon" href="icons/icon-192.png" />
 <link rel="apple-touch-icon" href="icons/icon-192.png" />
@@ -212,7 +212,7 @@
 </div>
 <!-- fallback reminder banner (shown when running without a data file) -->
 <div class="banner" id="fileReminder" hidden>
-  <span class="grow">💾 You haven't chosen a data file yet — your work is saved in this browser only.</span>
+  <span class="grow">💾 You haven't chosen a data file yet, so your work is saved in this browser only.</span>
   <button id="chooseFileBtn">Choose a folder</button>
   <button id="dismissReminder" title="Hide">✕</button>
 </div>
@@ -274,7 +274,7 @@
   <section id="view-library" hidden>
     <div class="row wrap" style="margin-bottom:12px">
       <input id="libSearch" placeholder="Search projects…" style="max-width:280px" />
-      <span class="muted help">Everything — dated and ideas-for-later. Click any card to open it.</span>
+      <span class="muted help">Everything you have, dated and ideas for later. Click any card to open it.</span>
     </div>
     <div class="libgrid" id="libgrid"></div>
   </section>
@@ -298,7 +298,7 @@
     </div>
     <div class="panel">
       <h2>Activity colours <span class="muted" style="font-weight:400">(for tasks inside a project)</span></h2>
-      <p class="muted">The second colour language — what kind of work a task is, so a "brainstorm day"
+      <p class="muted">The second colour language: what kind of work a task is, so a "brainstorm day"
          or "shoot day" lights up the right tasks across every project.</p>
       <div class="legend" id="activityLegend"></div>
     </div>
@@ -331,7 +331,7 @@
 <div class="modal" id="hookModal">
   <div class="box">
     <div class="row"><h2 class="grow">Pick a hook</h2><button id="hookModalClose">✕</button></div>
-    <p class="muted">Roll through your library — filter by what it taps, then click to attach.</p>
+    <p class="muted">Roll through your library. Filter by what it taps, then click to attach.</p>
     <div class="row wrap" id="hookModalFilter" style="margin:10px 0"></div>
     <div class="hooklist" id="hookModalList"></div>
   </div>
@@ -352,7 +352,7 @@
         <button data-lang="fr" aria-pressed="false">Français</button>
       </div>
     </div>
-    <div class="field"><label>Your target colours — make them yours</label>
+    <div class="field"><label>Your target colours (make them yours)</label>
       <div id="colorRemap" class="legend"></div>
     </div>
 
@@ -373,7 +373,7 @@
         <button id="docxBtn">⬇ Word (.docx)</button>
         <button id="pptxBtn">⬇ Slides (.pptx)</button>
       </div>
-      <p class="help">Builds the file on your computer — nothing is uploaded. Drop it into Google Drive.</p>
+      <p class="help">Builds the file on your computer. Nothing is uploaded. Drop it into Google Drive.</p>
     </div>
 
     <p class="help">Everything is saved automatically. Use ⬇ Export (top) for a plain JSON backup any time.</p>
@@ -386,23 +386,16 @@
     <div class="step">
       <h2>🌈 Welcome to your Technicolour Planner</h2>
       <div class="colourline"></div>
-      <p>This is your colour-first content planner — already filled with your projects, your hooks,
+      <p>This is your colour-first content planner, already filled with your projects, your hooks,
          and your four targets in your colours.</p>
-      <p><b>Where should I keep your work?</b><br>
-         <span class="muted">Pick a folder for your planner file. Tip: choose your Google&nbsp;Drive,
-         OneDrive or iCloud folder and it backs up automatically. You can also open it in Notepad —
-         it's always yours.</span></p>
+      <p>Where should I keep your work?<br>
+         <span class="muted">Pick a folder for your planner file. A good choice is your Google&nbsp;Drive,
+         OneDrive, or iCloud folder, so it backs up by itself. You can also open the file in Notepad.
+         It is always yours.</span></p>
       <button class="big" id="onbChoose">📁 Choose a folder</button>
-      <button class="later" id="onbLater">Decide later — just keep it in this browser for now</button>
+      <button class="later" id="onbLater">Decide later, just keep it in this browser for now</button>
     </div>
   </div>
-</div>
-
-<!-- UPDATE TOAST -->
-<div class="toast" id="updateToast">
-  <span>✨ A new version is ready.</span>
-  <button id="updateReload">Reload to update</button>
-  <button id="updateDismiss" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)">Later</button>
 </div>
 
 <!-- INSTALL GATE (shown only when running in a public browser tab, not the installed app) -->
@@ -410,38 +403,38 @@
   <div class="gbox">
     <h2>🌈 Sarah's Amazing Technicolour Planner</h2>
     <div class="colourline"></div>
-    <p>For your privacy — and so it works offline — this planner runs as an <b>installed app</b> on
-       your computer, in its own window, not in a browser tab.</p>
+    <p>This planner runs as an installed app on your computer, in its own window. That keeps your
+       work private and lets it open offline. Install it once, then open it from your Desktop.</p>
     <button class="big" id="installBtn" hidden>⬇ Install the app</button>
     <div class="os">
-      <p class="help"><b>On Mac (Chrome):</b></p>
+      <p class="help">On Mac (Chrome):</p>
       <ol>
-        <li>Click the <b>install icon</b> in the address bar (or ⋮ menu → "Install Sarah's Amazing Technicolour Planner").</li>
-        <li>It lands in <b>Applications</b> / Launchpad. For a <b>Desktop icon</b>: open Finder → Applications (or Launchpad), find it, and drag it onto your Desktop or Dock.</li>
-        <li>Open it from there — own window, works offline.</li>
+        <li>Click the install icon in the address bar, or the ⋮ menu, then "Install Sarah's Amazing Technicolour Planner".</li>
+        <li>It goes into Applications and Launchpad. For a Desktop icon, open Finder, go to Applications, then drag it onto your Desktop or Dock.</li>
+        <li>Open it from there. It runs in its own window and works offline.</li>
       </ol>
-      <p class="help"><b>On Windows (Chrome / Edge):</b></p>
+      <p class="help">On Windows (Chrome or Edge):</p>
       <ol>
-        <li>Click the <b>install icon</b> in the address bar (or ⋮ → "Install").</li>
-        <li>Tick "Create Desktop shortcut" if asked — it's also in the Start menu.</li>
-        <li>Open it from the Desktop / Start menu — own window, works offline.</li>
+        <li>Click the install icon in the address bar, or the ⋮ menu, then "Install".</li>
+        <li>Tick "Create Desktop shortcut" if asked. It also appears in the Start menu.</li>
+        <li>Open it from the Desktop or Start menu. It runs in its own window and works offline.</li>
       </ol>
     </div>
-    <p class="help" style="margin-top:14px">Already installed? Open it from your Desktop / Applications / Start menu instead of this tab.</p>
+    <p class="help" style="margin-top:14px">Already installed? Open it from your Desktop, Applications, or the Start menu instead of this tab.</p>
   </div>
 </div>
 
 <script>
 /* =========================================================================
-   🌈 Sarah's Amazing Technicolour Planner — single file, no server, no build.
+   🌈 Sarah's Amazing Technicolour Planner. Single file, no server, no build.
    Data model is plain JSON; the source of truth is a file Sarah chooses (File
    System Access API), mirrored to a readable .md, cached in IndexedDB, with a
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.2";
-const CHANGELOG_LATEST = "Fixed the install screen layout — the text was squished into narrow columns " +
-  "(a CSS class clash with the project cards); it now reads as a normal centered panel.";
+const VERSION = "1.0.3";
+const CHANGELOG_LATEST = "The app now updates itself, so reopening it always gives you the latest. " +
+  "This version also fixes the install screen layout and tidies the wording.";
 const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
 
 const TARGETS = {
@@ -564,7 +557,7 @@ function uid(){return "p"+Math.random().toString(36).slice(2,9);}
 
 /* ========================= STATE & STORAGE ========================= */
 const LS_KEY="technicolour_planner_v1";
-const OLD_LS_KEY="sarah_planner_v1";       // prototype key — read once for continuity
+const OLD_LS_KEY="sarah_planner_v1";       // prototype key, read once for continuity
 const JSON_NAME="Technicolour-Planner-Data.json";
 const MD_NAME="Technicolour-Planner-Data.md";
 const CURRENT_SCHEMA=1;
@@ -689,7 +682,7 @@ const Store = {
 
 /* ---- human-readable mirror (so her data is extractable in plain text) ---- */
 function toMarkdown(state){
-  const L=[]; L.push("# 🌈 Sarah's Amazing Technicolour Planner — your data");
+  const L=[]; L.push("# 🌈 Sarah's Amazing Technicolour Planner (your data)");
   L.push(""); L.push("_Saved "+new Date().toLocaleString()+". This is a readable copy; the app reads the .json file._"); L.push("");
   const fmt=(p)=>{
     const o=[]; o.push("### "+(p.title||"Untitled")+"  ·  "+(TYPES[p.type]?TYPES[p.type].label:p.type));
@@ -713,7 +706,7 @@ function toMarkdown(state){
 function downloadJSON(obj,name){ const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
 
-/* live state — populated by boot() before the UI starts */
+/* live state, populated by boot() before the UI starts */
 let state = defaultState();
 
 /* save(): instant local persist + debounced Store write (file + mirror + idb) */
@@ -737,7 +730,7 @@ function parseYMD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,
 function addDays(s,n){ const d=parseYMD(s); d.setDate(d.getDate()+n); return ymd(d); }
 const DOW_EN=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
 const DOW_FR=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
-const TODAY=ymd(new Date()); // real today — drives the "today" highlight + This week
+const TODAY=ymd(new Date()); // real today, drives the "today" highlight and This week
 
 /* ========================= RENDER ========================= */
 function applyColors(){
@@ -841,7 +834,7 @@ function renderBalance(){
     const seg=document.createElement("div"); seg.className="bseg"+(k==="retention"?" ret":"")+(counts[k]<=Math.max(1,max*0.4)?" low":"");
     seg.style.background=targetColor(k);
     seg.innerHTML=`<div class="n">${counts[k]}</div><div class="l">${TARGETS[k].label}</div>`;
-    seg.title=`${counts[k]} pieces aimed at ${TARGETS[k].label} — ${TARGETS[k].desc}`;
+    seg.title=`${counts[k]} pieces aimed at ${TARGETS[k].label}: ${TARGETS[k].desc}`;
     seg.style.cursor="pointer"; seg.addEventListener("click",()=>toggleFilter(k));
     el.appendChild(seg);
   });
@@ -926,7 +919,7 @@ function openDetail(id){
     b.setAttribute("aria-pressed",p.targets.includes(k));
     b.onclick=()=>{ const i=p.targets.indexOf(k); if(i<0)p.targets.push(k); else p.targets.splice(i,1); openDetail(id); softSave(); };
     tg.appendChild(b); });
-  s.appendChild(field("Targets — split colours show on the card", tg));
+  s.appendChild(field("Targets (split colours show on the card)", tg));
 
   if(p.type==="story"){
     const sc=document.createElement("div"); sc.className="seg";
@@ -942,7 +935,7 @@ function openDetail(id){
   di.onchange=()=>{ p.date=di.value||null; softSave(); renderAll(); };
   const clr=document.createElement("button"); clr.textContent="clear"; clr.onclick=()=>{p.date=null;softSave();openDetail(id);renderAll();};
   dwrap.append(di,clr);
-  s.appendChild(field("Date — sets where it lands on the board", dwrap));
+  s.appendChild(field("Date (sets where it lands on the board)", dwrap));
 
   const iwrap=document.createElement("div");
   if(p.image){ const im=document.createElement("img"); im.src=p.image; im.style.cssText="width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin-bottom:8px"; iwrap.appendChild(im); }
@@ -983,7 +976,7 @@ function openDetail(id){
   ab.onclick=()=>{ if(!ti.value.trim())return; p.tasks.push(t(ti.value.trim(),sel.value)); softSave(); openDetail(id); };
   ti.onkeydown=e=>{ if(e.key==="Enter")ab.click(); };
   addRow.append(ti,sel,ab); tl.appendChild(addRow);
-  s.appendChild(field("Tasks — colour = kind of work", tl));
+  s.appendChild(field("Tasks (colour shows the kind of work)", tl));
 
   s.appendChild(field("Notes", textareaEl(p.notes,v=>{p.notes=v;softSave();})));
 
@@ -1015,7 +1008,7 @@ function exportData(){ downloadJSON(state, "technicolour-planner-"+TODAY+".json"
 function importData(file){ const r=new FileReader(); r.onload=()=>{ try{ const s=JSON.parse(r.result);
   if(s && Array.isArray(s.projects)){ state=migrateState(s); save(); renderAll(); alert("Imported ✓"); }
   else alert("That file doesn't look like a planner export (no projects found)."); }
-  catch(e){ alert("Could not read that file — is it a planner .json export?"); } }; r.readAsText(file); }
+  catch(e){ alert("Could not read that file. Is it a planner .json export?"); } }; r.readAsText(file); }
 
 /* ========================= OFFICE EXPORTS (lazy) ========================= */
 let _exportMod=null;
@@ -1132,7 +1125,7 @@ document.getElementById("versionBadge").textContent="v"+VERSION;
 document.getElementById("versionBadge").onclick=()=>alert("🌈 Technicolour Planner v"+VERSION+"\n\nWhat's new:\n"+CHANGELOG_LATEST);
 document.getElementById("feedbackBtn").onclick=()=>{
   const subj=encodeURIComponent("Technicolour Planner feedback (v"+VERSION+")");
-  const body=encodeURIComponent("Hi Harry,\n\n(Tell me what you'd like changed or what went wrong.)\n\n— Sarah\n\n[app version "+VERSION+"]");
+  const body=encodeURIComponent("Hi Harry,\n\n(Tell me what you'd like changed or what went wrong.)\n\nThanks,\nSarah\n\n[app version "+VERSION+"]");
   window.location.href="mailto:"+FEEDBACK_EMAIL+"?subject="+subj+"&body="+body;
 };
 
@@ -1154,7 +1147,7 @@ document.getElementById("reconnectBtn").onclick=async()=>{
     }catch(e){ /* no file yet → keep current state */ }
     await Store.save(state);
     renderAll(); updateDataLocation();
-  } else alert("Couldn't reconnect — you can also pick the folder again in Settings.");
+  } else alert("Couldn't reconnect. You can also pick the folder again in Settings.");
 };
 document.getElementById("chooseFileBtn").onclick=()=>document.getElementById("setLocationBtn").click();
 document.getElementById("dismissReminder").onclick=()=>{ sessionStorage.setItem("hideReminder","1"); hideFileReminder(); };
@@ -1164,7 +1157,7 @@ function openOnboarding(){ document.getElementById("onbModal").classList.add("op
 function closeOnboarding(){ document.getElementById("onbModal").classList.remove("open"); }
 document.getElementById("onbChoose").onclick=async()=>{
   try{ await Store.setLocation(); await Store.save(state); localStorage.setItem("onb_seen","1"); closeOnboarding(); refreshDataStatus(); updateDataLocation(); }
-  catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder — you can pick one later in Settings."); }
+  catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder. You can pick one later in Settings."); }
 };
 document.getElementById("onbLater").onclick=()=>{ localStorage.setItem("onb_seen","1"); closeOnboarding(); showFileReminder(); requestPersist(); };
 async function requestPersist(){ try{ if(navigator.storage && navigator.storage.persist) await navigator.storage.persist(); }catch(e){} }
@@ -1181,26 +1174,20 @@ document.addEventListener("keydown",e=>{
   if(map[e.key]) toggleFilter(map[e.key]);
 });
 
-/* ========================= SERVICE WORKER + UPDATE TOAST ========================= */
+/* ========================= SERVICE WORKER (auto-update) ========================= */
 if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  // If the page is already controlled, a later controllerchange means a new version activated,
+  // so reload once to use it. On the first install there is no prior controller, so we don't
+  // reload (that keeps the first open from flashing).
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloaded=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(hadController && !reloaded){ reloaded=true; location.reload(); } });
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("service-worker.js").then(reg=>{
-      reg.addEventListener("updatefound",()=>{ const nw=reg.installing; if(!nw) return;
-        nw.addEventListener("statechange",()=>{ if(nw.state==="installed" && navigator.serviceWorker.controller) showUpdateToast(nw); }); });
-    }).catch(()=>{});
-    let refreshing=false;
-    // Only reload when the USER accepted an update — NOT on the first-load controllerchange that
-    // clients.claim() fires (that caused the flash-reload on first visit).
-    navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(!window.__acceptedUpdate || refreshing) return; refreshing=true; location.reload(); });
+    navigator.serviceWorker.register("service-worker.js").then(reg=>{ reg.update().catch(()=>{}); }).catch(()=>{});
   });
 }
-function showUpdateToast(worker){
-  const t=document.getElementById("updateToast"); t.classList.add("open");
-  document.getElementById("updateReload").onclick=()=>{ window.__acceptedUpdate=true; worker.postMessage("SKIP_WAITING"); };
-  document.getElementById("updateDismiss").onclick=()=>t.classList.remove("open");
-}
 
-/* ===== INSTALL GATE — run the planner only in the installed app, not a public browser tab ===== */
+/* ===== INSTALL GATE: run the planner only in the installed app, not a public browser tab ===== */
 function mm(q){ try{ return !!(window.matchMedia && window.matchMedia(q).matches); }catch(e){ return false; } }
 function isStandalone(){
   return mm("(display-mode: standalone)") || mm("(display-mode: minimal-ui)")
@@ -1219,7 +1206,7 @@ document.getElementById("installBtn").onclick = async ()=>{
 window.addEventListener("appinstalled", ()=>{ const b=document.getElementById("installBtn"); if(b) b.hidden=true; });
 function applyInstallGate(){ document.getElementById("installGate").classList.toggle("open", gateActive()); }
 try{ window.matchMedia("(display-mode: standalone)").addEventListener("change", applyInstallGate); }catch(e){}
-applyInstallGate(); // synchronous, before the async board render — the frosted layer is up from first paint
+applyInstallGate(); // synchronous, before the async board render, so the frosted layer is up from first paint
 
 /* ========================= BOOT ========================= */
 async function boot(){
@@ -1245,7 +1232,7 @@ async function boot(){
 
   if(firstRun) await Store.save(state);   // persist the seeded world immediately
 
-  // In a public browser tab (gated) we don't show onboarding/reminders — they'd sit behind the
+  // In a public browser tab (gated) we don't show onboarding/reminders, they'd sit behind the
   // install gate. Prompts only matter in the installed app (or local dev).
   if(gateActive()) return;
   if(Store.status().mode!=="file" && !localStorage.getItem("onb_seen")){

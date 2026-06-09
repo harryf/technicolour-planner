@@ -1,12 +1,12 @@
 /* =========================================================================
-   Sarah's Amazing Technicolour Planner — service worker.
+   Sarah's Amazing Technicolour Planner, service worker.
    Job: make the app open offline after first load, and update cleanly.
    Strategy: precache the whole shell on install; serve cache-first; on a new
    version, wait politely (no auto-reload) until the page tells us to take over.
    ========================================================================= */
 
 // Bump this string on every release (matches the in-app VERSION constant).
-const VERSION = "1.0.2";
+const VERSION = "1.0.3";
 const CACHE = "technicolour-v" + VERSION;
 
 // The full offline shell. Relative URLs so it works on the /technicolour-planner/ subpath.
@@ -25,7 +25,8 @@ const SHELL = [
 ];
 
 self.addEventListener("install", (event) => {
-  // Precache the shell. Don't skipWaiting — let the user accept the update first.
+  // Precache the shell, then activate right away so a new version applies on the next load.
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE).then((cache) =>
       // addAll is atomic; if a single file 404s the whole install fails, so add
@@ -50,11 +51,6 @@ self.addEventListener("activate", (event) => {
       await self.clients.claim();
     })()
   );
-});
-
-// The page posts "SKIP_WAITING" when the user clicks the update toast.
-self.addEventListener("message", (event) => {
-  if (event.data === "SKIP_WAITING") self.skipWaiting();
 });
 
 self.addEventListener("fetch", (event) => {
