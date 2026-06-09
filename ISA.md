@@ -180,7 +180,7 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-74: An empty catch-up tray shows the calm "All caught up ✓" state (predictable, always-present location).
 - [x] ISC-75: Every board card carries a quick "→ next wk" button (`.rollbtn`) that reschedules to next week's first working day without opening the editor; `stopPropagation` so it doesn't open the card.
 - [x] ISC-76: The detail drawer has "today" and "→ next week" quick-date buttons beside the date picker.
-- [x] ISC-77: The Library filters by All / Still to do / Posted (`libStatus`, `#libFilter`).
+- [x] ISC-77: The Library filters by status, ordered **Still to do · Posted · All** and defaulting to **Still to do** (`libStatus="todo"`, `#libFilter`), so she lands on what's left; refined in v1.2.1.
 - [x] ISC-78: Anti: no piece ever changes date or leaves the board/tray without an explicit tap (no auto-roll); the weekly grid always shows all 7 days (days off greyed, never removed); no past data is deleted (history stays in the Library); the v1→v2 migration backs up first and drops no existing fields.
 
 ## Test Strategy
@@ -270,6 +270,9 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.2.1): **Library defaults to "Still to do".** Harry: the two important views are
+  still-to-do and posted; the Library now orders the filter **Still to do · Posted · All** and opens on
+  Still to do, so she lands on what's left rather than the full list. ISC-77 refined.
 - 2026-06-10 (v1.2.0): **"Roll the week over" designed autism-first; manual, never automatic.** Harry
   asked (grounded in `ANALYSIS.md`: predictable, low-surprise, nothing relies on memory, stable layout,
   never lose data) for a way to carry unfinished past work forward, day-off preferences, and quick

@@ -2,6 +2,11 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.2.1], 2026-06-10
+- **Library opens on "Still to do".** The Library filter is now ordered **Still to do · Posted · All**
+  and starts on **Still to do**, so you land straight on what's left to do. "Posted" is everything
+  already done; "All" is everything.
+
 ## [1.2.0], 2026-06-10
 - **Roll the week over.** A new **"Still to do"** strip sits above the board and gathers anything from
   earlier weeks you never posted. Each one has a single tap: **→ this week**, **→ next week**, or

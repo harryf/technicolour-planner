@@ -292,9 +292,9 @@
     <div class="row wrap" style="margin-bottom:12px">
       <input id="libSearch" placeholder="Search projects…" style="max-width:280px" />
       <div class="seg" id="libFilter">
-        <button data-status="all" aria-pressed="true">All</button>
-        <button data-status="todo" aria-pressed="false">Still to do</button>
+        <button data-status="todo" aria-pressed="true">Still to do</button>
         <button data-status="posted" aria-pressed="false">Posted</button>
+        <button data-status="all" aria-pressed="false">All</button>
       </div>
       <span class="muted help">Everything you have, dated and ideas for later. Click any card to open it.</span>
     </div>
@@ -458,10 +458,10 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.2.0";
-const CHANGELOG_LATEST = "A 'Still to do' tray gathers anything from earlier weeks you haven't posted yet, " +
-  "with one tap to roll it to this or next week. You can set which days you work (others show greyed and " +
-  "are skipped when rolling). Cards have a quick '→ next wk'. The Library filters by All / Still to do / Posted.";
+const VERSION = "1.2.1";
+const CHANGELOG_LATEST = "The Library now opens on 'Still to do' so you see what's left first, then Posted, " +
+  "then All. A 'Still to do' tray on the board gathers anything from earlier weeks you haven't posted yet, " +
+  "with one tap to roll it forward. You can set which days you work, and cards have a quick '→ next wk'.";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
@@ -965,7 +965,7 @@ function renderCatchup(){
   }
 }
 
-let libStatus="all"; // all | todo | posted
+let libStatus="todo"; // todo (default, the focus) | posted | all
 function renderLibrary(){
   const grid=document.getElementById("libgrid"); grid.innerHTML="";
   const q=(document.getElementById("libSearch").value||"").toLowerCase();

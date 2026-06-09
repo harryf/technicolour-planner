@@ -139,8 +139,9 @@ never lose data). The unit that rolls is a **piece** (it owns the `date`), not a
 - **Quick reschedule:** `rollToWeek(p, weekStart)` sets the date to `firstWorkday(weekStart, notBefore)`,
   the first **working** day of that week (skips days off), never before today. Wired to the per-card
   `.rollbtn` ("→ next wk"), the drawer's **today** / **→ next week** buttons, and the tray. Drag-drop stays.
-- **History:** nothing is deleted. Library has an All / Still to do / Posted filter (`libStatus`,
-  `#libFilter`) so past work stays reviewable; posted past pieces live there, not in the tray.
+- **History:** nothing is deleted. Library has a status filter ordered **Still to do · Posted · All**
+  (`libStatus`, default `"todo"`, `#libFilter`) so she lands on what's left; posted past pieces live
+  there, not in the tray.
 
 ## Install gate (browser tab vs installed app)
 

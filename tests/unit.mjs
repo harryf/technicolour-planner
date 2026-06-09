@@ -36,9 +36,9 @@ export async function runUnit() {
   s.ok("target text tags", $$("#board .ttag").length > 0, `${$$("#board .ttag").length} tags`);
   s.ok("Saturday NO POST", $$(".nopost").length > 0, `${$$(".nopost").length}`);
   s.ok("dated projects auto-place", $$("#board .card").length >= 4, `${$$("#board .card").length} cards this week`);
-  ev("setView('library')");
+  ev("setView('library'); libStatus='all'; renderLibrary();");
   s.ok("library renders all projects", $$("#libgrid .card").length === nProj, `${$$("#libgrid .card").length}/${nProj}`);
-  ev("setView('board')");
+  ev("libStatus='todo'; setView('board')");
   s.ok("balance has 4 segments", $$("#balance .bseg").length === 4, `${$$("#balance .bseg").length}`);
   s.ok("balance counts > 0", $$("#balance .bseg .n").some(n => Number(n.textContent) > 0), $$("#balance .bseg .n").map(n => n.textContent).join("/"));
   doc.dispatchEvent(new win.KeyboardEvent("keydown", { key: "3" }));
@@ -170,7 +170,7 @@ export async function runUnit() {
   s.ok("roll to next week lands on a working day (skips days off)", ev(`(()=>{ state.settings.workdays=[false,true,true,true,true,false,true]; const p=state.projects.find(x=>x.id==='ovd1'); rollToWeek(p, nextWeekStart()); return isWorkday(p.date) && p.date>=nextWeekStart(); })()`), "working day, next week");
   s.ok("mark posted removes it from catch-up", ev(`(()=>{ const p=state.projects.find(x=>x.id==='ovd1'); p.stages.posted=true; return !overduePieces().some(x=>x.id==='ovd1'); })()`), "posted leaves tray");
   s.ok("catch-up shows 'All caught up' when none overdue", ev(`(()=>{ state.projects=state.projects.filter(p=>!isOverdue(p)); renderCatchup(); return /All caught up/.test(document.getElementById('catchup').textContent); })()`), "empty state");
-  s.ok("library filter All/Still-to-do/Posted present", !!$("#libFilter") && $$("#libFilter [data-status]").length===3 && /libStatus/.test(html), "3 filter buttons");
+  s.ok("library filter present, ordered todo/posted/all, default todo", !!$("#libFilter") && $$("#libFilter [data-status]").map(b=>b.dataset.status).join(",")==="todo,posted,all" && /let libStatus="todo"/.test(html) && $('#libFilter [data-status="todo"]').getAttribute("aria-pressed")==="true", "todo first + selected");
   s.ok("quick next-week button on board cards", $$("#board .card .rollbtn").length>=1 && /→ next wk/.test(html), `${$$("#board .card .rollbtn").length} rollbtns`);
   s.ok("detail drawer has today + next-week quick dates", /firstWorkday\(nextWeekStart\(\), TODAY\)/.test(html), "drawer quick dates");
 
