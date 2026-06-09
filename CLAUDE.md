@@ -113,9 +113,11 @@ it runs standalone, plus `navigator.getInstalledRelatedApps()`), the gate's butt
 a tab, so that button shows a short "open it from your Desktop" note; it does not auto-launch.
 
 Note: updates are automatic. The service worker calls `skipWaiting()` on install and `clients.claim()`
-on activate. The page reloads once on `controllerchange`, but only if it already had a controller at
-load (a real update), so the first open never reloads. There is no manual update prompt. Keep the
-`hadController` guard if you touch the SW update flow (it prevents a first-load reload).
+on activate. The page calls `reg.update()` at launch, when the app regains focus (`visibilitychange`),
+and hourly, so a long-open installed window still picks up new versions. It reloads once on
+`controllerchange`, but only if it already had a controller at load (a real update), so the first open
+never reloads. There is no manual update prompt. Keep the `hadController` guard if you touch the SW
+update flow (it prevents a first-load reload).
 
 ## Icons
 

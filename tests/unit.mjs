@@ -107,6 +107,7 @@ export async function runUnit() {
   // ---- auto-update mechanism (source-level) ----
   s.ok("page reload guarded by hadController", /hadController/.test(html), "no first-load reload");
   s.ok("service worker skipWaiting on install", /self\.skipWaiting\(\)/.test(swSrc), "auto-activate");
+  s.ok("update check on refocus + interval", /visibilitychange/.test(html) && /setInterval\(check/.test(html), "auto-update polling");
   s.ok("no em-dashes in app UI strings", checkNoEmDashUi(html), "writing guide");
 
   return s;

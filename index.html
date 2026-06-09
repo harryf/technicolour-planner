@@ -432,9 +432,9 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.6";
-const CHANGELOG_LATEST = "Made \"Open the App\" reliable: if it's already installed, the web page now shows " +
-  "\"Open the App\" even if you haven't opened the installed app since.";
+const VERSION = "1.0.7";
+const CHANGELOG_LATEST = "The installed app now checks for updates when you switch back to it, not just " +
+  "when you cold-start it, so new versions arrive on their own.";
 const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
 
 const TARGETS = {
@@ -1200,7 +1200,12 @@ if("serviceWorker" in navigator && location.protocol.startsWith("http")){
   let reloaded=false;
   navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(hadController && !reloaded){ reloaded=true; location.reload(); } });
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("service-worker.js").then(reg=>{ reg.update().catch(()=>{}); }).catch(()=>{});
+    navigator.serviceWorker.register("service-worker.js").then(reg=>{
+      const check = () => reg.update().catch(()=>{});
+      check();                                                              // at launch
+      setInterval(check, 60 * 60 * 1000);                                   // hourly while open
+      document.addEventListener("visibilitychange", () => { if(!document.hidden) check(); }); // when refocused
+    }).catch(()=>{});
   });
 }
 

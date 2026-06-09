@@ -2,6 +2,11 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.0.7], 2026-06-09
+- **Installed app picks up updates on its own.** It previously only checked for a new version at cold
+  launch, so a window left open (or resumed) stayed on the old version. It now also re-checks when you
+  switch back to the app and once an hour, then applies the update with its usual one reload.
+
 ## [1.0.6], 2026-06-09
 - **Reliable "Open the App" detection.** Before, the page only knew the app was installed if it had
   been opened in its own window first, so a browser tab often still showed "Install". Now, on Chromium,
