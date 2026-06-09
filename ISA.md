@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 76/78
+progress: 82/84
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -183,6 +183,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-77: The Library filters by status, ordered **Still to do · Posted · All** and defaulting to **Still to do** (`libStatus="todo"`, `#libFilter`), so she lands on what's left; refined in v1.2.1.
 - [x] ISC-78: Anti: no piece ever changes date or leaves the board/tray without an explicit tap (no auto-roll); the weekly grid always shows all 7 days (days off greyed, never removed); no past data is deleted (history stays in the Library); the v1→v2 migration backs up first and drops no existing fields.
 
+### v1.2.2: friendlier detail drawer (autism-first editor)
+- [x] ISC-79: The detail drawer is widened to about a third of a wide screen (`width:clamp(460px,33vw,820px)`, `max-width:96vw`); it still slides in from the right and never exceeds the viewport.
+- [x] ISC-80: The Description/caption and Notes fields each have a clearly-labelled "⤢ Bigger" button (no magnifying-glass metaphor) that opens a roomy full-height editor overlay (`#bigEdit`) on top, synced live to the inline field, with a clear "✕ Close".
+- [x] ISC-81: The confusing footer "Done" button is removed (it duplicated the close action and clashed with "Posted"); the only close affordance is the header "✕ Close".
+- [x] ISC-82: Music and Hook sit on one row (`.field2`) to reduce scrolling; combined with the wider drawer the editor's scroll height drops (1188px → ~1092px at the same width).
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -270,6 +276,13 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.2.2): **Friendlier detail drawer (autism-first editor).** Harry asked for a wider panel
+  (~⅓), an expand affordance for caption/notes (explicitly NOT a magnifying glass, "think autism"),
+  removal of the confusing "Done" button (really a close, clashed with "Posted"), and less scrolling.
+  Done: drawer `clamp(460px,33vw,820px)`; `expandableField()` + `#bigEdit` roomy overlay with a labelled
+  "⤢ Bigger"; footer "Done" removed, header now "✕ Close"; Music+Hook share a row. Note: measuring the
+  drawer mid-slide reads as off-screen (its open transform animates from `translateX(100%)`), settle
+  before asserting position, this cost a debugging detour and is now documented in CLAUDE.md.
 - 2026-06-10 (v1.2.1): **Library defaults to "Still to do".** Harry: the two important views are
   still-to-do and posted; the Library now orders the filter **Still to do · Posted · All** and opens on
   Still to do, so she lands on what's left rather than the full list. ISC-77 refined.
@@ -482,3 +495,12 @@ screenshot `/tmp/tcv-120-board.png`).
   earlier, not posted yet" with 1 row; 2 greyed days-off (Mon+Sat) + 1 "NO POST"; 6 card roll buttons;
   no "Français"; rolling the overdue piece moved it to Tue 2026-06-16 and emptied the tray. Screenshot
   shows greyed hatched Mon/Sat columns, the tray, and "→ next wk" on cards.
+
+**v1.2.2 (friendlier drawer):** full suite **93/93** + real-Chrome screenshots
+(`/tmp/tcv-drawer-settled.png`, `/tmp/tcv-bigedit.png`).
+- ISC-79: settled drawer measured `width:460` at a 1100px window (clamp floor), flush-right, fully in
+  the viewport (left 625, right 1085 incl. scrollbar); clamp gives ⅓ on wider screens. jsdom asserts the
+  `clamp(460px,33vw,820px)` rule. ISC-80: jsdom opens a piece → 2 `.biggerbtn`; clicking one opens
+  `#bigEdit` with `bigEditArea.value === field value`, then closes; real-Chrome shows the roomy 352px-tall
+  editor. ISC-81: `#d-done` is null, `#d-close` text is "✕ Close". ISC-82: 1 `.field2` (Music+Hook);
+  real-Chrome scrollHeight 1092 (was 1188).

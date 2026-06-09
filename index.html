@@ -146,13 +146,21 @@
   /* ---- Detail slide-over ---- */
   .scrim{position:fixed;inset:0;background:rgba(20,18,15,.32);z-index:50;display:none}
   .scrim.open{display:block}
-  .drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:var(--panel);
+  .drawer{position:fixed;top:0;right:0;height:100%;width:clamp(460px,33vw,820px);max-width:96vw;background:var(--panel);
          z-index:60;box-shadow:-8px 0 30px rgba(0,0,0,.18);transform:translateX(100%);
          transition:transform var(--t);display:flex;flex-direction:column}
   .drawer.open{transform:none}
   .drawer h2{font-size:16px}
-  .drawer .scroll{overflow:auto;padding:18px;display:flex;flex-direction:column;gap:16px}
+  .drawer .scroll{overflow:auto;padding:18px;display:flex;flex-direction:column;gap:13px}
   .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+  .field2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .field .lblrow{display:flex;align-items:center;gap:8px;margin-bottom:5px}
+  .field .lblrow label{margin:0;flex:0 0 auto}
+  .field .lblrow .grow{flex:1}
+  .biggerbtn{font-size:11px;font-weight:700;border:1px solid var(--line);border-radius:8px;background:var(--panel);
+             color:var(--muted);cursor:pointer;padding:2px 9px}
+  .biggerbtn:hover{color:var(--ink);background:#f3efe8}
+  #bigEditArea{width:100%;min-height:48vh;font-size:16px;line-height:1.5}
   .seg{display:flex;gap:6px;flex-wrap:wrap}
   .seg button{font-weight:700}
   .seg button[aria-pressed="true"]{border-color:var(--ink);background:#fffdf8}
@@ -339,15 +347,22 @@
 <aside class="drawer" id="drawer" aria-label="Project detail">
   <div class="row" style="padding:14px 18px;border-bottom:1px solid var(--line)">
     <h2 class="grow" id="d-title-h">Project</h2>
-    <button id="d-close" aria-label="Close">✕</button>
+    <button id="d-close" aria-label="Close">✕ Close</button>
   </div>
   <div class="scroll" id="d-scroll"><!-- filled by JS --></div>
   <div class="foot">
     <button class="danger" id="d-delete">Delete</button>
     <span class="grow"></span>
-    <button id="d-done">Done</button>
   </div>
 </aside>
+
+<!-- BIG TEXT EDITOR (opens on top, for writing the caption/notes with room) -->
+<div class="modal" id="bigEdit">
+  <div class="box">
+    <div class="row" style="margin-bottom:10px"><h2 class="grow" id="bigEditTitle">Write</h2><button id="bigEditClose">✕ Close</button></div>
+    <textarea id="bigEditArea"></textarea>
+  </div>
+</div>
 
 <!-- HOOK PICKER MODAL -->
 <div class="modal" id="hookModal">
@@ -458,10 +473,10 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.2.1";
-const CHANGELOG_LATEST = "The Library now opens on 'Still to do' so you see what's left first, then Posted, " +
-  "then All. A 'Still to do' tray on the board gathers anything from earlier weeks you haven't posted yet, " +
-  "with one tap to roll it forward. You can set which days you work, and cards have a quick '→ next wk'.";
+const VERSION = "1.2.2";
+const CHANGELOG_LATEST = "The edit panel is wider with less scrolling. The description and notes have a " +
+  "'Bigger' button that opens a roomy writing space. The confusing 'Done' button is gone, just a clear " +
+  "'Close'. Music and hook now sit side by side.";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
@@ -1136,14 +1151,15 @@ function openDetail(id){
     iwrap.appendChild(rm); }
   s.appendChild(field("Image / thumbnail", iwrap));
 
-  s.appendChild(field("🎵 Music", inputEl(p.music,v=>{p.music=v;softSave();})));
   const hookWrap=document.createElement("div"); hookWrap.className="row";
   const hookIn=inputEl(p.hook,v=>{p.hook=v;softSave();});
   const pick=document.createElement("button"); pick.textContent="pick ▾"; pick.onclick=()=>openHookPicker(name=>{p.hook=name;softSave();openDetail(id);});
   hookWrap.append(hookIn,pick);
-  s.appendChild(field("🪝 Hook", hookWrap));
+  const mh=document.createElement("div"); mh.className="field2"; // Music + Hook share a row to save vertical space
+  mh.append(field("🎵 Music", inputEl(p.music,v=>{p.music=v;softSave();})), field("🪝 Hook", hookWrap));
+  s.appendChild(mh);
 
-  s.appendChild(field("Description / caption", textareaEl(p.desc,v=>{p.desc=v;softSave();})));
+  s.appendChild(expandableField("Description / caption", p.desc, v=>{p.desc=v;softSave();}));
 
   const sg=document.createElement("div"); sg.className="stagebtns";
   STAGES.forEach(st=>{ const b=document.createElement("button"); b.textContent=st;
@@ -1169,7 +1185,7 @@ function openDetail(id){
   addRow.append(ti,sel,ab); tl.appendChild(addRow);
   s.appendChild(field("Tasks (colour shows the kind of work)", tl));
 
-  s.appendChild(field("Notes", textareaEl(p.notes,v=>{p.notes=v;softSave();})));
+  s.appendChild(expandableField("Notes", p.notes, v=>{p.notes=v;softSave();}));
 
   openDrawer();
 }
@@ -1177,6 +1193,27 @@ function field(label,el){ const f=document.createElement("div"); f.className="fi
   const l=document.createElement("label"); l.textContent=label; f.append(l,el); return f; }
 function inputEl(val,on){ const i=document.createElement("input"); i.value=val||""; i.oninput=()=>on(i.value); return i; }
 function textareaEl(val,on){ const t=document.createElement("textarea"); t.rows=3; t.value=val||""; t.oninput=()=>on(t.value); return t; }
+// A textarea with a clear "Bigger" button that opens a roomy full-height editor on top (kinder than a
+// tiny box you have to scroll inside). No magnifying-glass metaphor: a plain labelled button.
+function expandableField(label,val,on){
+  const f=document.createElement("div"); f.className="field";
+  const head=document.createElement("div"); head.className="lblrow";
+  const l=document.createElement("label"); l.textContent=label;
+  const grow=document.createElement("span"); grow.className="grow";
+  const big=document.createElement("button"); big.type="button"; big.className="biggerbtn";
+  big.textContent="⤢ Bigger"; big.title="Open a bigger writing space";
+  const ta=textareaEl(val,on);
+  big.onclick=()=>openBigEditor(label,ta,on);
+  head.append(l,grow,big); f.append(head,ta); return f;
+}
+function openBigEditor(title,sourceTextarea,on){
+  const m=document.getElementById("bigEdit");
+  document.getElementById("bigEditTitle").textContent=title;
+  const area=document.getElementById("bigEditArea");
+  area.value=sourceTextarea.value;
+  area.oninput=()=>{ sourceTextarea.value=area.value; on(area.value); };
+  m.classList.add("open"); area.focus();
+}
 let softTimer=null;
 function softSave(){ clearTimeout(softTimer); softTimer=setTimeout(()=>{save();if(currentView!=="turnover")renderAll();},200); }
 
@@ -1258,7 +1295,8 @@ document.querySelectorAll('#libFilter [data-status]').forEach(b=>b.onclick=()=>{
 });
 
 document.getElementById("d-close").onclick=closeDrawer;
-document.getElementById("d-done").onclick=closeDrawer;
+document.getElementById("bigEditClose").onclick=()=>document.getElementById("bigEdit").classList.remove("open");
+document.getElementById("bigEdit").addEventListener("click",e=>{ if(e.target.id==="bigEdit") e.currentTarget.classList.remove("open"); });
 document.getElementById("scrim").onclick=closeDrawer;
 document.getElementById("d-delete").onclick=()=>{ if(openId&&confirm("Delete this project?")){ state.projects=state.projects.filter(p=>p.id!==openId); closeDrawer(); } };
 

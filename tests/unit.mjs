@@ -174,6 +174,17 @@ export async function runUnit() {
   s.ok("quick next-week button on board cards", $$("#board .card .rollbtn").length>=1 && /→ next wk/.test(html), `${$$("#board .card .rollbtn").length} rollbtns`);
   s.ok("detail drawer has today + next-week quick dates", /firstWorkday\(nextWeekStart\(\), TODAY\)/.test(html), "drawer quick dates");
 
+  // ---- NEW (v1.2.2): wider drawer, 'Bigger' editor, no confusing Done button ----
+  s.ok("confusing 'Done' button removed from drawer", $("#d-done")===null, "no d-done");
+  s.ok("close button clearly labelled", /✕ Close/.test($("#d-close").textContent), $("#d-close").textContent.trim());
+  s.ok("drawer widened toward ~33%", /\.drawer\{[^}]*width:clamp\(460px,33vw,820px\)/.test(html), "clamp 33vw");
+  s.ok("big editor overlay present", !!$("#bigEdit") && !!$("#bigEditArea"), "bigEdit modal");
+  ev("openDetail(state.projects[0].id)");
+  s.ok("description + notes have a 'Bigger' button", $$("#d-scroll .biggerbtn").length>=2, `${$$("#d-scroll .biggerbtn").length} bigger`);
+  s.ok("music + hook share a row", $$("#d-scroll .field2").length>=1, `${$$("#d-scroll .field2").length} field2`);
+  s.ok("'Bigger' opens roomy editor synced to the field, then closes", ev(`(()=>{ const b=document.querySelector('#d-scroll .biggerbtn'); b.click(); const m=document.getElementById('bigEdit'); const ta=document.querySelector('#d-scroll textarea'); const area=document.getElementById('bigEditArea'); const ok=m.classList.contains('open') && area.value===ta.value; document.getElementById('bigEditClose').click(); return ok && !m.classList.contains('open'); })()`), "open+sync+close");
+  ev("closeDrawer()");
+
   return s;
 }
 

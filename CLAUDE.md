@@ -218,6 +218,13 @@ need the exact approach). If you change the brand mark, regenerate all three.
 
 - **Don't redesign the UI.** This is Sarah's loved prototype, hardened. Preserve the colour-first
   board / library / turn-over UX and the seeded-with-her-real-world content.
+- **Detail drawer (the piece editor), built by `openDetail()`** (v1.2.2): `.drawer` is
+  `width:clamp(460px,33vw,820px)` (≈⅓ of a wide screen). It slides in via `transform` (the closed state
+  is `translateX(100%)`, so measuring it before the transition settles reads as off-screen, that's the
+  animation, not a bug). Long-text fields use `expandableField()` (a labelled **"⤢ Bigger"** button, no
+  magnifying-glass metaphor) which opens `#bigEdit`, a roomy full-height editor overlaid on top, synced
+  live to the inline textarea. Music + Hook share a `.field2` 2-col row to cut scrolling. The header has
+  one clear **"✕ Close"**; there is deliberately **no "Done" button** (it confused with "Posted").
 - **Relative paths only** (Pages subpath). **Colour model in sync** across `index.html` ↔
   `src/export.js`. **No runtime network calls** after install (export libs are vendored).
 - **Privacy:** the repo is public and currently ships Sarah's real seed data with a `noindex` meta

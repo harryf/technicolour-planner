@@ -2,6 +2,13 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.2.2], 2026-06-10
+- **The edit panel is friendlier.** It's wider now (about a third of the screen) with less scrolling.
+  The **Description / caption** and **Notes** each have a clear **"⤢ Bigger"** button that opens a roomy,
+  full-height writing space on top, no squinting into a small box. **Music** and **Hook** sit side by
+  side to save room. The confusing **"Done"** button is gone (it was really just a close button); there's
+  one clear **"✕ Close"** at the top.
+
 ## [1.2.1], 2026-06-10
 - **Library opens on "Still to do".** The Library filter is now ordered **Still to do · Posted · All**
   and starts on **Still to do**, so you land straight on what's left to do. "Posted" is everything
