@@ -5,25 +5,1190 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" /><!-- keep this off search engines for now -->
 <title>🌈 Sarah's Amazing Technicolour Planner</title>
-<link rel="icon" href="data:," />
+<meta name="theme-color" content="#ff9dcd" />
+<meta name="description" content="Colour-first content planner — everything stays yours." />
+<link rel="manifest" href="manifest.webmanifest" />
+<link rel="icon" href="icons/icon-192.png" />
+<link rel="apple-touch-icon" href="icons/icon-192.png" />
 <style>
-  body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f1ec;
-       font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#23211e}
-  .card{max-width:560px;padding:40px;text-align:center}
-  h1{font-size:26px;margin:0 0 8px}
-  .bar{height:8px;border-radius:6px;margin:18px 0;background:linear-gradient(90deg,
-       #9aa0a6 0 25%,#ff9dcd 25% 50%,#3b82f6 50% 75%,#111 75% 100%)}
-  p{color:#5b554c}
-  code{background:#ece7df;padding:2px 6px;border-radius:6px}
+  /* ---- Calm, predictable, colour-forward. Autism-friendly defaults:
+         muted canvas, generous spacing, no flashing, gentle motion only. ---- */
+  :root{
+    --bg:#f4f1ec; --panel:#ffffff; --ink:#23211e; --muted:#7c776f; --line:#e3ddd3;
+    --shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.04);
+    --radius:14px; --t:.18s ease;
+    /* type colours */
+    --reel:#8b5cf6; --post:#22c55e; --story:#14b8a6;
+    /* target colours (Sarah's) */
+    --discovery:#9aa0a6; --authority:#ff9dcd; --conversion:#3b82f6; --retention:#111111;
+    /* activity colours */
+    --act-brainstorm:#3b82f6; --act-shoot:#eab308; --act-edit:#22c55e; --act-priority:#ef4444; --act-justdo:#8b5cf6;
+  }
+  body.lowstim{ --bg:#f6f5f3; --panel:#fff; --shadow:none; --t:0s; filter:saturate(.78); }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font:15px/1.45 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+       background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+  button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);
+         color:var(--ink);border-radius:10px;padding:7px 12px;transition:background var(--t),border var(--t)}
+  button:hover{background:#faf8f4}
+  button:focus-visible,[tabindex]:focus-visible{outline:3px solid #5b8def;outline-offset:2px}
+  input,select,textarea{font:inherit;color:var(--ink);background:var(--panel);
+         border:1px solid var(--line);border-radius:10px;padding:8px 10px;width:100%}
+  h1,h2,h3{margin:0;font-weight:700}
+  .row{display:flex;gap:10px;align-items:center}
+  .wrap{flex-wrap:wrap}
+  .grow{flex:1}
+  .muted{color:var(--muted)}
+  .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
+        font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel)}
+
+  /* ---- Header ---- */
+  header{position:sticky;top:0;z-index:30;background:var(--bg);
+         border-bottom:1px solid var(--line);padding:12px 18px 10px}
+  .brand{display:flex;align-items:baseline;gap:10px}
+  .brand h1{font-size:19px}
+  .brand .sub{font-size:13px;color:var(--muted)}
+  .tabs{display:flex;gap:4px;background:#ece7df;border-radius:12px;padding:4px}
+  .tabs button{border:0;background:transparent;border-radius:9px;padding:7px 14px;font-weight:600;color:var(--muted)}
+  .tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+
+  /* ---- Target filter chips ---- */
+  .filters{gap:8px}
+  .chip{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:5px 12px 5px 8px;
+        font-weight:700;border:2px solid transparent;background:var(--panel);box-shadow:var(--shadow)}
+  .chip .dot{width:16px;height:16px;border-radius:50%;border:1px solid rgba(0,0,0,.15)}
+  .chip .key{font-size:11px;color:var(--muted);font-weight:600;
+        border:1px solid var(--line);border-radius:6px;padding:0 5px;margin-left:2px}
+  .chip[aria-pressed="true"]{border-color:var(--ink);background:#fffdf8}
+  .chip[aria-pressed="false"][data-anyactive="true"]{opacity:.45}
+
+  /* ---- Balance bar ---- */
+  .balance{display:flex;gap:10px;align-items:stretch;margin:10px 0 0}
+  .bseg{flex:1;border-radius:12px;padding:9px 12px;color:#fff;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .bseg .n{font-size:22px;font-weight:800;line-height:1}
+  .bseg .l{font-size:12px;font-weight:700;opacity:.95}
+  .bseg.low::after{content:"light here";position:absolute;right:10px;top:9px;font-size:10px;
+        background:rgba(255,255,255,.25);padding:2px 6px;border-radius:6px;font-weight:700}
+  .bseg.ret{color:#fff}
+
+  main{padding:14px 18px 40px;max-width:1500px;margin:0 auto}
+
+  /* ---- Board (weekly calendar) ---- */
+  .board{display:grid;grid-template-columns:repeat(7,1fr);gap:10px}
+  .day{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+       min-height:340px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
+  .day.today{outline:2px solid #5b8def}
+  .day.dragover{background:#eef4ff;border-color:#5b8def}
+  .day-h{padding:9px 11px;border-bottom:1px solid var(--line);position:sticky;top:0}
+  .day-h .dow{font-weight:800}
+  .day-h .dt{font-size:12px;color:var(--muted)}
+  .day-h .cbar{height:5px;border-radius:4px;margin-top:7px}
+  .day-body{padding:9px;display:flex;flex-direction:column;gap:9px;flex:1}
+  .nopost{margin:auto;color:var(--muted);font-weight:700;letter-spacing:.12em;
+          transform:rotate(-8deg);font-size:18px;opacity:.55}
+
+  /* ---- Project card ---- */
+  .card{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--panel);
+        box-shadow:var(--shadow);display:flex;overflow:hidden;cursor:pointer;transition:transform var(--t),box-shadow var(--t)}
+  .card:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(0,0,0,.12)}
+  .card.dim{opacity:.28;filter:grayscale(.4)}
+  .card .stripes{display:flex;flex-direction:column;width:8px;flex:none}
+  .card .stripes i{flex:1}
+  .card .body{padding:8px 10px;flex:1;min-width:0}
+  .card .titleline{display:flex;align-items:center;gap:7px}
+  .badge{flex:none;width:20px;height:20px;border-radius:6px;color:#fff;font-weight:800;
+         font-size:12px;display:grid;place-items:center}
+  .card .ttl{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .card .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;align-items:center}
+  .ttag{font-size:11px;font-weight:700;color:#fff;border-radius:6px;padding:1px 6px}
+  .thumb{width:100%;height:78px;object-fit:cover;border-radius:8px;margin-top:7px;background:#eee;display:block}
+  .stages{display:flex;gap:4px;margin-top:7px}
+  .stages .s{width:14px;height:14px;border-radius:4px;border:1px solid var(--line);font-size:9px;
+        display:grid;place-items:center;color:var(--muted)}
+  .stages .s.on{background:var(--post);border-color:var(--post);color:#fff}
+  .add-card{border:1.5px dashed var(--line);border-radius:12px;background:transparent;color:var(--muted);
+        padding:8px;font-weight:600;text-align:center}
+  .add-card:hover{background:#faf8f4;color:var(--ink)}
+
+  /* ---- Library grid ---- */
+  .libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+  .lib-card{min-height:120px}
+
+  /* ---- Turn-over (building blocks) ---- */
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+         padding:16px;box-shadow:var(--shadow);margin-bottom:16px}
+  .legend{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:10px}
+  .legend .item{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);
+         border-radius:12px;padding:10px}
+  .legend .sw{width:26px;height:26px;border-radius:8px;flex:none;border:1px solid rgba(0,0,0,.15)}
+  .hooklist{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px}
+  .hook{border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--panel)}
+  .hook .types{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+  .htype{font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px;background:#efeae1;color:#6b6459}
+
+  /* ---- Detail slide-over ---- */
+  .scrim{position:fixed;inset:0;background:rgba(20,18,15,.32);z-index:50;display:none}
+  .scrim.open{display:block}
+  .drawer{position:fixed;top:0;right:0;height:100%;width:min(460px,100%);background:var(--panel);
+         z-index:60;box-shadow:-8px 0 30px rgba(0,0,0,.18);transform:translateX(100%);
+         transition:transform var(--t);display:flex;flex-direction:column}
+  .drawer.open{transform:none}
+  .drawer h2{font-size:16px}
+  .drawer .scroll{overflow:auto;padding:18px;display:flex;flex-direction:column;gap:16px}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em}
+  .seg{display:flex;gap:6px;flex-wrap:wrap}
+  .seg button{font-weight:700}
+  .seg button[aria-pressed="true"]{border-color:var(--ink);background:#fffdf8}
+  .tgl{display:flex;gap:6px;flex-wrap:wrap}
+  .tgl button{display:flex;align-items:center;gap:7px;font-weight:700}
+  .tgl button .dot{width:14px;height:14px;border-radius:50%}
+  .tgl button[aria-pressed="false"]{opacity:.5}
+  .stagebtns{display:flex;gap:6px;flex-wrap:wrap}
+  .stagebtns button[aria-pressed="true"]{background:var(--post);border-color:var(--post);color:#fff}
+  .tasklist{display:flex;flex-direction:column;gap:6px}
+  .task{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:6px 8px}
+  .task .ac{width:12px;height:12px;border-radius:50%;flex:none}
+  .task .x{margin-left:auto;border:0;background:transparent;color:var(--muted);padding:2px 6px}
+  .drawer .foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
+  .danger{color:#b91c1c;border-color:#f1c4c4}
+
+  /* ---- Generic modal ---- */
+  .modal{position:fixed;inset:0;z-index:70;display:none;place-items:center;background:rgba(20,18,15,.34)}
+  .modal.open{display:grid}
+  .modal .box{background:var(--panel);border-radius:16px;box-shadow:var(--shadow);
+        width:min(620px,94vw);max-height:88vh;overflow:auto;padding:18px}
+  .menu{position:absolute;top:calc(100% + 6px);left:0;background:var(--panel);border:1px solid var(--line);border-radius:12px;
+        box-shadow:var(--shadow);padding:6px;z-index:40;display:none;min-width:170px}
+  .menu.open{display:block}
+  .menu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:9px 10px}
+  .menu button:hover{background:#f3efe8}
+  .help{font-size:12px;color:var(--muted)}
+  kbd{font:inherit;font-size:11px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px}
+  .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+  /* ---- PWA additions: reconnect banner, onboarding, update toast, footer ---- */
+  .banner{background:#fff4e5;border-bottom:1px solid #f0d9a8;padding:9px 18px;display:flex;gap:10px;
+          align-items:center;font-size:13px;font-weight:600;color:#7a5a14}
+  .banner[hidden]{display:none}
+  .banner button{background:#fff}
+  .onb .box{max-width:540px}
+  .onb h2{font-size:21px}
+  .onb .step{display:flex;flex-direction:column;gap:14px}
+  .onb .colourline{height:8px;border-radius:6px;background:linear-gradient(90deg,
+        var(--discovery) 0 25%,var(--authority) 25% 50%,var(--conversion) 50% 75%,var(--retention) 75% 100%)}
+  .onb .big{font-size:15px;padding:13px 16px;font-weight:800;border-color:var(--ink)}
+  .onb .later{align-self:center;background:transparent;border:0;color:var(--muted);text-decoration:underline}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;
+         padding:11px 16px;border-radius:12px;box-shadow:var(--shadow);z-index:95;display:none;gap:14px;align-items:center}
+  .toast.open{display:flex}
+  .toast button{background:#fff;color:var(--ink);border:0;font-weight:700}
+  footer{padding:14px 18px 30px;color:var(--muted);font-size:12px;display:flex;gap:14px;flex-wrap:wrap;
+         align-items:center;border-top:1px solid var(--line);max-width:1500px;margin:8px auto 0}
+  footer .vbadge{font-weight:700;border:1px solid var(--line);border-radius:999px;padding:2px 10px;
+         cursor:pointer;background:var(--panel);color:var(--ink)}
+  footer a,footer .linkbtn{color:var(--muted);cursor:pointer;border:0;background:transparent;text-decoration:underline;padding:0;font:inherit}
 </style>
 </head>
 <body>
-  <div class="card">
-    <h1>🌈 Sarah's Amazing Technicolour Planner</h1>
-    <div class="bar"></div>
-    <p>The colour-first content planner is on its way. This page is a placeholder that confirms the
-    deploy pipeline works — it will be replaced by the real app (milestone&nbsp;M1).</p>
-    <p>Build plan: <code>IMPLEMENTATION_PLAN.md</code></p>
+<!-- reconnect banner (shown when the saved data file needs permission again) -->
+<div class="banner" id="reconnectBanner" hidden>
+  <span class="grow">🔌 Your data file needs reconnecting (browsers ask again after a restart).</span>
+  <button id="reconnectBtn">Reconnect your data file</button>
+</div>
+<!-- fallback reminder banner (shown when running without a data file) -->
+<div class="banner" id="fileReminder" hidden>
+  <span class="grow">💾 You haven't chosen a data file yet — your work is saved in this browser only.</span>
+  <button id="chooseFileBtn">Choose a folder</button>
+  <button id="dismissReminder" title="Hide">✕</button>
+</div>
+
+<header>
+  <div class="row wrap" style="gap:14px">
+    <div class="brand grow">
+      <h1>🌈 Sarah's Amazing Technicolour Planner</h1>
+      <span class="sub">colour-first content planning · everything stays yours</span>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Views">
+      <button role="tab" data-view="board" aria-selected="true">📅 Board</button>
+      <button role="tab" data-view="library" aria-selected="false">🗂️ Library</button>
+      <button role="tab" data-view="turnover" aria-selected="false">🎯 Turn-over</button>
+    </div>
+    <div class="row" style="position:relative">
+      <button id="newBtn">＋ New ▾</button>
+      <div class="menu" id="newMenu">
+        <button data-new="reel">🟣 New Reel</button>
+        <button data-new="post">🟢 New Post</button>
+        <button data-new="story">🩵 New Story</button>
+      </div>
+      <button id="exportBtn" title="Download all your data as a JSON file">⬇ Export</button>
+      <button id="importBtn" title="Load data from a file">⬆ Import</button>
+      <input id="importFile" type="file" accept="application/json" class="visually-hidden" />
+      <button id="settingsBtn" title="Colours, labels, calm mode, your data">⚙</button>
+    </div>
   </div>
+
+  <!-- target filter -->
+  <div class="row filters wrap" style="margin-top:10px">
+    <span class="muted" style="font-weight:700;font-size:12px">Show me:</span>
+    <button class="chip" data-target="discovery" aria-pressed="false"><span class="dot" style="background:var(--discovery)"></span>Discovery<span class="key">1</span></button>
+    <button class="chip" data-target="authority" aria-pressed="false"><span class="dot" style="background:var(--authority)"></span>Authority<span class="key">2</span></button>
+    <button class="chip" data-target="conversion" aria-pressed="false"><span class="dot" style="background:var(--conversion)"></span>Conversion<span class="key">3</span></button>
+    <button class="chip" data-target="retention" aria-pressed="false"><span class="dot" style="background:var(--retention)"></span>Retention<span class="key">4</span></button>
+    <button id="clearFilter" class="pill" title="Clear (Esc)">clear ✕</button>
+    <label class="pill" style="gap:6px"><input type="checkbox" id="filterMode" style="width:auto" /> hide non-matching</label>
+    <span class="help">press <kbd>1</kbd>–<kbd>4</kbd> to filter · <kbd>Esc</kbd> clears</span>
+  </div>
+
+  <!-- balance bar -->
+  <div class="balance" id="balance" aria-label="Target balance across planned content"></div>
+</header>
+
+<main>
+  <!-- BOARD -->
+  <section id="view-board">
+    <div class="row wrap" style="margin-bottom:12px">
+      <button id="prevWeek">← Previous week</button>
+      <button id="thisWeek">This week</button>
+      <button id="nextWeek">Next week →</button>
+      <h3 id="weekLabel" class="grow" style="text-align:right;color:var(--muted)"></h3>
+    </div>
+    <div class="board" id="board"></div>
+  </section>
+
+  <!-- LIBRARY -->
+  <section id="view-library" hidden>
+    <div class="row wrap" style="margin-bottom:12px">
+      <input id="libSearch" placeholder="Search projects…" style="max-width:280px" />
+      <span class="muted help">Everything — dated and ideas-for-later. Click any card to open it.</span>
+    </div>
+    <div class="libgrid" id="libgrid"></div>
+  </section>
+
+  <!-- TURN-OVER -->
+  <section id="view-turnover" hidden>
+    <div class="panel">
+      <h2>The four targets</h2>
+      <p class="muted">Every piece of content is meant to move someone one step. This is the spine.</p>
+      <div class="legend" id="targetLegend"></div>
+    </div>
+    <div class="panel">
+      <h2>Story structure codes</h2>
+      <div class="legend" id="storyLegend"></div>
+    </div>
+    <div class="panel">
+      <div class="row"><h2 class="grow">Your hooks</h2>
+        <span class="muted help">filter by what the hook taps into</span></div>
+      <div class="row wrap" id="hookFilter" style="margin:10px 0"></div>
+      <div class="hooklist" id="hookList"></div>
+    </div>
+    <div class="panel">
+      <h2>Activity colours <span class="muted" style="font-weight:400">(for tasks inside a project)</span></h2>
+      <p class="muted">The second colour language — what kind of work a task is, so a "brainstorm day"
+         or "shoot day" lights up the right tasks across every project.</p>
+      <div class="legend" id="activityLegend"></div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <button class="vbadge" id="versionBadge" title="What's new">v0.0.0</button>
+  <span id="dataLocation" class="muted">Storage: this browser</span>
+  <span class="grow"></span>
+  <button class="linkbtn" id="feedbackBtn">✉ Send feedback</button>
+</footer>
+
+<!-- DETAIL DRAWER -->
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Project detail">
+  <div class="row" style="padding:14px 18px;border-bottom:1px solid var(--line)">
+    <h2 class="grow" id="d-title-h">Project</h2>
+    <button id="d-close" aria-label="Close">✕</button>
+  </div>
+  <div class="scroll" id="d-scroll"><!-- filled by JS --></div>
+  <div class="foot">
+    <button class="danger" id="d-delete">Delete</button>
+    <span class="grow"></span>
+    <button id="d-done">Done</button>
+  </div>
+</aside>
+
+<!-- HOOK PICKER MODAL -->
+<div class="modal" id="hookModal">
+  <div class="box">
+    <div class="row"><h2 class="grow">Pick a hook</h2><button id="hookModalClose">✕</button></div>
+    <p class="muted">Roll through your library — filter by what it taps, then click to attach.</p>
+    <div class="row wrap" id="hookModalFilter" style="margin:10px 0"></div>
+    <div class="hooklist" id="hookModalList"></div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="modal" id="settingsModal">
+  <div class="box">
+    <div class="row"><h2 class="grow">Settings</h2><button id="settingsClose">✕</button></div>
+
+    <div class="field" style="margin-top:12px">
+      <label><input type="checkbox" id="lowstim" style="width:auto" /> Calm mode (less motion & contrast)</label>
+    </div>
+    <div class="field">
+      <label>Day labels</label>
+      <div class="seg">
+        <button data-lang="en" aria-pressed="true">English</button>
+        <button data-lang="fr" aria-pressed="false">Français</button>
+      </div>
+    </div>
+    <div class="field"><label>Your target colours — make them yours</label>
+      <div id="colorRemap" class="legend"></div>
+    </div>
+
+    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
+      <label>Your data</label>
+      <p class="help" id="dataStatus" style="margin:0 0 8px"></p>
+      <div class="row wrap">
+        <button id="setLocationBtn">📁 Choose / change data folder</button>
+        <button id="backupNowBtn">🛟 Back up now</button>
+      </div>
+      <p class="help" id="persistStatus" style="margin:8px 0 0"></p>
+    </div>
+
+    <div class="field">
+      <label>Export for Google Drive</label>
+      <div class="row wrap">
+        <button id="xlsxBtn">⬇ Excel (.xlsx)</button>
+        <button id="docxBtn">⬇ Word (.docx)</button>
+        <button id="pptxBtn">⬇ Slides (.pptx)</button>
+      </div>
+      <p class="help">Builds the file on your computer — nothing is uploaded. Drop it into Google Drive.</p>
+    </div>
+
+    <p class="help">Everything is saved automatically. Use ⬇ Export (top) for a plain JSON backup any time.</p>
+  </div>
+</div>
+
+<!-- ONBOARDING MODAL (first run) -->
+<div class="modal onb" id="onbModal">
+  <div class="box">
+    <div class="step">
+      <h2>🌈 Welcome to your Technicolour Planner</h2>
+      <div class="colourline"></div>
+      <p>This is your colour-first content planner — already filled with your projects, your hooks,
+         and your four targets in your colours.</p>
+      <p><b>Where should I keep your work?</b><br>
+         <span class="muted">Pick a folder for your planner file. Tip: choose your Google&nbsp;Drive,
+         OneDrive or iCloud folder and it backs up automatically. You can also open it in Notepad —
+         it's always yours.</span></p>
+      <button class="big" id="onbChoose">📁 Choose a folder</button>
+      <button class="later" id="onbLater">Decide later — just keep it in this browser for now</button>
+    </div>
+  </div>
+</div>
+
+<!-- UPDATE TOAST -->
+<div class="toast" id="updateToast">
+  <span>✨ A new version is ready.</span>
+  <button id="updateReload">Reload to update</button>
+  <button id="updateDismiss" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)">Later</button>
+</div>
+
+<script>
+/* =========================================================================
+   🌈 Sarah's Amazing Technicolour Planner — single file, no server, no build.
+   Data model is plain JSON; the source of truth is a file Sarah chooses (File
+   System Access API), mirrored to a readable .md, cached in IndexedDB, with a
+   localStorage fallback. Export/import keeps it portable forever.
+   ========================================================================= */
+
+const VERSION = "1.0.0";
+const CHANGELOG_LATEST = "First release: installable offline app, your data in a file you own, " +
+  "Office exports, and everything from the prototype you loved.";
+const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
+
+const TARGETS = {
+  discovery:{label:"Discovery",short:"Disc",desc:"Get seen on the For-You page",color:"#9aa0a6"},
+  authority:{label:"Authority",short:"Auth",desc:"Turn viewers into followers",color:"#ff9dcd"},
+  conversion:{label:"Conversion",short:"Conv",desc:"Turn followers into customers",color:"#3b82f6"},
+  retention:{label:"Retention",short:"Ret",desc:"Bring customers back",color:"#111111"},
+};
+const TARGET_ORDER = ["discovery","authority","conversion","retention"];
+const TYPES = {
+  reel:{label:"Reel",short:"R",color:"#8b5cf6"},
+  post:{label:"Post",short:"P",color:"#22c55e"},
+  story:{label:"Story",short:"S",color:"#14b8a6"},
+};
+const ACTIVITIES = {
+  brainstorm:{label:"Brainstorm",color:"#3b82f6"},
+  shoot:{label:"Shoot",color:"#eab308"},
+  edit:{label:"Edit",color:"#22c55e"},
+  priority:{label:"Priority",color:"#ef4444"},
+  justdo:{label:"Just do it",color:"#8b5cf6"},
+};
+const STAGES = ["prep","shot","edited","posted"];
+const STORY_CODES = {
+  1:{label:"Presence",desc:"you talking"},
+  2:{label:"Process",desc:"WIP / work in progress"},
+  3:{label:"Engagement",desc:"poll / question / slider"},
+  4:{label:"Soft CTA",desc:"only when relevant"},
+  5:{label:"Share",desc:"memes / things to share"},
+};
+const HOOK_TYPES = {
+  curiosity:"Curiosity", "pattern-interrupt":"Pattern interrupt",
+  identity:"Identity recognition", visual:"Visual satisfaction", controversy:"Controversy",
+};
+
+/* ---- Her hook library (from the 'hooks' tab) ---- */
+const HOOKS = [
+  ["Strong first 1.5 s",["curiosity"]],
+  ["Opinion",["curiosity","pattern-interrupt","identity","controversy"]],
+  ["Wipe reveal",["visual"]],
+  ["Start mid-action",["visual","pattern-interrupt"]],
+  ["Regional",["curiosity","identity"]],
+  ["Controversy",["curiosity","pattern-interrupt","controversy"]],
+  ["Movement hook",["curiosity","visual"]],
+  ["Unexpected angle",["curiosity","pattern-interrupt"]],
+  ["Fast cuts",["pattern-interrupt"]],
+  ["Bold text / statement",["curiosity","pattern-interrupt","identity","controversy"]],
+  ["Hand motion",["visual"]],
+  ["Linework satisfaction shots",["visual"]],
+  ["Tape peel satisfaction",["visual"]],
+  ["Stencil peel satisfaction",["visual"]],
+  ["Before / after",["visual","curiosity"]],
+  ["Relatable content",["curiosity","pattern-interrupt","identity","controversy"]],
+  ["Advice",["curiosity","controversy","visual"]],
+  ["Sharable",["identity","controversy"]],
+  ["Trend",["identity"]],
+  ["Funny observation",["curiosity","pattern-interrupt","identity","controversy"]],
+  ["Close up",["visual"]],
+  ["Colour packing",["visual"]],
+  ["Lining",["visual"]],
+  ["Sketch to skin",["visual","curiosity"]],
+  ["Details (eyes / hair / highlights)",["visual"]],
+  ["Finished work",["visual"]],
+  ["Sensory satisfaction feel",["visual","curiosity"]],
+  ["Healed vs fresh",["curiosity","visual"]],
+  ["Strong eye contact (first 3 s)",["pattern-interrupt"]],
+];
+
+/* ---- Seed: HER real projects (so first open = recognition, not lorem ipsum) ---- */
+function seedProjects(){
+  const P = (o)=>Object.assign({
+    id:uid(), type:"reel", targets:[], date:null, music:"", hook:"", desc:"", notes:"",
+    storyCodes:[], image:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[]
+  }, o);
+  return [
+    P({title:"Burton dogs", type:"reel", targets:["authority"], date:"2026-06-09",
+       music:"This is Halloween", hook:"Bold text / statement",
+       desc:"\"When you're a tattoo artist and you get this DM\" → text bubble \"Can we do Tim Burton dogs bracelet?\" → the tattoo. We already did Frankenweenie 6 months ago (you see it healed at the end). My client had the best idea!",
+       stages:{prep:true,shot:false,edited:false,posted:false},
+       tasks:[t("Shoot: halloween-girly on phone, receives DM, happy","shoot"),
+              t("Edit: create the 'DM' bubble","edit")]}),
+    P({title:"ttt design colour (flash promo)", type:"post", targets:["conversion"], date:"2026-06-08",
+       desc:"Colour flash at reduced price — to push myself on colour and promote it. \"Since I started tattooing my goal has been colour…\"",
+       notes:"Turn-over code: 1234 · Theme: colour · Structure: short reel",
+       stages:{prep:true,shot:true,edited:false,posted:false},
+       tasks:[t("Resize tattoos","edit"),t("Caption + censored note","justdo")]}),
+    P({title:"Carla smiley ttt", type:"reel", targets:["conversion","discovery"], date:"2026-06-10",
+       tasks:[t("Brainstorm","brainstorm"),t("Prep + edit old footage","edit"),t("Shoot","shoot")]}),
+    P({title:"1 TTT / year", type:"reel", targets:["retention","conversion"], date:"2026-06-12",
+       hook:"Fast cuts", notes:"Find photos of me 20→26, choose tattoos per year",
+       tasks:[t("Choose photos per year","brainstorm"),t("Edit","edit")]}),
+    P({title:"Eat my ass trend", type:"reel", targets:["discovery"], date:"2026-06-14",
+       desc:"draw butts — trend", tasks:[t("Draw","justdo"),t("Shoot","shoot"),t("Edit","edit")]}),
+    P({title:"Alysson + Marie bf ttt", type:"reel", targets:["discovery"],
+       music:"Best Friend (feat. Doja Cat) — Saweetie", hook:"Bold text / statement",
+       desc:"Two best friends had a GENIUS tattoo idea — \"same same but different\" unicorn + narwhal. What would you and your best friend get?",
+       tasks:[t("Brainstorm after client validation","brainstorm"),
+              t("Ask Alysson which photos are OK","justdo"),t("Edit old footage","edit")]}),
+    P({title:"Pêcheur trend", type:"reel", targets:["discovery"],
+       tasks:[t("Shoot + plan","shoot")]}),
+    P({title:"Dino (finished sheet)", type:"post", targets:["discovery"],
+       stages:{prep:true,shot:true,edited:true,posted:false}}),
+    P({title:"Bird on broomstick", type:"post", targets:["discovery"],
+       desc:"\"I drew a bird on a broomstick so he could fly\"", tasks:[t("Shoot","shoot"),t("Caption","justdo")]}),
+    P({title:"Healed — Nim", type:"story", targets:["retention"], date:"2026-06-11",
+       notes:"5.0", stages:{prep:true,shot:true,edited:true,posted:false}}),
+    P({title:"Healed — Bryan", type:"story", targets:["retention"],
+       notes:"5.0", stages:{prep:true,shot:true,edited:false,posted:false}}),
+    P({title:"I'm back", type:"post", targets:["authority"],
+       desc:"Re-introduction post", stages:{prep:true,shot:true,edited:true,posted:false}}),
+    P({title:"FS never posted", type:"reel", targets:["discovery"],
+       notes:"Dinos · Palestine · Erminea 1+2 · birds · witch gun · wands · medieval cats…",
+       tasks:[t("Finish flash sheets","justdo"),t("Photograph + edit","edit"),t("Pick hooks","brainstorm")]}),
+    P({title:"Portfolio — define my style?", type:"story", targets:["authority","discovery"],
+       storyCodes:[3], desc:"Question, then 9 images numbered 1–9 — \"help me define my style\"",
+       tasks:[t("Select 9 tattoos","brainstorm")]}),
+  ];
+}
+function t(text,activity){return {id:uid(),text,activity,done:false};}
+function uid(){return "p"+Math.random().toString(36).slice(2,9);}
+
+/* ========================= STATE & STORAGE ========================= */
+const LS_KEY="technicolour_planner_v1";
+const OLD_LS_KEY="sarah_planner_v1";       // prototype key — read once for continuity
+const JSON_NAME="Technicolour-Planner-Data.json";
+const MD_NAME="Technicolour-Planner-Data.md";
+const CURRENT_SCHEMA=1;
+
+/* Ordered migrations keyed by the version you are migrating FROM. None beyond
+   base normalization yet; future releases append here (and auto-backup runs first). */
+const migrations = {
+  // 1: (s)=>{ /* example: rename a field when bumping to schema 2 */ },
+};
+function migrateState(s){
+  s.settings = s.settings || {lang:"en",lowstim:false,colors:{}};
+  s.settings.colors = s.settings.colors || {};
+  s.weekStart = s.weekStart || isoWeekStart(new Date());
+  s.projects = Array.isArray(s.projects) ? s.projects : [];
+  s.updatedAt = s.updatedAt || ""; // content timestamp for reconnect conflict-avoidance
+  let v = s.schemaVersion || 0;
+  while(v < CURRENT_SCHEMA){ const fn = migrations[v]; if(fn) fn(s); v++; }
+  s.schemaVersion = CURRENT_SCHEMA;
+  return s;
+}
+function defaultState(){
+  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{}},
+           weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
+}
+function nowISO(){ return new Date().toISOString().replace(/[:.]/g,"-"); }
+
+/* ---- tiny IndexedDB key/value (for the file handle + a data snapshot) ---- */
+function idbOpen(){ return new Promise((res,rej)=>{ const r=indexedDB.open("technicolour",1);
+  r.onupgradeneeded=()=>r.result.createObjectStore("kv"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); }); }
+async function idbGet(k){ try{ const db=await idbOpen(); return await new Promise((res,rej)=>{
+  const q=db.transaction("kv","readonly").objectStore("kv").get(k); q.onsuccess=()=>res(q.result); q.onerror=()=>rej(q.error); }); }catch(e){ return null; } }
+async function idbSet(k,v){ try{ const db=await idbOpen(); return await new Promise((res,rej)=>{
+  const tx=db.transaction("kv","readwrite"); tx.objectStore("kv").put(v,k); tx.oncomplete=()=>res(true); tx.onerror=()=>rej(tx.error); }); }catch(e){ return false; } }
+
+/* ---- File System Access helpers ---- */
+async function writeFileTo(dir,name,contents){ const fh=await dir.getFileHandle(name,{create:true});
+  const w=await fh.createWritable(); await w.write(contents); await w.close(); }
+async function pruneBackups(dir){
+  const names=[];
+  try{ for await(const [name] of dir.entries()){ if(/^Technicolour-Planner-backup-.*\.json$/.test(name)) names.push(name); } }catch(e){ return; }
+  names.sort();
+  while(names.length>10){ const n=names.shift(); try{ await dir.removeEntry(n); }catch(e){} }
+}
+
+/* ---- The Store: one place that owns load/save/location/backup/import/export ---- */
+const Store = {
+  fsa: (typeof window!=="undefined") && ("showDirectoryPicker" in window),
+  dir: null,        // FileSystemDirectoryHandle (file mode)
+  mode: "local",    // "file" | "local"
+  async init(){
+    this.mode = (await idbGet("mode")) || "local";
+    if(this.mode==="file" && this.fsa){ const h = await idbGet("dirHandle"); if(h) this.dir = h; else this.mode="local"; }
+  },
+  async perm(request){
+    if(!this.dir || !this.dir.queryPermission) return false;
+    const opt={mode:"readwrite"};
+    let p = await this.dir.queryPermission(opt);
+    if(p!=="granted" && request) p = await this.dir.requestPermission(opt);
+    return p==="granted";
+  },
+  /* returns {state} | {needsReconnect:true} | null(→seed) */
+  async load(){
+    if(this.mode==="file" && this.dir){
+      if(!(await this.perm(false))) return {needsReconnect:true};
+      try{
+        const fh=await this.dir.getFileHandle(JSON_NAME,{create:false});
+        const text=await (await fh.getFile()).text();
+        const raw=JSON.parse(text);
+        if(raw && raw.projects){
+          if((raw.schemaVersion||0) < CURRENT_SCHEMA){ try{ await this._backupRaw(text); }catch(e){} }
+          return {state: migrateState(raw)};
+        }
+      }catch(e){ /* file missing/unreadable → fall through to cache */ }
+    }
+    const snap = await idbGet("snapshot");
+    if(snap && snap.projects) return {state: migrateState(snap)};
+    try{ const ls=JSON.parse(localStorage.getItem(LS_KEY)); if(ls && ls.projects) return {state:migrateState(ls)}; }catch(e){}
+    try{ const old=JSON.parse(localStorage.getItem(OLD_LS_KEY)); if(old && old.projects) return {state:migrateState(old)}; }catch(e){}
+    return null;
+  },
+  async _backupRaw(text){ // write the pre-migration file verbatim before we change it
+    if(this.mode==="file" && this.dir && await this.perm(false)){
+      await writeFileTo(this.dir, "Technicolour-Planner-backup-"+nowISO()+".json", text);
+      await pruneBackups(this.dir);
+    }
+  },
+  async save(state){
+    state.schemaVersion = CURRENT_SCHEMA;
+    state.updatedAt = new Date().toISOString(); // stamp every save (reconnect uses it to pick the newer copy)
+    const json = JSON.stringify(state,null,2);
+    await idbSet("snapshot", state);
+    try{ localStorage.setItem(LS_KEY, json); }catch(e){}
+    if(this.mode==="file" && this.dir){
+      try{
+        if(!(await this.perm(false))) return {ok:true,file:false};
+        await writeFileTo(this.dir, JSON_NAME, json);
+        await writeFileTo(this.dir, MD_NAME, toMarkdown(state));
+        return {ok:true,file:true};
+      }catch(e){ console.warn("file write failed:", e && e.message); return {ok:true,file:false}; }
+    }
+    return {ok:true,file:false};
+  },
+  async setLocation(){
+    if(!this.fsa) throw new Error("File storage isn't available in this browser. Your work stays saved in this browser instead.");
+    const dir = await window.showDirectoryPicker({mode:"readwrite"});
+    this.dir = dir; this.mode = "file";
+    await idbSet("dirHandle", dir); await idbSet("mode","file");
+    return true;
+  },
+  async backup(state){
+    if(this.mode==="file" && this.dir && await this.perm(true)){
+      const name="Technicolour-Planner-backup-"+nowISO()+".json";
+      await writeFileTo(this.dir, name, JSON.stringify(state,null,2));
+      await pruneBackups(this.dir);
+      return name;
+    }
+    downloadJSON(state, "Technicolour-Planner-backup-"+TODAY+".json");
+    return "download";
+  },
+  status(){ return {mode:this.mode, fsa:this.fsa, name:(this.dir && this.dir.name) || null}; },
+};
+
+/* ---- human-readable mirror (so her data is extractable in plain text) ---- */
+function toMarkdown(state){
+  const L=[]; L.push("# 🌈 Sarah's Amazing Technicolour Planner — your data");
+  L.push(""); L.push("_Saved "+new Date().toLocaleString()+". This is a readable copy; the app reads the .json file._"); L.push("");
+  const fmt=(p)=>{
+    const o=[]; o.push("### "+(p.title||"Untitled")+"  ·  "+(TYPES[p.type]?TYPES[p.type].label:p.type));
+    if(p.targets && p.targets.length) o.push("- Targets: "+p.targets.map(k=>TARGETS[k]?TARGETS[k].label:k).join(", "));
+    if(p.date) o.push("- Date: "+p.date);
+    if(p.hook) o.push("- Hook: "+p.hook);
+    if(p.music) o.push("- Music: "+p.music);
+    if(p.storyCodes && p.storyCodes.length) o.push("- Story codes: "+p.storyCodes.map(c=>c+" "+(STORY_CODES[c]?STORY_CODES[c].label:"")).join(", "));
+    const st=STAGES.filter(s=>p.stages && p.stages[s]); if(st.length) o.push("- Done: "+st.join(", "));
+    if(p.desc) o.push("- Description: "+p.desc.replace(/\n/g," "));
+    if(p.tasks && p.tasks.length) o.push("- Tasks:\n"+p.tasks.map(tk=>"  - ["+(tk.done?"x":" ")+"] ("+(ACTIVITIES[tk.activity]?ACTIVITIES[tk.activity].label:tk.activity)+") "+tk.text).join("\n"));
+    if(p.notes) o.push("- Notes: "+p.notes.replace(/\n/g," "));
+    return o.join("\n");
+  };
+  const dated=state.projects.filter(p=>p.date).sort((a,b)=>a.date<b.date?-1:1);
+  const undated=state.projects.filter(p=>!p.date);
+  if(dated.length){ L.push("## Scheduled"); L.push(""); dated.forEach(p=>{L.push(fmt(p));L.push("");}); }
+  if(undated.length){ L.push("## Ideas / not yet dated"); L.push(""); undated.forEach(p=>{L.push(fmt(p));L.push("");}); }
+  return L.join("\n");
+}
+function downloadJSON(obj,name){ const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); }
+
+/* live state — populated by boot() before the UI starts */
+let state = defaultState();
+
+/* save(): instant local persist + debounced Store write (file + mirror + idb) */
+let saveTimer=null;
+function save(){
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
+  catch(e){ console.warn("Could not save to this browser (private mode or storage blocked). Use ⬇ Export to keep a file backup."); }
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(()=>{ Store.save(state).then(()=>updateDataLocation()); }, 300);
+}
+
+let activeFilters=new Set();
+let filterHide=false;
+let currentView="board";
+let openId=null;
+
+/* ========================= DATE HELPERS ========================= */
+function isoWeekStart(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return ymd(x); }
+function ymd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function parseYMD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+function addDays(s,n){ const d=parseYMD(s); d.setDate(d.getDate()+n); return ymd(d); }
+const DOW_EN=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const DOW_FR=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
+const TODAY=ymd(new Date()); // real today — drives the "today" highlight + This week
+
+/* ========================= RENDER ========================= */
+function applyColors(){
+  for(const k of TARGET_ORDER){
+    const c=state.settings.colors[k]||TARGETS[k].color;
+    document.documentElement.style.setProperty("--"+k,c);
+  }
+}
+function targetColor(k){ return state.settings.colors[k]||TARGETS[k].color; }
+
+function projectCard(p,{compact=false}={}){
+  const card=document.createElement("div");
+  card.className="card"; card.dataset.id=p.id; card.tabIndex=0;
+  if(!compact) card.classList.add("lib-card");
+  if(activeFilters.size){
+    const match=p.targets.some(t=>activeFilters.has(t));
+    if(!match){ if(filterHide){card.style.display="none";} else {card.classList.add("dim");} }
+  }
+  const stripes=document.createElement("div"); stripes.className="stripes";
+  const tg = p.targets.length?p.targets:["discovery"];
+  for(const k of TARGET_ORDER){ if(tg.includes(k)){ const i=document.createElement("i"); i.style.background=targetColor(k); stripes.appendChild(i);} }
+  if(!stripes.children.length){ const i=document.createElement("i"); i.style.background=targetColor("discovery"); stripes.appendChild(i); }
+  card.appendChild(stripes);
+  const body=document.createElement("div"); body.className="body";
+  const tl=document.createElement("div"); tl.className="titleline";
+  const badge=document.createElement("span"); badge.className="badge";
+  badge.style.background=TYPES[p.type].color; badge.textContent=TYPES[p.type].short;
+  badge.title=TYPES[p.type].label;
+  const ttl=document.createElement("span"); ttl.className="ttl"; ttl.textContent=p.title;
+  tl.append(badge,ttl); body.appendChild(tl);
+  if(p.image){ const im=document.createElement("img"); im.className="thumb"; im.src=p.image; im.alt=""; body.appendChild(im); }
+  const meta=document.createElement("div"); meta.className="meta";
+  for(const k of (p.targets.length?p.targets:["discovery"])){
+    const s=document.createElement("span"); s.className="ttag";
+    s.style.background=targetColor(k); if(k==="retention") s.style.color="#fff";
+    s.textContent=TARGETS[k].short; meta.appendChild(s);
+  }
+  if(p.storyCodes&&p.storyCodes.length){ const s=document.createElement("span"); s.className="pill"; s.style.fontSize="11px";
+    s.textContent=p.storyCodes.map(c=>c+"·"+STORY_CODES[c].label).join(" "); meta.appendChild(s); }
+  body.appendChild(meta);
+  const st=document.createElement("div"); st.className="stages";
+  for(const s of STAGES){ const e=document.createElement("span"); e.className="s"+(p.stages[s]?" on":"");
+    e.textContent=s[0].toUpperCase(); e.title=s+(p.stages[s]?" ✓":""); st.appendChild(e); }
+  body.appendChild(st);
+  card.appendChild(body);
+  card.addEventListener("click",()=>openDetail(p.id));
+  card.addEventListener("keydown",e=>{ if(e.key==="Enter") openDetail(p.id); });
+  card.draggable=true;
+  card.addEventListener("dragstart",e=>{ e.dataTransfer.setData("text/plain",p.id); card.style.opacity=".4"; });
+  card.addEventListener("dragend",()=>card.style.opacity="");
+  return card;
+}
+
+function renderBoard(){
+  const board=document.getElementById("board"); board.innerHTML="";
+  for(let i=0;i<7;i++){
+    const date=addDays(state.weekStart,i);
+    const col=document.createElement("div"); col.className="day"+(date===TODAY?" today":"");
+    col.dataset.date=date;
+    const h=document.createElement("div"); h.className="day-h";
+    const dows=(state.settings.lang==="fr"?DOW_FR:DOW_EN)[i];
+    const d=parseYMD(date);
+    h.innerHTML=`<div class="dow">${dows}</div><div class="dt">${d.getDate()}/${d.getMonth()+1}</div>`;
+    const hues=["#f9c6c6","#f7d9b0","#f6efb0","#c8e6c0","#bfe0e6","#c9c6ee","#e6c6e0"];
+    const bar=document.createElement("div"); bar.className="cbar"; bar.style.background=hues[i]; h.appendChild(bar);
+    col.appendChild(h);
+    const bodyEl=document.createElement("div"); bodyEl.className="day-body";
+    const dayProjects=state.projects.filter(p=>p.date===date);
+    if(i===5 && dayProjects.length===0){ const np=document.createElement("div"); np.className="nopost"; np.textContent="NO POST"; bodyEl.appendChild(np); }
+    for(const p of dayProjects) bodyEl.appendChild(projectCard(p,{compact:true}));
+    const add=document.createElement("button"); add.className="add-card"; add.textContent="＋ add here";
+    add.addEventListener("click",()=>{ const np=newProject("reel"); np.date=date; state.projects.push(np); save(); renderAll(); openDetail(np.id); });
+    bodyEl.appendChild(add);
+    col.addEventListener("dragover",e=>{ e.preventDefault(); col.classList.add("dragover"); });
+    col.addEventListener("dragleave",()=>col.classList.remove("dragover"));
+    col.addEventListener("drop",e=>{ e.preventDefault(); col.classList.remove("dragover");
+      const id=e.dataTransfer.getData("text/plain"); const p=state.projects.find(x=>x.id===id);
+      if(p){ p.date=date; save(); renderAll(); } });
+    col.appendChild(bodyEl);
+    board.appendChild(col);
+  }
+  const ws=parseYMD(state.weekStart), we=parseYMD(addDays(state.weekStart,6));
+  document.getElementById("weekLabel").textContent=
+    `${ws.getDate()}/${ws.getMonth()+1} – ${we.getDate()}/${we.getMonth()+1} ${we.getFullYear()}`;
+}
+
+function renderLibrary(){
+  const grid=document.getElementById("libgrid"); grid.innerHTML="";
+  const q=(document.getElementById("libSearch").value||"").toLowerCase();
+  state.projects
+    .filter(p=>!q || p.title.toLowerCase().includes(q) || (p.notes||"").toLowerCase().includes(q))
+    .forEach(p=>grid.appendChild(projectCard(p,{})));
+}
+
+function renderBalance(){
+  const el=document.getElementById("balance"); el.innerHTML="";
+  const counts={discovery:0,authority:0,conversion:0,retention:0};
+  state.projects.forEach(p=>{ const tg=p.targets.length?p.targets:["discovery"]; tg.forEach(k=>counts[k]++); });
+  const vals=TARGET_ORDER.map(k=>counts[k]); const max=Math.max(...vals,1);
+  TARGET_ORDER.forEach(k=>{
+    const seg=document.createElement("div"); seg.className="bseg"+(k==="retention"?" ret":"")+(counts[k]<=Math.max(1,max*0.4)?" low":"");
+    seg.style.background=targetColor(k);
+    seg.innerHTML=`<div class="n">${counts[k]}</div><div class="l">${TARGETS[k].label}</div>`;
+    seg.title=`${counts[k]} pieces aimed at ${TARGETS[k].label} — ${TARGETS[k].desc}`;
+    seg.style.cursor="pointer"; seg.addEventListener("click",()=>toggleFilter(k));
+    el.appendChild(seg);
+  });
+}
+
+function renderTurnover(){
+  const tl=document.getElementById("targetLegend"); tl.innerHTML="";
+  TARGET_ORDER.forEach(k=>{ const it=document.createElement("div"); it.className="item";
+    it.innerHTML=`<div class="sw" style="background:${targetColor(k)}"></div>
+      <div><b>${TARGETS[k].label}</b> <span class="muted">(${TARGETS[k].short})</span><br>
+      <span class="muted">${TARGETS[k].desc}</span></div>`; tl.appendChild(it); });
+  const sl=document.getElementById("storyLegend"); sl.innerHTML="";
+  Object.entries(STORY_CODES).forEach(([n,v])=>{ const it=document.createElement("div"); it.className="item";
+    it.innerHTML=`<div class="sw" style="display:grid;place-items:center;background:#efeae1;color:#6b6459;font-weight:800">${n}</div>
+      <div><b>${v.label}</b><br><span class="muted">${v.desc}</span></div>`; sl.appendChild(it); });
+  const al=document.getElementById("activityLegend"); al.innerHTML="";
+  Object.entries(ACTIVITIES).forEach(([k,v])=>{ const it=document.createElement("div"); it.className="item";
+    it.innerHTML=`<div class="sw" style="background:${v.color}"></div><div><b>${v.label}</b></div>`; al.appendChild(it); });
+  renderHookList("hookList","hookFilter",null);
+}
+
+let hookFilterType=null;
+function renderHookList(listId,filterId,onPick){
+  const f=document.getElementById(filterId); f.innerHTML="";
+  const allBtn=document.createElement("button"); allBtn.className="chip"; allBtn.style.boxShadow="none";
+  allBtn.setAttribute("aria-pressed",hookFilterType===null); allBtn.textContent="all";
+  allBtn.onclick=()=>{hookFilterType=null;renderHookList(listId,filterId,onPick);}; f.appendChild(allBtn);
+  Object.entries(HOOK_TYPES).forEach(([k,lbl])=>{ const b=document.createElement("button"); b.className="chip"; b.style.boxShadow="none";
+    b.setAttribute("aria-pressed",hookFilterType===k); b.textContent=lbl;
+    b.onclick=()=>{hookFilterType=(hookFilterType===k?null:k);renderHookList(listId,filterId,onPick);}; f.appendChild(b); });
+  const list=document.getElementById(listId); list.innerHTML="";
+  HOOKS.filter(([_,types])=>!hookFilterType||types.includes(hookFilterType)).forEach(([name,types])=>{
+    const h=document.createElement("div"); h.className="hook";
+    h.innerHTML=`<b>${name}</b><div class="types">${types.map(t=>`<span class="htype">${HOOK_TYPES[t]}</span>`).join("")}</div>`;
+    if(onPick){ h.style.cursor="pointer"; h.onclick=()=>onPick(name); }
+    list.appendChild(h);
+  });
+}
+
+function renderAll(){
+  applyColors();
+  if(currentView==="board") renderBoard();
+  if(currentView==="library") renderLibrary();
+  if(currentView==="turnover") renderTurnover();
+  renderBalance();
+  document.querySelectorAll(".chip[data-target]").forEach(c=>{
+    const on=activeFilters.has(c.dataset.target);
+    c.setAttribute("aria-pressed",on);
+    c.dataset.anyactive=activeFilters.size>0;
+  });
+}
+
+/* ========================= DETAIL DRAWER ========================= */
+function newProject(type){
+  const p={ id:uid(), title:"", type, targets:[], date:null, music:"", hook:"", desc:"", notes:"",
+    storyCodes:[], image:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[] };
+  if(type==="reel"){ p.title="New reel"; p.music=""; p.hook="";
+    p.tasks=[t("Brainstorm","brainstorm"),t("Shoot","shoot"),t("Edit","edit")]; }
+  if(type==="post"){ p.title="New post"; p.tasks=[t("Prep","brainstorm"),t("Caption","justdo")]; }
+  if(type==="story"){ p.title="New story"; p.storyCodes=[1]; p.tasks=[t("Shoot","shoot")]; }
+  return p;
+}
+function addNew(type){ const p=newProject(type); state.projects.push(p); save(); renderAll(); openDetail(p.id); }
+
+function openDetail(id){
+  openId=id; const p=state.projects.find(x=>x.id===id); if(!p) return;
+  const s=document.getElementById("d-scroll"); s.innerHTML="";
+  document.getElementById("d-title-h").textContent=p.title||"Untitled";
+
+  s.appendChild(field("Title", inputEl(p.title,v=>{p.title=v;document.getElementById("d-title-h").textContent=v||"Untitled";softSave();})));
+
+  const typeSeg=document.createElement("div"); typeSeg.className="seg";
+  Object.entries(TYPES).forEach(([k,v])=>{ const b=document.createElement("button");
+    b.textContent=v.short+" "+v.label; b.style.borderLeft="5px solid "+v.color;
+    b.setAttribute("aria-pressed",p.type===k);
+    b.onclick=()=>{p.type=k;openDetail(id);softSave();}; typeSeg.appendChild(b); });
+  s.appendChild(field("Type", typeSeg));
+
+  const tg=document.createElement("div"); tg.className="tgl";
+  TARGET_ORDER.forEach(k=>{ const b=document.createElement("button");
+    b.innerHTML=`<span class="dot" style="background:${targetColor(k)}"></span>${TARGETS[k].label}`;
+    b.setAttribute("aria-pressed",p.targets.includes(k));
+    b.onclick=()=>{ const i=p.targets.indexOf(k); if(i<0)p.targets.push(k); else p.targets.splice(i,1); openDetail(id); softSave(); };
+    tg.appendChild(b); });
+  s.appendChild(field("Targets — split colours show on the card", tg));
+
+  if(p.type==="story"){
+    const sc=document.createElement("div"); sc.className="seg";
+    Object.entries(STORY_CODES).forEach(([n,v])=>{ const b=document.createElement("button"); n=Number(n);
+      b.textContent=n+" "+v.label; b.title=v.desc; b.setAttribute("aria-pressed",p.storyCodes.includes(n));
+      b.onclick=()=>{ const i=p.storyCodes.indexOf(n); if(i<0)p.storyCodes.push(n); else p.storyCodes.splice(i,1); openDetail(id); softSave(); };
+      sc.appendChild(b); });
+    s.appendChild(field("Story structure", sc));
+  }
+
+  const dwrap=document.createElement("div"); dwrap.className="row";
+  const di=document.createElement("input"); di.type="date"; di.value=p.date||"";
+  di.onchange=()=>{ p.date=di.value||null; softSave(); renderAll(); };
+  const clr=document.createElement("button"); clr.textContent="clear"; clr.onclick=()=>{p.date=null;softSave();openDetail(id);renderAll();};
+  dwrap.append(di,clr);
+  s.appendChild(field("Date — sets where it lands on the board", dwrap));
+
+  const iwrap=document.createElement("div");
+  if(p.image){ const im=document.createElement("img"); im.src=p.image; im.style.cssText="width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin-bottom:8px"; iwrap.appendChild(im); }
+  const fi=document.createElement("input"); fi.type="file"; fi.accept="image/*";
+  fi.onchange=()=>{ const f=fi.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{p.image=r.result;softSave();openDetail(id);renderAll();}; r.readAsDataURL(f); };
+  iwrap.appendChild(fi);
+  if(p.image){ const rm=document.createElement("button"); rm.textContent="remove image"; rm.style.marginTop="6px"; rm.onclick=()=>{p.image=null;softSave();openDetail(id);renderAll();}; iwrap.appendChild(rm); }
+  s.appendChild(field("Image / thumbnail", iwrap));
+
+  s.appendChild(field("🎵 Music", inputEl(p.music,v=>{p.music=v;softSave();})));
+  const hookWrap=document.createElement("div"); hookWrap.className="row";
+  const hookIn=inputEl(p.hook,v=>{p.hook=v;softSave();});
+  const pick=document.createElement("button"); pick.textContent="pick ▾"; pick.onclick=()=>openHookPicker(name=>{p.hook=name;softSave();openDetail(id);});
+  hookWrap.append(hookIn,pick);
+  s.appendChild(field("🪝 Hook", hookWrap));
+
+  s.appendChild(field("Description / caption", textareaEl(p.desc,v=>{p.desc=v;softSave();})));
+
+  const sg=document.createElement("div"); sg.className="stagebtns";
+  STAGES.forEach(st=>{ const b=document.createElement("button"); b.textContent=st;
+    b.setAttribute("aria-pressed",!!p.stages[st]); b.onclick=()=>{p.stages[st]=!p.stages[st];softSave();openDetail(id);renderAll();}; sg.appendChild(b); });
+  s.appendChild(field("Progress", sg));
+
+  const tl=document.createElement("div"); tl.className="tasklist";
+  (p.tasks||[]).forEach(task=>{
+    const row=document.createElement("div"); row.className="task";
+    const dot=document.createElement("span"); dot.className="ac"; dot.style.background=ACTIVITIES[task.activity].color; dot.title=ACTIVITIES[task.activity].label;
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=task.done; cb.style.width="auto"; cb.onchange=()=>{task.done=cb.checked;softSave();};
+    const txt=document.createElement("span"); txt.className="grow"; txt.textContent=task.text; txt.style.textDecoration=task.done?"line-through":"";
+    const x=document.createElement("button"); x.className="x"; x.textContent="✕"; x.onclick=()=>{p.tasks=p.tasks.filter(t=>t.id!==task.id);softSave();openDetail(id);};
+    row.append(dot,cb,txt,x); tl.appendChild(row);
+  });
+  const addRow=document.createElement("div"); addRow.className="row";
+  const ti=document.createElement("input"); ti.placeholder="add a task…";
+  const sel=document.createElement("select"); sel.style.width="auto";
+  Object.entries(ACTIVITIES).forEach(([k,v])=>{ const o=document.createElement("option"); o.value=k; o.textContent=v.label; sel.appendChild(o); });
+  const ab=document.createElement("button"); ab.textContent="add";
+  ab.onclick=()=>{ if(!ti.value.trim())return; p.tasks.push(t(ti.value.trim(),sel.value)); softSave(); openDetail(id); };
+  ti.onkeydown=e=>{ if(e.key==="Enter")ab.click(); };
+  addRow.append(ti,sel,ab); tl.appendChild(addRow);
+  s.appendChild(field("Tasks — colour = kind of work", tl));
+
+  s.appendChild(field("Notes", textareaEl(p.notes,v=>{p.notes=v;softSave();})));
+
+  openDrawer();
+}
+function field(label,el){ const f=document.createElement("div"); f.className="field";
+  const l=document.createElement("label"); l.textContent=label; f.append(l,el); return f; }
+function inputEl(val,on){ const i=document.createElement("input"); i.value=val||""; i.oninput=()=>on(i.value); return i; }
+function textareaEl(val,on){ const t=document.createElement("textarea"); t.rows=3; t.value=val||""; t.oninput=()=>on(t.value); return t; }
+let softTimer=null;
+function softSave(){ clearTimeout(softTimer); softTimer=setTimeout(()=>{save();if(currentView!=="turnover")renderAll();},200); }
+
+function openDrawer(){ document.getElementById("scrim").classList.add("open"); document.getElementById("drawer").classList.add("open"); }
+function closeDrawer(){ document.getElementById("scrim").classList.remove("open"); document.getElementById("drawer").classList.remove("open"); openId=null; save(); renderAll(); }
+
+/* ========================= HOOK PICKER ========================= */
+function openHookPicker(onPick){
+  hookFilterType=null;
+  renderHookList("hookModalList","hookModalFilter",(name)=>{ onPick(name); document.getElementById("hookModal").classList.remove("open"); });
+  document.getElementById("hookModal").classList.add("open");
+}
+
+/* ========================= FILTERS ========================= */
+function toggleFilter(k){ if(activeFilters.has(k)) activeFilters.delete(k); else activeFilters.add(k); renderAll(); }
+function clearFilters(){ activeFilters.clear(); renderAll(); }
+
+/* ========================= EXPORT / IMPORT (JSON) ========================= */
+function exportData(){ downloadJSON(state, "technicolour-planner-"+TODAY+".json"); }
+function importData(file){ const r=new FileReader(); r.onload=()=>{ try{ const s=JSON.parse(r.result);
+  if(s && Array.isArray(s.projects)){ state=migrateState(s); save(); renderAll(); alert("Imported ✓"); }
+  else alert("That file doesn't look like a planner export (no projects found)."); }
+  catch(e){ alert("Could not read that file — is it a planner .json export?"); } }; r.readAsText(file); }
+
+/* ========================= OFFICE EXPORTS (lazy) ========================= */
+let _exportMod=null;
+function loadScript(src){ return new Promise((res,rej)=>{
+  if(document.querySelector(`script[data-vendor="${src}"]`)) return res();
+  const s=document.createElement("script"); s.src=src; s.dataset.vendor=src;
+  s.onload=()=>res(); s.onerror=()=>rej(new Error("Couldn't load "+src)); document.head.appendChild(s); }); }
+async function loadExporter(){
+  if(_exportMod) return _exportMod;
+  await loadScript("vendor/exceljs.min.js");
+  await loadScript("vendor/docx.umd.js");
+  await loadScript("vendor/pptxgen.bundle.js");
+  _exportMod = await import("./src/export.js");
+  return _exportMod;
+}
+async function officeExport(kind,btn){
+  const label=btn?btn.textContent:""; if(btn){ btn.disabled=true; btn.textContent="Building…"; }
+  try{
+    const m=await loadExporter();
+    if(kind==="xlsx") await m.exportXlsx(state);
+    else if(kind==="docx") await m.exportDocx(state);
+    else if(kind==="pptx") await m.exportPptx(state);
+  }catch(e){ alert("Could not build that file: "+(e&&e.message||e)); }
+  finally{ if(btn){ btn.disabled=false; btn.textContent=label; } }
+}
+
+/* ========================= WIRE UP ========================= */
+function setView(v){
+  currentView=v;
+  document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute("aria-selected",b.dataset.view===v));
+  document.getElementById("view-board").hidden=v!=="board";
+  document.getElementById("view-library").hidden=v!=="library";
+  document.getElementById("view-turnover").hidden=v!=="turnover";
+  renderAll();
+}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setView(b.dataset.view));
+
+const newMenu=document.getElementById("newMenu");
+document.getElementById("newBtn").onclick=e=>{ e.stopPropagation(); newMenu.classList.toggle("open"); };
+newMenu.querySelectorAll("button").forEach(b=>b.onclick=()=>{ newMenu.classList.remove("open"); addNew(b.dataset.new); });
+document.addEventListener("click",()=>newMenu.classList.remove("open"));
+
+document.querySelectorAll(".chip[data-target]").forEach(c=>c.onclick=()=>toggleFilter(c.dataset.target));
+document.getElementById("clearFilter").onclick=clearFilters;
+document.getElementById("filterMode").onchange=e=>{filterHide=e.target.checked;renderAll();};
+
+document.getElementById("prevWeek").onclick=()=>{state.weekStart=addDays(state.weekStart,-7);save();renderBoard();};
+document.getElementById("nextWeek").onclick=()=>{state.weekStart=addDays(state.weekStart,7);save();renderBoard();};
+document.getElementById("thisWeek").onclick=()=>{state.weekStart=isoWeekStart(parseYMD(TODAY));save();renderBoard();};
+
+document.getElementById("libSearch").oninput=renderLibrary;
+
+document.getElementById("d-close").onclick=closeDrawer;
+document.getElementById("d-done").onclick=closeDrawer;
+document.getElementById("scrim").onclick=closeDrawer;
+document.getElementById("d-delete").onclick=()=>{ if(openId&&confirm("Delete this project?")){ state.projects=state.projects.filter(p=>p.id!==openId); closeDrawer(); } };
+
+document.getElementById("hookModalClose").onclick=()=>document.getElementById("hookModal").classList.remove("open");
+
+document.getElementById("exportBtn").onclick=exportData;
+document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();
+document.getElementById("importFile").onchange=e=>{ if(e.target.files[0]) importData(e.target.files[0]); };
+
+/* settings */
+const settingsModal=document.getElementById("settingsModal");
+document.getElementById("settingsBtn").onclick=()=>{ buildSettings(); settingsModal.classList.add("open"); };
+document.getElementById("settingsClose").onclick=()=>settingsModal.classList.remove("open");
+function buildSettings(){
+  document.getElementById("lowstim").checked=!!state.settings.lowstim;
+  document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===state.settings.lang));
+  const cr=document.getElementById("colorRemap"); cr.innerHTML="";
+  TARGET_ORDER.forEach(k=>{ const it=document.createElement("div"); it.className="item";
+    const ci=document.createElement("input"); ci.type="color"; ci.value=rgbToHex(targetColor(k)); ci.style.width="44px"; ci.style.height="34px"; ci.style.padding="2px";
+    ci.oninput=()=>{ state.settings.colors[k]=ci.value; save(); applyColors(); renderAll(); };
+    const lbl=document.createElement("div"); lbl.innerHTML=`<b>${TARGETS[k].label}</b><br><span class="muted">${TARGETS[k].desc}</span>`;
+    it.append(ci,lbl); cr.appendChild(it); });
+  refreshDataStatus();
+}
+document.getElementById("lowstim").onchange=e=>{ state.settings.lowstim=e.target.checked; document.body.classList.toggle("lowstim",e.target.checked); save(); };
+document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ state.settings.lang=b.dataset.lang; save(); buildSettings(); renderBoard(); });
+function rgbToHex(c){ if(c.startsWith("#"))return c.length===4?("#"+[...c.slice(1)].map(x=>x+x).join("")):c;
+  const m=c.match(/\d+/g); if(!m)return "#000000"; return "#"+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,"0")).join(""); }
+
+/* settings → data controls */
+async function refreshDataStatus(){
+  const st=Store.status();
+  const ds=document.getElementById("dataStatus");
+  if(st.mode==="file" && st.name) ds.textContent="Saved to your folder \""+st.name+"\" (file: "+JSON_NAME+"). Backs up automatically if that folder syncs to the cloud.";
+  else if(!st.fsa) ds.textContent="This browser doesn't support choosing a data file, so your work is saved inside this browser. Use ⬇ Export for backups.";
+  else ds.textContent="Saved in this browser only. Choose a folder to keep your data in a file you own (recommended).";
+  const ps=document.getElementById("persistStatus");
+  try{ if(navigator.storage && navigator.storage.persisted){ const p=await navigator.storage.persisted();
+    ps.textContent = p ? "🔒 This browser has promised to keep your data (persistent storage on)." : "ℹ️ Tip: choosing a data folder is the safest way to never lose your work."; } else ps.textContent=""; }catch(e){ ps.textContent=""; }
+}
+document.getElementById("setLocationBtn").onclick=async()=>{
+  try{ await Store.setLocation(); await Store.save(state); hideFileReminder(); hideReconnect(); refreshDataStatus(); updateDataLocation(); alert("Saved! Your data now lives in your folder."); }
+  catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder."); }
+};
+document.getElementById("backupNowBtn").onclick=async()=>{
+  try{ const r=await Store.backup(state); alert(r==="download"?"Backup downloaded ✓":"Backup written to your folder ✓"); }
+  catch(e){ alert("Couldn't back up: "+(e&&e.message||e)); }
+};
+document.getElementById("xlsxBtn").onclick=e=>officeExport("xlsx",e.currentTarget);
+document.getElementById("docxBtn").onclick=e=>officeExport("docx",e.currentTarget);
+document.getElementById("pptxBtn").onclick=e=>officeExport("pptx",e.currentTarget);
+
+/* footer: version + data location + feedback */
+function updateDataLocation(){
+  const st=Store.status(); const el=document.getElementById("dataLocation");
+  if(st.mode==="file" && st.name) el.textContent="Storage: 📁 "+st.name;
+  else el.textContent="Storage: this browser";
+}
+document.getElementById("versionBadge").textContent="v"+VERSION;
+document.getElementById("versionBadge").onclick=()=>alert("🌈 Technicolour Planner v"+VERSION+"\n\nWhat's new:\n"+CHANGELOG_LATEST);
+document.getElementById("feedbackBtn").onclick=()=>{
+  const subj=encodeURIComponent("Technicolour Planner feedback (v"+VERSION+")");
+  const body=encodeURIComponent("Hi Harry,\n\n(Tell me what you'd like changed or what went wrong.)\n\n— Sarah\n\n[app version "+VERSION+"]");
+  window.location.href="mailto:"+FEEDBACK_EMAIL+"?subject="+subj+"&body="+body;
+};
+
+/* reconnect + reminder banners */
+function showReconnect(){ document.getElementById("reconnectBanner").hidden=false; }
+function hideReconnect(){ document.getElementById("reconnectBanner").hidden=true; }
+function showFileReminder(){ if(sessionStorage.getItem("hideReminder")!=="1") document.getElementById("fileReminder").hidden=false; }
+function hideFileReminder(){ document.getElementById("fileReminder").hidden=true; }
+document.getElementById("reconnectBtn").onclick=async()=>{
+  if(await Store.perm(true)){
+    hideReconnect();
+    // Conflict-avoidance: keep whichever copy is newer. The in-memory state is what Sarah has been
+    // editing this session (from the cache); only adopt the file if the FILE was saved more recently
+    // (e.g. edited on another device). Then write the winner back so file saves resume.
+    try{
+      const fh=await Store.dir.getFileHandle(JSON_NAME,{create:false});
+      const fileState=JSON.parse(await (await fh.getFile()).text());
+      if(fileState && fileState.projects && (fileState.updatedAt||"") > (state.updatedAt||"")) state=migrateState(fileState);
+    }catch(e){ /* no file yet → keep current state */ }
+    await Store.save(state);
+    renderAll(); updateDataLocation();
+  } else alert("Couldn't reconnect — you can also pick the folder again in Settings.");
+};
+document.getElementById("chooseFileBtn").onclick=()=>document.getElementById("setLocationBtn").click();
+document.getElementById("dismissReminder").onclick=()=>{ sessionStorage.setItem("hideReminder","1"); hideFileReminder(); };
+
+/* onboarding (first run) */
+function openOnboarding(){ document.getElementById("onbModal").classList.add("open"); }
+function closeOnboarding(){ document.getElementById("onbModal").classList.remove("open"); }
+document.getElementById("onbChoose").onclick=async()=>{
+  try{ await Store.setLocation(); await Store.save(state); closeOnboarding(); refreshDataStatus(); updateDataLocation(); }
+  catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder — you can pick one later in Settings."); }
+};
+document.getElementById("onbLater").onclick=()=>{ closeOnboarding(); showFileReminder(); requestPersist(); };
+async function requestPersist(){ try{ if(navigator.storage && navigator.storage.persist) await navigator.storage.persist(); }catch(e){} }
+
+/* keyboard: 1-4 filter, Esc clear/close */
+document.addEventListener("keydown",e=>{
+  const tag=(e.target&&e.target.tagName||"").toLowerCase();
+  if(tag==="input"||tag==="textarea"||tag==="select"){ if(e.key==="Escape")e.target.blur(); return; }
+  if(e.key==="Escape"){ if(document.getElementById("drawer").classList.contains("open"))closeDrawer();
+    else if(document.getElementById("hookModal").classList.contains("open"))document.getElementById("hookModal").classList.remove("open");
+    else if(settingsModal.classList.contains("open"))settingsModal.classList.remove("open");
+    else clearFilters(); return; }
+  const map={"1":"discovery","2":"authority","3":"conversion","4":"retention"};
+  if(map[e.key]) toggleFilter(map[e.key]);
+});
+
+/* ========================= SERVICE WORKER + UPDATE TOAST ========================= */
+if("serviceWorker" in navigator && location.protocol.startsWith("http")){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("service-worker.js").then(reg=>{
+      reg.addEventListener("updatefound",()=>{ const nw=reg.installing; if(!nw) return;
+        nw.addEventListener("statechange",()=>{ if(nw.state==="installed" && navigator.serviceWorker.controller) showUpdateToast(nw); }); });
+    }).catch(()=>{});
+    let refreshing=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(refreshing)return; refreshing=true; location.reload(); });
+  });
+}
+function showUpdateToast(worker){
+  const t=document.getElementById("updateToast"); t.classList.add("open");
+  document.getElementById("updateReload").onclick=()=>{ worker.postMessage("SKIP_WAITING"); };
+  document.getElementById("updateDismiss").onclick=()=>t.classList.remove("open");
+}
+
+/* ========================= BOOT ========================= */
+async function boot(){
+  await Store.init();
+  let firstRun=false;
+  let res=null;
+  try{ res=await Store.load(); }catch(e){ res=null; }
+  if(res && res.needsReconnect){
+    const snap=await idbGet("snapshot");
+    state = (snap && snap.projects) ? migrateState(snap) : defaultState();
+    showReconnect();
+  } else if(res && res.state){
+    state=res.state;
+  } else {
+    state=defaultState(); firstRun=true;
+  }
+
+  if(state.settings.lowstim) document.body.classList.add("lowstim");
+  applyColors();
+  setView("board");
+  updateDataLocation();
+
+  if(firstRun){
+    await Store.save(state);   // persist the seeded world immediately
+    openOnboarding();
+    requestPersist();
+  } else if(Store.status().mode!=="file" && !(res && res.needsReconnect)){
+    // running browser-only on a return visit → gentle reminder (dismissible)
+    showFileReminder();
+  }
+}
+boot();
+</script>
 </body>
 </html>
