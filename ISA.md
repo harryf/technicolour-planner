@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 60/60
+progress: 62/62
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -159,6 +159,10 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-59: Anti: image attach/remove never throws or blocks the UI when folder permission has lapsed or File System Access is unavailable, it degrades to the inline data URL path (guarded by try/catch + perm checks).
 - [x] ISC-60: Anti: the copied image files are not matched by `pruneBackups`' `backup|checkpoint` regex (so checkpoints never delete pictures) and are written only into Sarah's chosen folder, never the git repo.
 
+### v1.1.1: tidier footer + images in a subfolder
+- [x] ISC-61: The footer storage indicator shows the folder name only (`📁 <folder>`), not the data file path (refines ISC-52, which appended `/Technicolour-Planner-Data.json`).
+- [x] ISC-62: Attached images are written into an `images/` subfolder of the data folder (`getImagesDir(true)` → `getDirectoryHandle("images",{create:true})`), and read/deleted from there; `readImageHandle()` falls back to the folder root so v1.1.0 images written at root still load (refines ISC-54/56/57).
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -236,6 +240,11 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.1.1): **Footer shows folder name only; images moved to an `images/` subfolder.** Harry
+  found `📁 Sarah/Technicolour-Planner-Data.json` too noisy and the flat folder messy as images pile up.
+  refined: footer label is now `📁 <folder>`; new images write to `images/` via `getImagesDir(true)`.
+  Back-compat kept, `readImageHandle()`/`deleteImageFile()` check the subfolder then the folder root, so
+  v1.1.0 images already written at root still load and can be removed. ISC-61/62 added (52/54/56/57 refined).
 - 2026-06-10 (v1.1.0): **Forge auto-include relaxed (soft floor), codex CLI still absent.** `command -v
   codex` → not installed, same environment gap as the build session. Show-your-math: this is a focused
   edit to one single-file app plus its committed suite; a second author would add drift risk on
@@ -394,3 +403,10 @@ overwriting. ISC-20/21/22 now [x]. No deferred criteria remain.
 - Real-Chrome confirms the bump landed cleanly: `caches.keys()` → `["technicolour-v1.1.0"]`,
   controller+registration true, board 7 cols / 6 cards, all 3 exports valid zips, true offline reload,
   exactly 1 load (no flash). Upgrade test green (cross-version load).
+
+**v1.1.1 (folder-only footer, images subfolder):** full suite **68/68** via `node tests/run.mjs`.
+- ISC-61: jsdom asserts the footer label source is `el.textContent="📁 "+st.name;` and the old
+  `st.name+"/"+JSON_NAME` form is gone.
+- ISC-62: `getImagesDir` defined, `IMG_DIR==="images"`, source writes `writeFileTo(idir, name, f)` after
+  `getDirectoryHandle(IMG_DIR,{create})`; `readImageHandle` checks `getImagesDir(false)` then root
+  (legacy fallback). Real-Chrome layer green at the new version (cache rolled, board renders, exports OK).

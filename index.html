@@ -439,10 +439,10 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.1.0";
-const CHANGELOG_LATEST = "The footer shows your storage folder and lets you change it with a click. " +
-  "Pictures you attach are now saved as real files in your folder (not buried in the data file). " +
-  "Send feedback now opens WhatsApp to Harry.";
+const VERSION = "1.1.1";
+const CHANGELOG_LATEST = "The footer shows your storage folder (click to change it). Pictures you " +
+  "attach are now saved in an images subfolder so the main folder stays tidy. Send feedback opens " +
+  "WhatsApp to Harry.";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
@@ -706,31 +706,45 @@ const Store = {
   status(){ return {mode:this.mode, fsa:this.fsa, name:(this.dir && this.dir.name) || null}; },
 };
 
-/* ---- Image files: when a folder is connected we save the picture into it and remember only
-   the filename in the JSON (a copy she owns), not a heavy inline data URL. With no folder we
-   fall back to an inline data URL so the feature never hard-fails. IMG_CACHE maps project id →
-   object URL read back from the folder, so render stays synchronous. ---- */
+/* ---- Image files: when a folder is connected we save the picture into an `images/` subfolder
+   inside it (so the main folder stays tidy) and remember only the filename in the JSON (a copy
+   she owns), not a heavy inline data URL. With no folder we fall back to an inline data URL so
+   the feature never hard-fails. IMG_CACHE maps project id → object URL read back from the folder,
+   so render stays synchronous. ---- */
 const IMG_CACHE = {};
+const IMG_DIR = "images"; // pictures live in this subfolder of the chosen data folder
 function imageNameFor(p, file){
   const ext = ((file && file.name || "").match(/\.[a-z0-9]+$/i) || [".png"])[0].toLowerCase();
   return "Technicolour-Planner-image-" + p.id + "-" + nowISO() + ext;
 }
 // Best available source for a project's picture (object URL from folder → inline data URL → none).
 function imageSrcFor(p){ return (p && (IMG_CACHE[p.id] || p.image)) || null; }
+// The images/ subfolder handle (create it on demand for writes).
+async function getImagesDir(create){
+  if(Store.mode!=="file" || !Store.dir) return null;
+  try{ return await Store.dir.getDirectoryHandle(IMG_DIR, {create:!!create}); }catch(e){ return null; }
+}
+// Read an image file handle by name: images/ subfolder first, then the folder root (pre-1.1.1 files).
+async function readImageHandle(name){
+  const idir=await getImagesDir(false);
+  if(idir){ try{ return await idir.getFileHandle(name,{create:false}); }catch(e){} }
+  try{ return await Store.dir.getFileHandle(name,{create:false}); }catch(e){ return null; }
+}
 // Read every folder-stored image back into IMG_CACHE once, so first render shows thumbnails.
 async function prewarmImages(){
   if(Store.mode!=="file" || !Store.dir || !(await Store.perm(false))) return;
   for(const p of state.projects){
     if(p.imageName && !IMG_CACHE[p.id]){
-      try{ const fh=await Store.dir.getFileHandle(p.imageName,{create:false});
-        IMG_CACHE[p.id]=URL.createObjectURL(await fh.getFile()); }catch(e){ /* file gone → silently skip */ }
+      try{ const fh=await readImageHandle(p.imageName);
+        if(fh) IMG_CACHE[p.id]=URL.createObjectURL(await fh.getFile()); }catch(e){ /* file gone → silently skip */ }
     }
   }
 }
 async function deleteImageFile(name){
-  if(name && Store.mode==="file" && Store.dir && await Store.perm(false)){
-    try{ await Store.dir.removeEntry(name); }catch(e){ /* already gone */ }
-  }
+  if(!name || Store.mode!=="file" || !Store.dir || !(await Store.perm(false))) return;
+  const idir=await getImagesDir(false);
+  if(idir){ try{ await idir.removeEntry(name); return; }catch(e){} }
+  try{ await Store.dir.removeEntry(name); }catch(e){ /* already gone / legacy root */ }
 }
 
 /* ---- human-readable mirror (so her data is extractable in plain text) ---- */
@@ -997,12 +1011,14 @@ function openDetail(id){
   const fi=document.createElement("input"); fi.type="file"; fi.accept="image/*";
   fi.onchange=async()=>{
     const f=fi.files[0]; if(!f) return;
-    // Folder connected → save a copy into it, remember the filename, drop the inline data URL.
+    // Folder connected → save a copy into its images/ subfolder, remember the filename, drop inline.
     if(Store.mode==="file" && Store.dir && await Store.perm(true)){
       try{
         const old=p.imageName;
         const name=imageNameFor(p,f);
-        await writeFileTo(Store.dir, name, f);
+        const idir=await getImagesDir(true);
+        if(!idir) throw new Error("no images dir");
+        await writeFileTo(idir, name, f);
         p.imageName=name; p.image=null;
         if(IMG_CACHE[p.id]) URL.revokeObjectURL(IMG_CACHE[p.id]);
         IMG_CACHE[p.id]=URL.createObjectURL(f);
@@ -1215,7 +1231,7 @@ function updateDataLocation(){
   const st=Store.status(); const el=document.getElementById("dataLocation");
   // Browsers never expose a folder's absolute OS path to a web app, so the deepest identifier we
   // can show is the folder's own name. Clicking changes (or sets) the storage location.
-  if(st.mode==="file" && st.name){ el.textContent="📁 "+st.name+"/"+JSON_NAME; el.title="Click to change where your data is stored"; }
+  if(st.mode==="file" && st.name){ el.textContent="📁 "+st.name; el.title="Your data folder. Click to change where your data is stored."; }
   else if(st.fsa){ el.textContent="Storage: this browser (click to choose a folder)"; el.title="Click to store your data in a folder you own"; }
   else { el.textContent="Storage: this browser"; el.title="This browser can't store data in a folder you pick"; }
   el.classList.toggle("clickable", st.fsa);

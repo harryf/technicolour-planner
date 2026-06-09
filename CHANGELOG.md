@@ -2,6 +2,12 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.1.1], 2026-06-10
+- **Tidier footer + tidier folder.** The footer now shows just your data folder's name (not the file
+  inside it). Attached pictures now go into an `images` subfolder of your data folder, so the main
+  folder stays clean instead of filling up with image files. Pictures saved before this update are
+  still found (the app checks the old location too).
+
 ## [1.1.0], 2026-06-10
 - **Your storage folder, front and centre.** The footer now shows where your data lives
   (`📁 YourFolder/Technicolour-Planner-Data.json`) and you can click it to change the folder any

@@ -102,19 +102,20 @@ Key behaviours (don't regress these):
   `Store.checkpoint()` writes one silently on app start (only if a folder is connected and permission
   is already granted). `pruneBackups()` keeps the last `MAX_BACKUPS` (20). Import/Export live in
   Settings, not the header, because the live JSON + `.md` already mirror every change.
-- **Images** (v1.1.0): when a folder is connected, attaching a picture to a piece writes a copy into
-  that folder as `Technicolour-Planner-image-<projectId>-<ISO>.<ext>` and stores **only the filename**
-  in `imageName` (the JSON stays small, the picture is a real file she owns). With no folder, it falls
-  back to the inline `image` data URL. `IMG_CACHE[projectId]` holds an object URL read back from the
-  folder so render stays synchronous; `prewarmImages()` fills it at boot / after reconnect / after a
-  folder change. `imageSrcFor(p)` (cache → inline data URL → none) is the single source for thumbnails
-  on the board and detail drawer. Removing clears both refs and `removeEntry`s the file. The image
-  filename pattern is deliberately outside `pruneBackups`' `backup|checkpoint` regex, so checkpoints
-  never delete pictures.
-- **Footer storage location** (v1.1.0): the footer `#dataLocation` shows `📁 <folder>/<JSON_NAME>` and
-  is clickable to change (or set) the folder via the shared `chooseLocation()` (same flow as Settings).
-  Browsers don't expose a folder's absolute OS path to a web app, so the folder name is the deepest
-  identifier shown, this is a platform limit, not a TODO.
+- **Images** (v1.1.0, subfolder since v1.1.1): when a folder is connected, attaching a picture writes a
+  copy into an **`images/` subfolder** of the data folder (`getImagesDir(true)` →
+  `getDirectoryHandle("images",{create:true})`) as `Technicolour-Planner-image-<projectId>-<ISO>.<ext>`,
+  and stores **only the filename** in `imageName` (JSON stays small, picture is a real file she owns,
+  main folder stays tidy). With no folder, it falls back to the inline `image` data URL.
+  `IMG_CACHE[projectId]` holds an object URL read back from disk so render stays synchronous;
+  `prewarmImages()` fills it at boot / after reconnect / after a folder change, via `readImageHandle()`
+  which checks `images/` first then the folder root (back-compat with v1.1.0 images written to root).
+  `imageSrcFor(p)` (cache → inline data URL → none) is the single source for board + drawer thumbnails.
+  Removing clears both refs and `removeEntry`s the file (subfolder, then root).
+- **Footer storage location** (v1.1.0, folder-only label since v1.1.1): the footer `#dataLocation` shows
+  `📁 <folder>` (just the folder name) and is clickable to change (or set) the folder via the shared
+  `chooseLocation()` (same flow as Settings). Browsers don't expose a folder's absolute OS path to a web
+  app, so the folder name is the deepest identifier available, this is a platform limit, not a TODO.
 
 ## Install gate (browser tab vs installed app)
 

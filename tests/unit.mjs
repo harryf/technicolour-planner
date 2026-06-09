@@ -118,7 +118,9 @@ export async function runUnit() {
 
   // ---- NEW (v1.1.0): clickable storage location + image-to-folder ----
   s.ok("footer location is clickable", ev('typeof document.getElementById("dataLocation").onclick==="function"') && /chooseLocation/.test(html), "onclick + chooseLocation");
-  s.ok("location label shows folder + file name", /st\.name\+"\/"\+JSON_NAME/.test(html), "name + JSON_NAME");
+  s.ok("location label shows folder only (no file)", /el\.textContent="📁 "\+st\.name;/.test(html) && !/st\.name\+"\/"\+JSON_NAME/.test(html), "folder name only");
+  s.ok("images go in a subfolder", ev("typeof getImagesDir==='function' && IMG_DIR==='images'") && /getDirectoryHandle\(IMG_DIR/.test(html) && /writeFileTo\(idir, name, f\)/.test(html), "images/ subdir write");
+  s.ok("image read falls back to legacy root", /readImageHandle/.test(html) && /getImagesDir\(false\)/.test(html), "subfolder then root");
   s.ok("image helpers present", ev("typeof imageSrcFor==='function' && typeof prewarmImages==='function' && typeof imageNameFor==='function' && typeof deleteImageFile==='function'"), "imageSrcFor/prewarm/name/delete");
   s.ok("image filename is project-scoped + timestamped", ev(`(()=>{ const n=imageNameFor({id:'abc'},{name:'x.JPG'}); return /^Technicolour-Planner-image-abc-.*\\.jpg$/.test(n); })()`), "named per project + ext");
   s.ok("imageSrcFor falls back to inline data url", ev(`imageSrcFor({id:'q', image:'data:image/png;base64,AA'})==='data:image/png;base64,AA'`), "data url fallback");
