@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 48/48
+progress: 50/50
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-09
@@ -141,6 +141,10 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-47: A committed test suite (`tests/`) runs via `bun run test` (jsdom unit + real-Chrome integration); a CI workflow runs it on push and PR.
 - [x] ISC-48: Browser tests prove true offline reload (network emulated offline → cached shell renders) and that the three Office exports are valid OOXML zips.
 
+### v1.0.6–1.0.8: reliable install detection, refocus auto-update, checkpoints
+- [x] ISC-49: Timestamped checkpoints are written into the chosen folder, both on demand ("Save a checkpoint now") and automatically on app start, keeping the last 20.
+- [x] ISC-50: Import/Export controls live in Settings, not the header (the live JSON + .md already mirror every change); "Restore from a file" and "Download a copy" remain as escape hatches.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -254,6 +258,15 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   since v1.0.5, and getInstalledRelatedApps proved unreliable. learned (v1.0.6): added the primary
   signal: on Chromium, if no install prompt fires within ~3s the app is already installed, so show
   "Open the App". criterion_now: ISC-46 also covers the no-prompt heuristic (tested deterministically).
+- conjectured: header Import/Export buttons are core controls. refuted_by: the live JSON + .md mirror
+  every change, so a manual export of the current state is redundant; the real value is a timestamped
+  snapshot. learned: moved Import/Export into Settings, made "Save a checkpoint now" write a
+  timestamped copy into the folder, and added an automatic checkpoint on every app start (last 20
+  kept). criterion_now: ISC-49/50 cover folder checkpoints + the Settings move.
+- conjectured (v1.0.7): checking for updates at cold launch is enough. refuted_by: Harry's installed
+  window stayed on 1.0.5 because it was resumed, never cold-launched. learned: also call reg.update()
+  on visibilitychange and hourly, so a long-open app self-updates. criterion_now: covered by the
+  auto-update polling check in the unit suite.
 
 ## Verification
 

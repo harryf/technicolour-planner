@@ -21,7 +21,8 @@ a plain file she owns (in her own folder / cloud drive), so nothing is ever lock
 - **Colour-first** board / library / turn-over views, ported unchanged from the loved prototype.
 - Data source-of-truth = a **file Sarah chooses on first run** (recommend a Google Drive / OneDrive /
   iCloud folder for automatic backup), with a readable `.md` mirror, nothing is ever locked in.
-- Export to JSON (always), plus `.xlsx` / `.docx` / `.pptx` for Google Drive, all client-side, no backend.
+- Timestamped checkpoints saved into your folder (on demand and on each app start), plus
+  `.xlsx` / `.docx` / `.pptx` export for Google Drive, all from Settings, client-side, no backend.
 - Durable across updates (schema versioning + auto-backup-before-migrate).
 
 ## Dev / release

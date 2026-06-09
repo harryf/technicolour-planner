@@ -235,8 +235,6 @@
         <button data-new="post">🟢 New Post</button>
         <button data-new="story">🩵 New Story</button>
       </div>
-      <button id="exportBtn" title="Download all your data as a JSON file">⬇ Export</button>
-      <button id="importBtn" title="Load data from a file">⬆ Import</button>
       <input id="importFile" type="file" accept="application/json" class="visually-hidden" />
       <button id="settingsBtn" title="Colours, labels, calm mode, your data">⚙</button>
     </div>
@@ -361,9 +359,16 @@
       <p class="help" id="dataStatus" style="margin:0 0 8px"></p>
       <div class="row wrap">
         <button id="setLocationBtn">📁 Choose / change data folder</button>
-        <button id="backupNowBtn">🛟 Back up now</button>
+        <button id="backupNowBtn">🛟 Save a checkpoint now</button>
       </div>
-      <p class="help" id="persistStatus" style="margin:8px 0 0"></p>
+      <div class="row wrap" style="margin-top:8px">
+        <button id="importBtn">⬆ Restore from a file…</button>
+        <button id="exportBtn">⬇ Download a copy</button>
+      </div>
+      <p class="help" style="margin:8px 0 0">Your latest work saves automatically. A checkpoint is a
+         timestamped copy kept in your folder (the app also saves one each time it starts), so you can
+         go back to an earlier version. The last 20 are kept.</p>
+      <p class="help" id="persistStatus" style="margin:6px 0 0"></p>
     </div>
 
     <div class="field">
@@ -432,9 +437,9 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.7";
-const CHANGELOG_LATEST = "The installed app now checks for updates when you switch back to it, not just " +
-  "when you cold-start it, so new versions arrive on their own.";
+const VERSION = "1.0.8";
+const CHANGELOG_LATEST = "Import and export moved into Settings. \"Checkpoints\" are timestamped copies " +
+  "saved in your folder, and one is saved automatically each time the app starts.";
 const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
 
 const TARGETS = {
@@ -561,6 +566,7 @@ const OLD_LS_KEY="sarah_planner_v1";       // prototype key, read once for conti
 const JSON_NAME="Technicolour-Planner-Data.json";
 const MD_NAME="Technicolour-Planner-Data.md";
 const CURRENT_SCHEMA=1;
+const MAX_BACKUPS=20; // timestamped checkpoints kept in the folder (oldest pruned)
 
 /* Ordered migrations keyed by the version you are migrating FROM. None beyond
    base normalization yet; future releases append here (and auto-backup runs first). */
@@ -597,9 +603,9 @@ async function writeFileTo(dir,name,contents){ const fh=await dir.getFileHandle(
   const w=await fh.createWritable(); await w.write(contents); await w.close(); }
 async function pruneBackups(dir){
   const names=[];
-  try{ for await(const [name] of dir.entries()){ if(/^Technicolour-Planner-backup-.*\.json$/.test(name)) names.push(name); } }catch(e){ return; }
+  try{ for await(const [name] of dir.entries()){ if(/^Technicolour-Planner-(backup|checkpoint)-.*\.json$/.test(name)) names.push(name); } }catch(e){ return; }
   names.sort();
-  while(names.length>10){ const n=names.shift(); try{ await dir.removeEntry(n); }catch(e){} }
+  while(names.length>MAX_BACKUPS){ const n=names.shift(); try{ await dir.removeEntry(n); }catch(e){} }
 }
 
 /* ---- The Store: one place that owns load/save/location/backup/import/export ---- */
@@ -640,7 +646,7 @@ const Store = {
   },
   async _backupRaw(text){ // write the pre-migration file verbatim before we change it
     if(this.mode==="file" && this.dir && await this.perm(false)){
-      await writeFileTo(this.dir, "Technicolour-Planner-backup-"+nowISO()+".json", text);
+      await writeFileTo(this.dir, "Technicolour-Planner-checkpoint-"+nowISO()+".json", text);
       await pruneBackups(this.dir);
     }
   },
@@ -673,15 +679,26 @@ const Store = {
     }catch(e){ /* no existing file in this folder */ }
     return { existing:false };
   },
+  // Manual checkpoint (from the button): may prompt for permission, downloads if there is no folder.
   async backup(state){
     if(this.mode==="file" && this.dir && await this.perm(true)){
-      const name="Technicolour-Planner-backup-"+nowISO()+".json";
+      const name="Technicolour-Planner-checkpoint-"+nowISO()+".json";
       await writeFileTo(this.dir, name, JSON.stringify(state,null,2));
       await pruneBackups(this.dir);
       return name;
     }
-    downloadJSON(state, "Technicolour-Planner-backup-"+TODAY+".json");
+    downloadJSON(state, "Technicolour-Planner-checkpoint-"+TODAY+".json");
     return "download";
+  },
+  // Silent checkpoint (on app start): only if a folder is set and permission is already granted.
+  async checkpoint(state){
+    if(this.mode==="file" && this.dir && await this.perm(false)){
+      const name="Technicolour-Planner-checkpoint-"+nowISO()+".json";
+      await writeFileTo(this.dir, name, JSON.stringify(state,null,2));
+      await pruneBackups(this.dir);
+      return name;
+    }
+    return null;
   },
   status(){ return {mode:this.mode, fsa:this.fsa, name:(this.dir && this.dir.name) || null}; },
 };
@@ -1120,8 +1137,8 @@ document.getElementById("setLocationBtn").onclick=async()=>{
   catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder."); }
 };
 document.getElementById("backupNowBtn").onclick=async()=>{
-  try{ const r=await Store.backup(state); alert(r==="download"?"Backup downloaded ✓":"Backup written to your folder ✓"); }
-  catch(e){ alert("Couldn't back up: "+(e&&e.message||e)); }
+  try{ const r=await Store.backup(state); alert(r==="download"?"Checkpoint downloaded ✓":"Checkpoint saved to your folder ✓"); }
+  catch(e){ alert("Couldn't save a checkpoint: "+(e&&e.message||e)); }
 };
 document.getElementById("xlsxBtn").onclick=e=>officeExport("xlsx",e.currentTarget);
 document.getElementById("docxBtn").onclick=e=>officeExport("docx",e.currentTarget);
@@ -1301,6 +1318,7 @@ async function boot(){
   // In a public browser tab (gated) we don't show onboarding/reminders, they'd sit behind the
   // install gate. Prompts only matter in the installed app (or local dev).
   if(gateActive()) return;
+  if(!firstRun) Store.checkpoint(state); // startup checkpoint (silent; only when a folder is connected)
   if(Store.status().mode!=="file" && !localStorage.getItem("onb_seen")){
     openOnboarding(); requestPersist();
   } else if(Store.status().mode!=="file" && !(res && res.needsReconnect)){

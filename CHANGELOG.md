@@ -2,6 +2,13 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.0.8], 2026-06-09
+- **Checkpoints, and a tidier header.** The live data file already updates on every change, so the
+  header's Import/Export buttons were redundant; they moved into Settings. "Save a checkpoint now"
+  writes a timestamped copy into your folder (was a plain download), and the app saves one
+  automatically each time it starts. The last 20 checkpoints are kept. Settings also has "Restore
+  from a file" and "Download a copy" as escape hatches.
+
 ## [1.0.7], 2026-06-09
 - **Installed app picks up updates on its own.** It previously only checked for a new version at cold
   launch, so a window left open (or resumed) stayed on the old version. It now also re-checks when you

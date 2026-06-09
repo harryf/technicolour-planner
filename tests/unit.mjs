@@ -91,6 +91,18 @@ export async function runUnit() {
   })()`));
   s.ok("setLocation on empty folder does not claim existing", empty.existing === false, JSON.stringify(empty));
 
+  // NEW: timestamped checkpoint written to the folder (mock the dir handle)
+  const chk = JSON.parse(await ev(`(async()=>{
+    let written = null;
+    Store.mode = "file";
+    Store.dir = { name:"F", queryPermission: async()=>"granted", requestPermission: async()=>"granted",
+      getFileHandle: async(n)=>({ createWritable: async()=>({ write: async(c)=>{ written = { name:n, len:String(c).length }; }, close: async()=>{} }) }),
+      entries: async function*(){} };
+    const name = await Store.checkpoint(state);
+    return JSON.stringify({ name, written });
+  })()`));
+  s.ok("checkpoint writes timestamped file to folder", /Technicolour-Planner-checkpoint-.*\.json/.test(chk.name) && chk.written && chk.written.name === chk.name, JSON.stringify(chk).slice(0, 90));
+
   // ---- NEW: install detection + Open-the-App relabel ----
   s.ok("detectInstalled true when flag set", await ev("(async()=>{ localStorage.setItem('installed','1'); return await detectInstalled(); })()") === true, "localStorage flag");
   s.ok("setGateMode open -> 'Open the App'", ev("(()=>{ setGateMode(true); const b=document.getElementById('installBtn'); return b.textContent==='Open the App' && b.dataset.mode==='open'; })()"), "button relabel");
@@ -99,7 +111,9 @@ export async function runUnit() {
 
   // ---- polish + wiring ----
   s.ok("version badge matches VERSION", $("#versionBadge").textContent === "v" + ev("VERSION"), $("#versionBadge").textContent);
-  s.ok("settings data controls", !!$("#setLocationBtn") && !!$("#backupNowBtn"), "setLocation + backup");
+  s.ok("settings data controls", !!$("#setLocationBtn") && !!$("#backupNowBtn"), "setLocation + checkpoint");
+  s.ok("import/export moved into Settings", !!$("#settingsModal #exportBtn") && !!$("#settingsModal #importBtn") && $("header #exportBtn") === null, "not in header");
+  s.ok("Store.checkpoint present", ev("typeof Store.checkpoint==='function'"), "startup checkpoint method");
   s.ok("feedback mailto", !!$("#feedbackBtn") && /mailto:/.test(html), "feedback");
   s.ok("office export lazy-loaded", /loadExporter/.test(html) && /import\("\.\/src\/export\.js"\)/.test(html), "dynamic import");
   s.ok("SW registration guarded", /register\("service-worker\.js"\)/.test(html) && /location\.protocol\.startsWith\("http"\)/.test(html), "guarded");

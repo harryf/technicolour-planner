@@ -96,7 +96,12 @@ Key behaviours (don't regress these):
 - **Reconnect is conflict-aware**: `updatedAt` decides, keep the newer of (in-memory cache) vs
   (file), then write the winner back. Don't blindly reload the file over session edits.
 - **Schema migrations**: bump `CURRENT_SCHEMA`, add a `migrations[fromVersion]` fn. The loader
-  **auto-backs-up the file before migrating** (keeps last 10 `*-backup-*.json`).
+  **auto-backs-up the file before migrating**.
+- **Checkpoints**: timestamped `Technicolour-Planner-checkpoint-<ISO>.json` copies in the folder.
+  `Store.backup()` writes one on demand (Settings → "Save a checkpoint now"; downloads if no folder);
+  `Store.checkpoint()` writes one silently on app start (only if a folder is connected and permission
+  is already granted). `pruneBackups()` keeps the last `MAX_BACKUPS` (20). Import/Export live in
+  Settings, not the header, because the live JSON + `.md` already mirror every change.
 
 ## Install gate (browser tab vs installed app)
 
