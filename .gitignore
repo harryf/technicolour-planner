@@ -1,0 +1,20 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
+
+# Node (dev tooling only; the app itself is buildless)
+node_modules/
+npm-debug.log*
+*.log
+
+# Local data / backups — never commit Sarah's planner data
+*-Data.json
+*-Data.md
+*-backup-*.json
+/tmp/
+
+# PAI hooks sometimes write state to a literal ${HOME} dir in cwd — never commit it
+${HOME}/
