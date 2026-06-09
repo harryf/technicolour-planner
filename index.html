@@ -188,6 +188,20 @@
   footer .vbadge{font-weight:700;border:1px solid var(--line);border-radius:999px;padding:2px 10px;
          cursor:pointer;background:var(--panel);color:var(--ink)}
   footer a,footer .linkbtn{color:var(--muted);cursor:pointer;border:0;background:transparent;text-decoration:underline;padding:0;font:inherit}
+
+  /* ---- Install gate: frosted layer shown only in a public browser tab (not the installed app) ---- */
+  .gate{position:fixed;inset:0;z-index:200;display:none;place-items:center;padding:24px;
+        background:rgba(244,241,236,.6);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9)}
+  .gate.open{display:grid}
+  .gate .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+        max-width:520px;width:100%;padding:26px;text-align:center}
+  .gate h2{font-size:22px;margin-bottom:4px}
+  .gate .colourline{height:8px;border-radius:6px;margin:14px 0;background:linear-gradient(90deg,
+        var(--discovery) 0 25%,var(--authority) 25% 50%,var(--conversion) 50% 75%,var(--retention) 75% 100%)}
+  .gate .big{font-size:15px;font-weight:800;padding:13px 18px;border-color:var(--ink);margin:8px 0}
+  .gate ol{text-align:left;color:var(--muted);font-size:13px;line-height:1.7;margin:6px 0 0;padding-left:20px}
+  .gate .os{margin-top:14px}
+  .gate .os p{margin:12px 0 2px}
 </style>
 </head>
 <body>
@@ -391,6 +405,32 @@
   <button id="updateDismiss" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.4)">Later</button>
 </div>
 
+<!-- INSTALL GATE (shown only when running in a public browser tab, not the installed app) -->
+<div class="gate" id="installGate">
+  <div class="card">
+    <h2>🌈 Sarah's Amazing Technicolour Planner</h2>
+    <div class="colourline"></div>
+    <p>For your privacy — and so it works offline — this planner runs as an <b>installed app</b> on
+       your computer, in its own window, not in a browser tab.</p>
+    <button class="big" id="installBtn" hidden>⬇ Install the app</button>
+    <div class="os">
+      <p class="help"><b>On Mac (Chrome):</b></p>
+      <ol>
+        <li>Click the <b>install icon</b> in the address bar (or ⋮ menu → "Install Sarah's Amazing Technicolour Planner").</li>
+        <li>It lands in <b>Applications</b> / Launchpad. For a <b>Desktop icon</b>: open Finder → Applications (or Launchpad), find it, and drag it onto your Desktop or Dock.</li>
+        <li>Open it from there — own window, works offline.</li>
+      </ol>
+      <p class="help"><b>On Windows (Chrome / Edge):</b></p>
+      <ol>
+        <li>Click the <b>install icon</b> in the address bar (or ⋮ → "Install").</li>
+        <li>Tick "Create Desktop shortcut" if asked — it's also in the Start menu.</li>
+        <li>Open it from the Desktop / Start menu — own window, works offline.</li>
+      </ol>
+    </div>
+    <p class="help" style="margin-top:14px">Already installed? Open it from your Desktop / Applications / Start menu instead of this tab.</p>
+  </div>
+</div>
+
 <script>
 /* =========================================================================
    🌈 Sarah's Amazing Technicolour Planner — single file, no server, no build.
@@ -399,9 +439,9 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.0";
-const CHANGELOG_LATEST = "First release: installable offline app, your data in a file you own, " +
-  "Office exports, and everything from the prototype you loved.";
+const VERSION = "1.0.1";
+const CHANGELOG_LATEST = "Fixed the first-load flash, and the planner now runs as a proper installed " +
+  "app (with a friendly install screen if you open it in a browser tab).";
 const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
 
 const TARGETS = {
@@ -1123,10 +1163,10 @@ document.getElementById("dismissReminder").onclick=()=>{ sessionStorage.setItem(
 function openOnboarding(){ document.getElementById("onbModal").classList.add("open"); }
 function closeOnboarding(){ document.getElementById("onbModal").classList.remove("open"); }
 document.getElementById("onbChoose").onclick=async()=>{
-  try{ await Store.setLocation(); await Store.save(state); closeOnboarding(); refreshDataStatus(); updateDataLocation(); }
+  try{ await Store.setLocation(); await Store.save(state); localStorage.setItem("onb_seen","1"); closeOnboarding(); refreshDataStatus(); updateDataLocation(); }
   catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder — you can pick one later in Settings."); }
 };
-document.getElementById("onbLater").onclick=()=>{ closeOnboarding(); showFileReminder(); requestPersist(); };
+document.getElementById("onbLater").onclick=()=>{ localStorage.setItem("onb_seen","1"); closeOnboarding(); showFileReminder(); requestPersist(); };
 async function requestPersist(){ try{ if(navigator.storage && navigator.storage.persist) await navigator.storage.persist(); }catch(e){} }
 
 /* keyboard: 1-4 filter, Esc clear/close */
@@ -1149,17 +1189,41 @@ if("serviceWorker" in navigator && location.protocol.startsWith("http")){
         nw.addEventListener("statechange",()=>{ if(nw.state==="installed" && navigator.serviceWorker.controller) showUpdateToast(nw); }); });
     }).catch(()=>{});
     let refreshing=false;
-    navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(refreshing)return; refreshing=true; location.reload(); });
+    // Only reload when the USER accepted an update — NOT on the first-load controllerchange that
+    // clients.claim() fires (that caused the flash-reload on first visit).
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{ if(!window.__acceptedUpdate || refreshing) return; refreshing=true; location.reload(); });
   });
 }
 function showUpdateToast(worker){
   const t=document.getElementById("updateToast"); t.classList.add("open");
-  document.getElementById("updateReload").onclick=()=>{ worker.postMessage("SKIP_WAITING"); };
+  document.getElementById("updateReload").onclick=()=>{ window.__acceptedUpdate=true; worker.postMessage("SKIP_WAITING"); };
   document.getElementById("updateDismiss").onclick=()=>t.classList.remove("open");
 }
 
+/* ===== INSTALL GATE — run the planner only in the installed app, not a public browser tab ===== */
+function mm(q){ try{ return !!(window.matchMedia && window.matchMedia(q).matches); }catch(e){ return false; } }
+function isStandalone(){
+  return mm("(display-mode: standalone)") || mm("(display-mode: minimal-ui)")
+    || mm("(display-mode: window-controls-overlay)") || navigator.standalone === true; // iOS Safari
+}
+function isLocalDev(){ return ["127.0.0.1","localhost"].includes(location.hostname) || location.protocol === "file:"; }
+function gateActive(){ return !isStandalone() && !isLocalDev(); }
+
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredPrompt = e;
+  const b = document.getElementById("installBtn"); if(b) b.hidden = false; });
+document.getElementById("installBtn").onclick = async ()=>{
+  if(deferredPrompt){ deferredPrompt.prompt(); try{ await deferredPrompt.userChoice; }catch(e){} deferredPrompt = null; }
+  else alert("Use your browser's install control: the install icon in the address bar, or the ⋮ menu → \"Install\".");
+};
+window.addEventListener("appinstalled", ()=>{ const b=document.getElementById("installBtn"); if(b) b.hidden=true; });
+function applyInstallGate(){ document.getElementById("installGate").classList.toggle("open", gateActive()); }
+try{ window.matchMedia("(display-mode: standalone)").addEventListener("change", applyInstallGate); }catch(e){}
+applyInstallGate(); // synchronous, before the async board render — the frosted layer is up from first paint
+
 /* ========================= BOOT ========================= */
 async function boot(){
+  applyInstallGate(); // re-assert (covers any late layout)
   await Store.init();
   let firstRun=false;
   let res=null;
@@ -1179,13 +1243,15 @@ async function boot(){
   setView("board");
   updateDataLocation();
 
-  if(firstRun){
-    await Store.save(state);   // persist the seeded world immediately
-    openOnboarding();
-    requestPersist();
+  if(firstRun) await Store.save(state);   // persist the seeded world immediately
+
+  // In a public browser tab (gated) we don't show onboarding/reminders — they'd sit behind the
+  // install gate. Prompts only matter in the installed app (or local dev).
+  if(gateActive()) return;
+  if(Store.status().mode!=="file" && !localStorage.getItem("onb_seen")){
+    openOnboarding(); requestPersist();
   } else if(Store.status().mode!=="file" && !(res && res.needsReconnect)){
-    // running browser-only on a return visit → gentle reminder (dismissible)
-    showFileReminder();
+    showFileReminder();   // return visit, no data file → gentle dismissible reminder
   }
 }
 boot();

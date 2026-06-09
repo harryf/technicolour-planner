@@ -17,5 +17,14 @@ First real release — the prototype, turned into an installable, offline app.
 - Everything from the loved prototype preserved: colour-first board / library / turn-over, the four
   targets in your colours, hook picker, templates, balance bar, calm mode — seeded with your real work.
 
+## [1.0.1] — 2026-06-09
+- **Fixed the first-load flash**: the service worker's first-load `controllerchange` no longer
+  triggers a reload (only a user-accepted update does). The page no longer flashes/reloads on open.
+- **Installed-app gate**: the planner detects whether it's running as the installed PWA
+  (`display-mode: standalone`) vs a public browser tab. In a browser tab on the live URL it now shows
+  a frosted install screen with one-click install (Mac + Windows steps, incl. adding a Desktop icon),
+  so your data only shows in the installed app. Localhost dev is exempt.
+- Onboarding now reliably appears on the installed app's first run if no data folder is set yet.
+
 ## [Unreleased]
 - (next changes land here)
