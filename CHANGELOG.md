@@ -2,6 +2,12 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.1.2], 2026-06-10
+- **Window title, full-screen, and tidier filter buttons.** The app name no longer appears twice in the
+  window title (the manifest name now matches the page title). The installed app opens at the full size
+  of your screen. The "clear ✕" button is greyed out when there's no filter to clear, and "hide
+  non-matching" is only active (and only stays ticked) when a colour filter is switched on.
+
 ## [1.1.1], 2026-06-10
 - **Tidier footer + tidier folder.** The footer now shows just your data folder's name (not the file
   inside it). Attached pictures now go into an `images` subfolder of your data folder, so the main

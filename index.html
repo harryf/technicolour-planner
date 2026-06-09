@@ -42,6 +42,7 @@
   .muted{color:var(--muted)}
   .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 10px;
         font-size:13px;font-weight:600;border:1px solid var(--line);background:var(--panel)}
+  .pill.disabled,.pill:disabled{opacity:.4;cursor:not-allowed;pointer-events:none}
 
   /* ---- Header ---- */
   header{position:sticky;top:0;z-index:30;background:var(--bg);
@@ -250,7 +251,7 @@
     <button class="chip" data-target="conversion" aria-pressed="false"><span class="dot" style="background:var(--conversion)"></span>Conversion<span class="key">3</span></button>
     <button class="chip" data-target="retention" aria-pressed="false"><span class="dot" style="background:var(--retention)"></span>Retention<span class="key">4</span></button>
     <button id="clearFilter" class="pill" title="Clear (Esc)">clear ✕</button>
-    <label class="pill" style="gap:6px"><input type="checkbox" id="filterMode" style="width:auto" /> hide non-matching</label>
+    <label id="filterModeLabel" class="pill" style="gap:6px"><input type="checkbox" id="filterMode" style="width:auto" /> hide non-matching</label>
     <span class="help">press <kbd>1</kbd>–<kbd>4</kbd> to filter · <kbd>Esc</kbd> clears</span>
   </div>
 
@@ -439,10 +440,10 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.1.1";
-const CHANGELOG_LATEST = "The footer shows your storage folder (click to change it). Pictures you " +
-  "attach are now saved in an images subfolder so the main folder stays tidy. Send feedback opens " +
-  "WhatsApp to Harry.";
+const VERSION = "1.1.2";
+const CHANGELOG_LATEST = "The app name no longer shows twice in the window title, the app opens at full " +
+  "screen size, the clear button greys out when there's nothing to clear, and hide non-matching turns " +
+  "on only when a filter is active.";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
@@ -948,11 +949,19 @@ function renderAll(){
   if(currentView==="library") renderLibrary();
   if(currentView==="turnover") renderTurnover();
   renderBalance();
+  const anyFilter=activeFilters.size>0;
   document.querySelectorAll(".chip[data-target]").forEach(c=>{
     const on=activeFilters.has(c.dataset.target);
     c.setAttribute("aria-pressed",on);
-    c.dataset.anyactive=activeFilters.size>0;
+    c.dataset.anyactive=anyFilter;
   });
+  // Nothing to clear → grey out "clear". Nothing to match → "hide non-matching" can't do anything,
+  // so disable it (and untick it) until a filter is active.
+  const clr=document.getElementById("clearFilter");
+  clr.disabled=!anyFilter; clr.classList.toggle("disabled",!anyFilter);
+  const fm=document.getElementById("filterMode"), fml=document.getElementById("filterModeLabel");
+  fm.disabled=!anyFilter; fml.classList.toggle("disabled",!anyFilter);
+  if(!anyFilter && fm.checked){ fm.checked=false; filterHide=false; }
 }
 
 /* ========================= DETAIL DRAWER ========================= */
@@ -1337,6 +1346,11 @@ function isStandalone(){
 }
 function isLocalDev(){ return ["127.0.0.1","localhost"].includes(location.hostname) || location.protocol === "file:"; }
 function gateActive(){ return !isStandalone() && !isLocalDev(); }
+// Installed app: open as large as the screen allows. Browsers honor this for app windows and ignore
+// it for normal tabs, so guard to standalone and swallow any failure (it's a best-effort nicety).
+function maximizeWindow(){
+  try{ if(isStandalone() && window.screen){ window.moveTo(0,0); window.resizeTo(screen.availWidth, screen.availHeight); } }catch(e){}
+}
 
 function markInstalled(){ try{ localStorage.setItem("installed","1"); }catch(e){} }
 if(isStandalone()) markInstalled(); // running as the app proves it's installed on this device
@@ -1397,6 +1411,7 @@ resolveGateMode();
 /* ========================= BOOT ========================= */
 async function boot(){
   applyInstallGate(); // re-assert (covers any late layout)
+  maximizeWindow();   // installed app opens at full screen size (best-effort)
   await Store.init();
   let firstRun=false;
   let res=null;

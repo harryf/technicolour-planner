@@ -145,6 +145,21 @@ export async function runUnit() {
   s.ok("update check on refocus + interval", /visibilitychange/.test(html) && /setInterval\(check/.test(html), "auto-update polling");
   s.ok("no em-dashes in app UI strings", checkNoEmDashUi(html), "writing guide");
 
+  // ---- NEW (v1.1.2): title dedup, maximize, conditional clear / hide-non-matching ----
+  const manifest = JSON.parse(readFileSync(ROOT + "manifest.webmanifest", "utf8"));
+  const titleText = ($("title") && $("title").textContent || "").trim();
+  s.ok("manifest name matches <title> (no doubled window title)", manifest.name === titleText, `${manifest.name} == ${titleText}`);
+  s.ok("maximize-on-open helper present + called", ev("typeof maximizeWindow==='function'") && /maximizeWindow\(\)/.test(html) && /resizeTo\(screen\.availWidth/.test(html), "resizeTo availWidth/Height");
+  // Drive the filter state: empty → both disabled; one active → both enabled.
+  ev("clearFilters()");
+  s.ok("clear greyed when nothing to clear", ev('document.getElementById("clearFilter").disabled===true'), "clear disabled");
+  s.ok("hide-non-matching disabled when nothing to match", ev('document.getElementById("filterMode").disabled===true'), "filterMode disabled");
+  ev("toggleFilter('discovery')");
+  s.ok("clear enabled once a filter is active", ev('document.getElementById("clearFilter").disabled===false'), "clear enabled");
+  s.ok("hide-non-matching enabled once there's something to match", ev('document.getElementById("filterMode").disabled===false'), "filterMode enabled");
+  s.ok("clearing again unticks + disables hide-non-matching", ev("(()=>{ const fm=document.getElementById('filterMode'); fm.checked=true; filterHide=true; clearFilters(); return fm.checked===false && fm.disabled===true; })()"), "untick on clear");
+  ev("clearFilters()");
+
   return s;
 }
 

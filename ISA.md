@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 62/62
+progress: 64/66
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -163,6 +163,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-61: The footer storage indicator shows the folder name only (`📁 <folder>`), not the data file path (refines ISC-52, which appended `/Technicolour-Planner-Data.json`).
 - [x] ISC-62: Attached images are written into an `images/` subfolder of the data folder (`getImagesDir(true)` → `getDirectoryHandle("images",{create:true})`), and read/deleted from there; `readImageHandle()` falls back to the folder root so v1.1.0 images written at root still load (refines ISC-54/56/57).
 
+### v1.1.2: window title, maximize, conditional filter controls
+- [DEFERRED-VERIFY] ISC-63: The installed-app window title shows the app name once, not twice. Fix: manifest `name` is set identical to `<title>` (`🌈 Sarah's Amazing Technicolour Planner`) so Chrome's `{name} - {title}` window title collapses. Unit-asserted `manifest.name === <title>`; the installed-window render can't be probed headlessly → Harry confirms on reopen (FU-3).
+- [DEFERRED-VERIFY] ISC-64: When launched as the installed app, the window opens at the full available screen size via `maximizeWindow()` (`moveTo(0,0)`+`resizeTo(availWidth,availHeight)`, standalone-only, try/catch). Best-effort (browser may refuse); code-verified + called in `boot()`; live behaviour confirmed by Harry on reopen (FU-3).
+- [x] ISC-65: The `clear ✕` button is disabled/greyed (`disabled` + `.pill.disabled` opacity) when `activeFilters` is empty, and enabled once a filter is active.
+- [x] ISC-66: The "hide non-matching" toggle is disabled when `activeFilters` is empty (and unticked + `filterHide` reset), and enabled once a colour filter is active.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -240,6 +246,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.1.2): **Window title dedup, maximize-on-open, conditional filter controls.** Harry's
+  screenshot3 showed the app name twice in the installed-window title (`{manifest name} - {document.title}`,
+  which differed). Fix: set manifest `name` identical to `<title>`. Also: open the installed app at full
+  screen size (`maximizeWindow()`, best-effort), grey out `clear ✕` when nothing's filtered, and
+  disable/untick "hide non-matching" until a filter is active. Title + maximize are installed-window
+  behaviours not probeable headlessly → ISC-63/64 DEFERRED-VERIFY, FU-3 (Harry confirms on reopen).
 - 2026-06-10 (v1.1.1): **Footer shows folder name only; images moved to an `images/` subfolder.** Harry
   found `📁 Sarah/Technicolour-Planner-Data.json` too noisy and the flat folder messy as images pile up.
   refined: footer label is now `📁 <folder>`; new images write to `images/` via `getImagesDir(true)`.
@@ -410,3 +422,11 @@ overwriting. ISC-20/21/22 now [x]. No deferred criteria remain.
 - ISC-62: `getImagesDir` defined, `IMG_DIR==="images"`, source writes `writeFileTo(idir, name, f)` after
   `getDirectoryHandle(IMG_DIR,{create})`; `readImageHandle` checks `getImagesDir(false)` then root
   (legacy fallback). Real-Chrome layer green at the new version (cache rolled, board renders, exports OK).
+
+**v1.1.2 (title, maximize, filter controls):** full suite **75/75** via `node tests/run.mjs`.
+- ISC-63: unit asserts `manifest.name === <title>` (both `🌈 Sarah's Amazing Technicolour Planner`).
+  Installed-window render is DEFERRED-VERIFY (FU-3, Harry reopens).
+- ISC-64: `maximizeWindow` defined, called in `boot()`, `resizeTo(screen.availWidth,…)` present (source).
+  Live window resize is DEFERRED-VERIFY (FU-3).
+- ISC-65: jsdom drives `clearFilters()` → `#clearFilter.disabled===true`; `toggleFilter('discovery')` →
+  `disabled===false`. ISC-66: same for `#filterMode`, plus checked-state resets to false + disabled on clear.

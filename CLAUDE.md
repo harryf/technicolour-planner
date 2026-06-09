@@ -126,6 +126,18 @@ decides. When **not** standalone **and** not localhost dev (`gateActive()`), a f
 `beforeinstallprompt`); `boot()` returns early so prompts/onboarding don't fire behind it. Installed
 app or `localhost`/`127.0.0.1`/`file:` → no gate. Don't show Sarah's data in a public browser tab.
 
+**Window title (v1.1.2):** the installed PWA window shows `{manifest name} - {document.title}`; if those
+differ the app name appears twice. Keep the manifest `name` **identical** to the `<title>` (both
+`🌈 Sarah's Amazing Technicolour Planner`) so it shows once. A unit test asserts `manifest.name === <title>`.
+
+**Maximize on open (v1.1.2):** `maximizeWindow()` (called first in `boot()`) does
+`moveTo(0,0)`+`resizeTo(screen.availWidth, screen.availHeight)` when `isStandalone()`. Best-effort, browsers
+may ignore it for security; it's a no-op in a tab and wrapped in try/catch.
+
+**Filter controls (v1.1.2):** `renderAll()` greys out `#clearFilter` (`disabled`+`.disabled`) when
+`activeFilters` is empty, and disables `#filterMode` ("hide non-matching") + unticks it until a colour
+filter is active. `.pill.disabled,.pill:disabled` sets `opacity:.4;pointer-events:none`.
+
 If the app is already installed on the device (tracked by a `localStorage` "installed" flag set when
 it runs standalone, plus `navigator.getInstalledRelatedApps()`), the gate's button switches from
 "Install the app" to "Open the App" via `setGateMode()`. Browsers can't launch an installed PWA from
