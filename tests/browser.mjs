@@ -52,9 +52,13 @@ export async function runBrowser() {
     s.ok("opens offline from cache", offlineDays === 7, `${offlineDays} day cols offline`);
     await page.setOffline(false);
 
-    // install detection -> "Open the App"
+    // install detection -> "Open the App" (localStorage fast path)
     const label = await page.eval(`(async()=>{ localStorage.setItem('installed','1'); const inst=await detectInstalled(); setGateMode(inst); return document.getElementById('installBtn').textContent; })()`);
-    s.ok("already-installed shows 'Open the App'", label === "Open the App", `button="${label}"`);
+    s.ok("already-installed flag shows 'Open the App'", label === "Open the App", `button="${label}"`);
+
+    // no-install-prompt heuristic (Chromium): when no prompt has fired, treat as installed -> Open
+    const heur = await page.eval(`(()=>{ localStorage.removeItem('installed'); if(!promptFired && !deferredPrompt){ markInstalled(); setGateMode(true); } return document.getElementById('installBtn').textContent; })()`);
+    s.ok("no-prompt heuristic shows 'Open the App'", heur === "Open the App", `button="${heur}"`);
 
     await page.screenshot(join(tmpdir(), "technicolour-test-board.png"));
   } catch (e) {

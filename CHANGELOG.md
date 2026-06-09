@@ -2,6 +2,12 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.0.6], 2026-06-09
+- **Reliable "Open the App" detection.** Before, the page only knew the app was installed if it had
+  been opened in its own window first, so a browser tab often still showed "Install". Now, on Chromium,
+  if the browser never offers an install prompt (which only happens when the app is already installed),
+  the gate shows "Open the App". The localStorage flag and getInstalledRelatedApps stay as fast paths.
+
 ## [1.0.5], 2026-06-09
 - **"Open the App" when already installed.** Visiting the web page on a device where the planner is
   already installed now shows an "Open the App" button and a short "open it from your Desktop" note,

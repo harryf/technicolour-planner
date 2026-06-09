@@ -248,6 +248,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   refuted_by: browsers expose no API to launch an installed app from a page (security). learned:
   detect installed state (localStorage flag + getInstalledRelatedApps) and relabel to "Open the App"
   with guidance to open from the Desktop; no auto-launch. criterion_now: ISC-46 checks the relabel.
+- conjectured (v1.0.5): a localStorage flag set when the app runs standalone, plus
+  getInstalledRelatedApps, is enough to detect "installed" from a browser tab. refuted_by: Harry had
+  it installed but the tab still showed "Install": the flag is only set if the installed app has run
+  since v1.0.5, and getInstalledRelatedApps proved unreliable. learned (v1.0.6): added the primary
+  signal: on Chromium, if no install prompt fires within ~3s the app is already installed, so show
+  "Open the App". criterion_now: ISC-46 also covers the no-prompt heuristic (tested deterministically).
 
 ## Verification
 

@@ -432,9 +432,9 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.5";
-const CHANGELOG_LATEST = "If the app is already installed, opening the web page now shows an \"Open the App\" " +
-  "button instead of asking you to install it again.";
+const VERSION = "1.0.6";
+const CHANGELOG_LATEST = "Made \"Open the App\" reliable: if it's already installed, the web page now shows " +
+  "\"Open the App\" even if you haven't opened the installed app since.";
 const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
 
 const TARGETS = {
@@ -1224,8 +1224,10 @@ async function detectInstalled(){
 }
 
 let deferredPrompt = null;
-window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredPrompt = e;
-  const b = document.getElementById("installBtn"); if(b && b.dataset.mode !== "open") b.hidden = false; });
+let promptFired = false;
+const supportsInstallPrompt = "onbeforeinstallprompt" in window; // Chromium offers an install prompt
+window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredPrompt = e; promptFired = true;
+  setGateMode(false); const b = document.getElementById("installBtn"); if(b) b.hidden = false; });
 document.getElementById("installBtn").onclick = async ()=>{
   const btn = document.getElementById("installBtn");
   if(btn.dataset.mode === "open"){
@@ -1255,7 +1257,17 @@ function setGateMode(installed){
 function applyInstallGate(){ document.getElementById("installGate").classList.toggle("open", gateActive()); }
 try{ window.matchMedia("(display-mode: standalone)").addEventListener("change", applyInstallGate); }catch(e){}
 applyInstallGate(); // synchronous, before the async board render, so the frosted layer is up from first paint
-detectInstalled().then(setGateMode); // swap to "Open the App" if it's already installed on this device
+
+// Decide whether the gate shows "Install the app" or "Open the App".
+async function resolveGateMode(){
+  if(await detectInstalled()){ setGateMode(true); return; }   // known installed (ran standalone, or related apps)
+  setGateMode(false);                                          // default to the install view
+  // Heuristic: on a browser that offers install prompts, if none arrives the app is already installed.
+  if(supportsInstallPrompt){
+    setTimeout(()=>{ if(!promptFired && !deferredPrompt){ markInstalled(); setGateMode(true); } }, 3000);
+  }
+}
+resolveGateMode();
 
 /* ========================= BOOT ========================= */
 async function boot(){
