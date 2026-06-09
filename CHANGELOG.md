@@ -17,6 +17,11 @@ First real release — the prototype, turned into an installable, offline app.
 - Everything from the loved prototype preserved: colour-first board / library / turn-over, the four
   targets in your colours, hook picker, templates, balance bar, calm mode — seeded with your real work.
 
+## [1.0.2] — 2026-06-09
+- **Fixed the install-screen layout.** The gate card used `class="card"`, which collided with the
+  project-card rule (`display:flex`) and laid its text out as narrow columns. Renamed to `.gbox`
+  (block, definite width, scrolls if tall) — it now renders as a normal centered panel.
+
 ## [1.0.1] — 2026-06-09
 - **Fixed the first-load flash**: the service worker's first-load `controllerchange` no longer
   triggers a reload (only a user-accepted update does). The page no longer flashes/reloads on open.

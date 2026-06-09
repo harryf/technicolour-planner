@@ -193,8 +193,8 @@
   .gate{position:fixed;inset:0;z-index:200;display:none;place-items:center;padding:24px;
         background:rgba(244,241,236,.6);backdrop-filter:blur(16px) saturate(.9);-webkit-backdrop-filter:blur(16px) saturate(.9)}
   .gate.open{display:grid}
-  .gate .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
-        max-width:520px;width:100%;padding:26px;text-align:center}
+  .gate .gbox{display:block;background:var(--panel);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);
+        width:min(520px,92vw);max-height:90vh;overflow:auto;padding:26px;text-align:center}
   .gate h2{font-size:22px;margin-bottom:4px}
   .gate .colourline{height:8px;border-radius:6px;margin:14px 0;background:linear-gradient(90deg,
         var(--discovery) 0 25%,var(--authority) 25% 50%,var(--conversion) 50% 75%,var(--retention) 75% 100%)}
@@ -407,7 +407,7 @@
 
 <!-- INSTALL GATE (shown only when running in a public browser tab, not the installed app) -->
 <div class="gate" id="installGate">
-  <div class="card">
+  <div class="gbox">
     <h2>🌈 Sarah's Amazing Technicolour Planner</h2>
     <div class="colourline"></div>
     <p>For your privacy — and so it works offline — this planner runs as an <b>installed app</b> on
@@ -439,9 +439,9 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.1";
-const CHANGELOG_LATEST = "Fixed the first-load flash, and the planner now runs as a proper installed " +
-  "app (with a friendly install screen if you open it in a browser tab).";
+const VERSION = "1.0.2";
+const CHANGELOG_LATEST = "Fixed the install screen layout — the text was squished into narrow columns " +
+  "(a CSS class clash with the project cards); it now reads as a normal centered panel.";
 const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
 
 const TARGETS = {
