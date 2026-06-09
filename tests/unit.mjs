@@ -177,12 +177,22 @@ export async function runUnit() {
   // ---- NEW (v1.2.2): wider drawer, 'Bigger' editor, no confusing Done button ----
   s.ok("confusing 'Done' button removed from drawer", $("#d-done")===null, "no d-done");
   s.ok("close button clearly labelled", /✕ Close/.test($("#d-close").textContent), $("#d-close").textContent.trim());
-  s.ok("drawer widened toward ~33%", /\.drawer\{[^}]*width:clamp\(460px,33vw,820px\)/.test(html), "clamp 33vw");
+  s.ok("drawer widened toward a third+", /\.drawer\{[^}]*width:clamp\(520px,38vw,900px\)/.test(html), "clamp 38vw");
   s.ok("big editor overlay present", !!$("#bigEdit") && !!$("#bigEditArea"), "bigEdit modal");
   ev("openDetail(state.projects[0].id)");
   s.ok("description + notes have a 'Bigger' button", $$("#d-scroll .biggerbtn").length>=2, `${$$("#d-scroll .biggerbtn").length} bigger`);
   s.ok("music + hook share a row", $$("#d-scroll .field2").length>=1, `${$$("#d-scroll .field2").length} field2`);
   s.ok("'Bigger' opens roomy editor synced to the field, then closes", ev(`(()=>{ const b=document.querySelector('#d-scroll .biggerbtn'); b.click(); const m=document.getElementById('bigEdit'); const ta=document.querySelector('#d-scroll textarea'); const area=document.getElementById('bigEditArea'); const ok=m.classList.contains('open') && area.value===ta.value; document.getElementById('bigEditClose').click(); return ok && !m.classList.contains('open'); })()`), "open+sync+close");
+  ev("closeDrawer()");
+
+  // ---- NEW (v1.2.3): aligned buttons, wider drawer, image thumbnail actions, dimensions hint ----
+  s.ok("drawer buttons don't wrap (so heights align)", /\.drawer button\{white-space:nowrap\}/.test(html), "nowrap");
+  s.ok("drawer widened for alignment", /\.drawer\{[^}]*width:clamp\(520px,38vw,900px\)/.test(html), "clamp 38vw");
+  s.ok("task dropdown has room for its arrow", /select\{padding-right:30px\}/.test(html), "select padding-right");
+  s.ok("image field hints ideal wide dimensions", /wide \/ landscape works best, about 1280 × 720/.test(html), "dimensions hint");
+  s.ok("no-image: shows 'Add a picture' button, not a bare file dialog", ev(`(()=>{ const p=state.projects[0]; p.image=null; p.imageName=null; delete IMG_CACHE[p.id]; openDetail(p.id); return !!document.querySelector('#d-scroll .addimg') && !document.querySelector('#d-scroll .thumbwrap'); })()`), "addimg");
+  s.ok("with image: shows the picture + change/remove icons on it", ev(`(()=>{ const p=state.projects[0]; p.image='data:image/png;base64,AA'; openDetail(p.id); const tw=document.querySelector('#d-scroll .thumbwrap'); return !!tw && !!tw.querySelector('img') && tw.querySelectorAll('.acts button').length===2; })()`), "thumbwrap + 2 icons");
+  s.ok("file input hidden (icons drive it)", ev(`(()=>{ const fi=document.querySelector('#d-scroll input[type=file]'); return !!fi && fi.style.display==='none'; })()`), "hidden file input");
   ev("closeDrawer()");
 
   return s;

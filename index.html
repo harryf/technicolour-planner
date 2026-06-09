@@ -146,7 +146,7 @@
   /* ---- Detail slide-over ---- */
   .scrim{position:fixed;inset:0;background:rgba(20,18,15,.32);z-index:50;display:none}
   .scrim.open{display:block}
-  .drawer{position:fixed;top:0;right:0;height:100%;width:clamp(460px,33vw,820px);max-width:96vw;background:var(--panel);
+  .drawer{position:fixed;top:0;right:0;height:100%;width:clamp(520px,38vw,900px);max-width:96vw;background:var(--panel);
          z-index:60;box-shadow:-8px 0 30px rgba(0,0,0,.18);transform:translateX(100%);
          transition:transform var(--t);display:flex;flex-direction:column}
   .drawer.open{transform:none}
@@ -161,6 +161,17 @@
              color:var(--muted);cursor:pointer;padding:2px 9px}
   .biggerbtn:hover{color:var(--ink);background:#f3efe8}
   #bigEditArea{width:100%;min-height:48vh;font-size:16px;line-height:1.5}
+  .drawer button{white-space:nowrap}                 /* buttons stay one line → same height, aligned */
+  .drawer .row>input{flex:1;width:auto;min-width:0}  /* the text/date input grows; buttons keep natural size */
+  select{padding-right:30px}                          /* room between the value and the dropdown arrow */
+  /* image thumbnail with on-image actions (change / remove) instead of a bare file dialog */
+  .thumbwrap{position:relative;border-radius:10px;overflow:hidden;line-height:0}
+  .thumbwrap img{width:100%;max-height:200px;object-fit:cover;display:block}
+  .thumbwrap .acts{position:absolute;top:8px;right:8px;display:flex;gap:8px;line-height:1}
+  .thumbwrap .acts button{width:38px;height:38px;padding:0;border-radius:50%;display:grid;place-items:center;
+        font-size:17px;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.25);border:0}
+  .thumbwrap .acts button:hover{background:#fff}
+  .addimg{display:inline-flex;align-items:center;gap:8px}
   .seg{display:flex;gap:6px;flex-wrap:wrap}
   .seg button{font-weight:700}
   .seg button[aria-pressed="true"]{border-color:var(--ink);background:#fffdf8}
@@ -473,10 +484,10 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.2.2";
-const CHANGELOG_LATEST = "The edit panel is wider with less scrolling. The description and notes have a " +
-  "'Bigger' button that opens a roomy writing space. The confusing 'Done' button is gone, just a clear " +
-  "'Close'. Music and hook now sit side by side.";
+const VERSION = "1.2.3";
+const CHANGELOG_LATEST = "The edit panel is a bit wider and its buttons now line up neatly (no more " +
+  "wrapping onto two lines). When a piece has a picture, it now shows the picture with a 📷 (change) and " +
+  "🗑 (remove) icon right on it, and the image hint says wide/landscape works best.";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
@@ -1116,8 +1127,8 @@ function openDetail(id){
 
   const iwrap=document.createElement("div");
   const isrc=imageSrcFor(p);
-  if(isrc){ const im=document.createElement("img"); im.src=isrc; im.style.cssText="width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin-bottom:8px"; iwrap.appendChild(im); }
-  const fi=document.createElement("input"); fi.type="file"; fi.accept="image/*";
+  // hidden file input, triggered by the on-image "change" icon or the "add a picture" button
+  const fi=document.createElement("input"); fi.type="file"; fi.accept="image/*"; fi.style.display="none";
   fi.onchange=async()=>{
     const f=fi.files[0]; if(!f) return;
     // Folder connected → save a copy into its images/ subfolder, remember the filename, drop inline.
@@ -1144,12 +1155,27 @@ function openDetail(id){
     r.readAsDataURL(f);
   };
   iwrap.appendChild(fi);
-  if(isrc){ const rm=document.createElement("button"); rm.textContent="remove image"; rm.style.marginTop="6px";
-    rm.onclick=async()=>{ const old=p.imageName; p.image=null; p.imageName=null;
+  if(isrc){
+    // Show the picture itself with two icon buttons on it: change (📷) and remove (🗑).
+    const tw=document.createElement("div"); tw.className="thumbwrap";
+    const im=document.createElement("img"); im.src=isrc; im.alt="";
+    const acts=document.createElement("div"); acts.className="acts";
+    const change=document.createElement("button"); change.type="button"; change.textContent="📷";
+    change.title="Choose a different picture"; change.setAttribute("aria-label","Choose a different picture");
+    change.onclick=()=>fi.click();
+    const del=document.createElement("button"); del.type="button"; del.textContent="🗑";
+    del.title="Remove this picture"; del.setAttribute("aria-label","Remove this picture");
+    del.onclick=async()=>{ const old=p.imageName; p.image=null; p.imageName=null;
       if(IMG_CACHE[p.id]){ URL.revokeObjectURL(IMG_CACHE[p.id]); delete IMG_CACHE[p.id]; }
       await deleteImageFile(old); softSave(); openDetail(id); renderAll(); };
-    iwrap.appendChild(rm); }
-  s.appendChild(field("Image / thumbnail", iwrap));
+    acts.append(change,del); tw.append(im,acts); iwrap.appendChild(tw);
+  } else {
+    const add=document.createElement("button"); add.type="button"; add.className="addimg";
+    add.textContent="🖼 Add a picture"; add.onclick=()=>fi.click();
+    iwrap.appendChild(add);
+  }
+  const imgField=field("Image / thumbnail (wide / landscape works best, about 1280 × 720)", iwrap);
+  s.appendChild(imgField);
 
   const hookWrap=document.createElement("div"); hookWrap.className="row";
   const hookIn=inputEl(p.hook,v=>{p.hook=v;softSave();});

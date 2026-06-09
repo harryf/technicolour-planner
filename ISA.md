@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 82/84
+progress: 87/89
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -189,6 +189,13 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-81: The confusing footer "Done" button is removed (it duplicated the close action and clashed with "Posted"); the only close affordance is the header "✕ Close".
 - [x] ISC-82: Music and Hook sit on one row (`.field2`) to reduce scrolling; combined with the wider drawer the editor's scroll height drops (1188px → ~1092px at the same width).
 
+### v1.2.3: editor button alignment + on-image picture control
+- [x] ISC-83: Drawer buttons never wrap to multiple lines (`.drawer button{white-space:nowrap}`), so the date row's today / → next week / clear are all the same height (measured 38/38/38), and the hook "pick" button matches the input height.
+- [x] ISC-84: The Music and Hook fields are vertically aligned (their inputs share the same top; measured equal); drawer widened to `clamp(520px,38vw,900px)` to make room.
+- [x] ISC-85: The task activity `<select>` has space between its value and the dropdown arrow (`select{padding-right:30px}`).
+- [x] ISC-86: When a piece has a picture, the editor shows the picture itself with on-image 📷 (change) and 🗑 (remove) icon buttons driving a hidden file input; with no picture it shows a "🖼 Add a picture" button (no bare file dialog).
+- [x] ISC-87: The Image field label states wide/landscape (~1280×720) is ideal, matching the wide `object-fit:cover` thumbnail.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -276,6 +283,13 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.2.3): **Editor alignment + on-image picture control.** Harry: the "→ next week" and
+  hook "pick" buttons wrapped to multiple lines (taller than neighbours), Music/Hook weren't aligned, the
+  task dropdown arrow was cramped, the picture should show the image itself with change/remove icons (not
+  a file box), and the image hint should state ideal wide dimensions. Root cause of the misalignment was
+  buttons wrapping in tight columns. Done: `white-space:nowrap` on drawer buttons + slightly wider drawer
+  (`clamp(520px,38vw,900px)`) + inputs flex-grow; `select` right-padding; `.thumbwrap` with 📷/🗑 icons
+  over the image and a "🖼 Add a picture" button when empty; label notes ~1280×720 landscape.
 - 2026-06-10 (v1.2.2): **Friendlier detail drawer (autism-first editor).** Harry asked for a wider panel
   (~⅓), an expand affordance for caption/notes (explicitly NOT a magnifying glass, "think autism"),
   removal of the confusing "Done" button (really a close, clashed with "Posted"), and less scrolling.
@@ -504,3 +518,11 @@ screenshot `/tmp/tcv-120-board.png`).
   `#bigEdit` with `bigEditArea.value === field value`, then closes; real-Chrome shows the roomy 352px-tall
   editor. ISC-81: `#d-done` is null, `#d-close` text is "✕ Close". ISC-82: 1 `.field2` (Music+Hook);
   real-Chrome scrollHeight 1092 (was 1188).
+
+**v1.2.3 (alignment + picture control):** full suite **100/100** + real-Chrome probe (`/tmp/tcv-align.png`).
+- ISC-83: real-Chrome date-row heights `[42,38,38,38]` — the 3 buttons all 38px (input 42 by nature);
+  source has `.drawer button{white-space:nowrap}`. ISC-84: Music/Hook input tops equal (702/702);
+  drawer width 520 at a 1100px window (clamp floor), 38vw on wider. ISC-85: `select{padding-right:30px}`.
+- ISC-86: jsdom — no image → `.addimg` button present, no `.thumbwrap`; with image → `.thumbwrap` has an
+  `img` + 2 `.acts button` (📷/🗑); file input is `display:none`. Real-Chrome shows the icons on the image.
+  ISC-87: label regex `wide / landscape works best, about 1280 × 720` present.

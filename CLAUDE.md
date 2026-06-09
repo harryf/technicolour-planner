@@ -225,6 +225,13 @@ need the exact approach). If you change the brand mark, regenerate all three.
   magnifying-glass metaphor) which opens `#bigEdit`, a roomy full-height editor overlaid on top, synced
   live to the inline textarea. Music + Hook share a `.field2` 2-col row to cut scrolling. The header has
   one clear **"✕ Close"**; there is deliberately **no "Done" button** (it confused with "Posted").
+  v1.2.3 alignment: drawer widened to `clamp(520px,38vw,900px)`; `.drawer button{white-space:nowrap}` so
+  buttons never wrap to two lines (kept the date row + hook "pick" at one consistent height);
+  `.drawer .row>input{flex:1}` lets the text/date input grow while buttons keep natural width;
+  `select{padding-right:30px}` gives the task activity dropdown arrow room. **Image control** (v1.2.3):
+  when a piece has a picture, `openDetail` renders `.thumbwrap` (the image with on-image 📷 change + 🗑
+  remove icon buttons) driving a hidden file input; with no picture it shows a "🖼 Add a picture" button.
+  The Image field label states wide/landscape (~1280×720) is ideal, since the thumb is `object-fit:cover`.
 - **Relative paths only** (Pages subpath). **Colour model in sync** across `index.html` ↔
   `src/export.js`. **No runtime network calls** after install (export libs are vendored).
 - **Privacy:** the repo is public and currently ships Sarah's real seed data with a `noindex` meta

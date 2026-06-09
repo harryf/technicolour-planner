@@ -2,6 +2,16 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.2.3], 2026-06-10
+- **Tidier, better-aligned editor.** Buttons no longer wrap onto two lines, so the date row
+  (today / → next week / clear) and the hook's "pick" button line up at the same height, and Music and
+  Hook are properly aligned. The panel is a little wider to make room.
+- **Nicer picture control.** When a piece has a picture, the editor now shows the **picture itself** with
+  a 📷 (change) and 🗑 (remove) icon on it, instead of a plain file box. With no picture yet, there's a
+  clear **"🖼 Add a picture"** button. The label notes that **wide / landscape (about 1280 × 720)** looks
+  best, since the picture is shown in a wide format.
+- The task **activity dropdown** now has room around its little arrow.
+
 ## [1.2.2], 2026-06-10
 - **The edit panel is friendlier.** It's wider now (about a third of the screen) with less scrolling.
   The **Description / caption** and **Notes** each have a clear **"⤢ Bigger"** button that opens a roomy,
