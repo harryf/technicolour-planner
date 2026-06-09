@@ -80,6 +80,8 @@
   .day{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
        min-height:340px;display:flex;flex-direction:column;box-shadow:var(--shadow)}
   .day.today{outline:2px solid #5b8def}
+  .day.dayoff{background:repeating-linear-gradient(135deg,#f3f1ec,#f3f1ec 8px,#ecebe4 8px,#ecebe4 16px);opacity:.7}
+  .day.dayoff .cbar{filter:grayscale(1);opacity:.5}
   .day.dragover{background:#eef4ff;border-color:#5b8def}
   .day-h{padding:9px 11px;border-bottom:1px solid var(--line);position:sticky;top:0}
   .day-h .dow{font-weight:800}
@@ -88,6 +90,19 @@
   .day-body{padding:9px;display:flex;flex-direction:column;gap:9px;flex:1}
   .nopost{margin:auto;color:var(--muted);font-weight:700;letter-spacing:.12em;
           transform:rotate(-8deg);font-size:18px;opacity:.55}
+  .catchup{background:#fff7ed;border:1px solid #f0d9b8;border-radius:var(--radius);
+           padding:10px 12px;margin-bottom:12px}
+  .catchup.empty{color:var(--muted);font-weight:600;text-align:center;background:var(--panel);border-style:dashed}
+  .catchup-h{font-weight:800;margin-bottom:8px}
+  .catchup-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #f0e3cf;flex-wrap:wrap}
+  .catchup-row .stripes{display:flex;gap:2px;width:18px;height:18px;border-radius:5px;overflow:hidden;flex:0 0 auto}
+  .catchup-row .stripes i{flex:1;display:block}
+  .catchup-row .cu-ttl{font-weight:700;text-decoration:none}
+  .catchup-row .cu-when{font-size:12px;min-width:42px}
+  .catchup-row .cu-acts{display:flex;gap:6px;margin-left:auto;flex-wrap:wrap}
+  .rollbtn{margin-top:6px;align-self:flex-start;font-size:11px;font-weight:600;border:1px solid var(--line);
+           border-radius:999px;background:var(--panel);color:var(--muted);cursor:pointer;padding:2px 8px}
+  .rollbtn:hover{color:var(--ink)}
 
   /* ---- Project card ---- */
   .card{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--panel);
@@ -268,6 +283,7 @@
       <button id="nextWeek">Next week →</button>
       <h3 id="weekLabel" class="grow" style="text-align:right;color:var(--muted)"></h3>
     </div>
+    <div id="catchup" class="catchup"></div>
     <div class="board" id="board"></div>
   </section>
 
@@ -275,6 +291,11 @@
   <section id="view-library" hidden>
     <div class="row wrap" style="margin-bottom:12px">
       <input id="libSearch" placeholder="Search projects…" style="max-width:280px" />
+      <div class="seg" id="libFilter">
+        <button data-status="all" aria-pressed="true">All</button>
+        <button data-status="todo" aria-pressed="false">Still to do</button>
+        <button data-status="posted" aria-pressed="false">Posted</button>
+      </div>
       <span class="muted help">Everything you have, dated and ideas for later. Click any card to open it.</span>
     </div>
     <div class="libgrid" id="libgrid"></div>
@@ -347,11 +368,8 @@
       <label><input type="checkbox" id="lowstim" style="width:auto" /> Calm mode (less motion & contrast)</label>
     </div>
     <div class="field">
-      <label>Day labels</label>
-      <div class="seg">
-        <button data-lang="en" aria-pressed="true">English</button>
-        <button data-lang="fr" aria-pressed="false">Français</button>
-      </div>
+      <label>Days I work (others show as a greyed "NO POST" day and are skipped when rolling)</label>
+      <div class="seg" id="workdays"></div>
     </div>
     <div class="field"><label>Your target colours (make them yours)</label>
       <div id="colorRemap" class="legend"></div>
@@ -440,10 +458,10 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.1.2";
-const CHANGELOG_LATEST = "The app name no longer shows twice in the window title, the app opens at full " +
-  "screen size, the clear button greys out when there's nothing to clear, and hide non-matching turns " +
-  "on only when a filter is active.";
+const VERSION = "1.2.0";
+const CHANGELOG_LATEST = "A 'Still to do' tray gathers anything from earlier weeks you haven't posted yet, " +
+  "with one tap to roll it to this or next week. You can set which days you work (others show greyed and " +
+  "are skipped when rolling). Cards have a quick '→ next wk'. The Library filters by All / Still to do / Posted.";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
@@ -569,17 +587,20 @@ const LS_KEY="technicolour_planner_v1";
 const OLD_LS_KEY="sarah_planner_v1";       // prototype key, read once for continuity
 const JSON_NAME="Technicolour-Planner-Data.json";
 const MD_NAME="Technicolour-Planner-Data.md";
-const CURRENT_SCHEMA=1;
+const CURRENT_SCHEMA=2;
+const DEFAULT_WORKDAYS=[true,true,true,true,true,false,true]; // Mon..Sun; Sat off by default (her "NO POST")
 const MAX_BACKUPS=20; // timestamped checkpoints kept in the folder (oldest pruned)
 
 /* Ordered migrations keyed by the version you are migrating FROM. None beyond
    base normalization yet; future releases append here (and auto-backup runs first). */
 const migrations = {
-  // 1: (s)=>{ /* example: rename a field when bumping to schema 2 */ },
+  // From schema 1 → 2: add per-weekday work/posting days (Mon..Sun). Sat off preserves the old "NO POST".
+  1: (s)=>{ if(!Array.isArray(s.settings.workdays) || s.settings.workdays.length!==7) s.settings.workdays = DEFAULT_WORKDAYS.slice(); },
 };
 function migrateState(s){
   s.settings = s.settings || {lang:"en",lowstim:false,colors:{}};
   s.settings.colors = s.settings.colors || {};
+  if(!Array.isArray(s.settings.workdays) || s.settings.workdays.length!==7) s.settings.workdays = DEFAULT_WORKDAYS.slice();
   s.weekStart = s.weekStart || isoWeekStart(new Date());
   s.projects = Array.isArray(s.projects) ? s.projects : [];
   s.updatedAt = s.updatedAt || ""; // content timestamp for reconnect conflict-avoidance
@@ -589,7 +610,7 @@ function migrateState(s){
   return s;
 }
 function defaultState(){
-  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{}},
+  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice()},
            weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
 }
 function nowISO(){ return new Date().toISOString().replace(/[:.]/g,"-"); }
@@ -798,8 +819,26 @@ function ymd(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0
 function parseYMD(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
 function addDays(s,n){ const d=parseYMD(s); d.setDate(d.getDate()+n); return ymd(d); }
 const DOW_EN=["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
-const DOW_FR=["Lundi","Mardi","Mercredi","Jeudi","Vendredi","Samedi","Dimanche"];
 const TODAY=ymd(new Date()); // real today, drives the "today" highlight and This week
+
+/* ---- work-day preferences + rolling forward ---- */
+function workdays(){ const w=state.settings && state.settings.workdays;
+  return (Array.isArray(w) && w.length===7) ? w : DEFAULT_WORKDAYS; }
+function isWorkday(ymdStr){ return !!workdays()[(parseYMD(ymdStr).getDay()+6)%7]; } // Mon=0
+// First working day of the week starting weekStart; if notBefore given, the first that is >= notBefore.
+function firstWorkday(weekStart, notBefore){
+  for(let i=0;i<7;i++){ const d=addDays(weekStart,i); if(workdays()[i] && (!notBefore || d>=notBefore)) return d; }
+  for(let i=0;i<7;i++){ if(workdays()[i]) return addDays(weekStart,i); } // ignore notBefore if it overflowed the week
+  return weekStart; // no working days at all → fall back to the week start
+}
+function curWeekStart(){ return isoWeekStart(parseYMD(TODAY)); }
+function nextWeekStart(){ return addDays(curWeekStart(),7); }
+// A piece needs catching up if it's dated before this week and hasn't been posted yet.
+function isOverdue(p){ return !!p.date && p.date < curWeekStart() && !(p.stages && p.stages.posted); }
+function overduePieces(){ return state.projects.filter(isOverdue)
+  .sort((a,b)=> (a.date<b.date?-1:a.date>b.date?1:0)); }
+// Quick reschedule: move a piece to the first working day of a target week (this/next), never before today.
+function rollToWeek(p, weekStart){ p.date = firstWorkday(weekStart, weekStart>=curWeekStart()?TODAY:null); save(); renderAll(); }
 
 /* ========================= RENDER ========================= */
 function applyColors(){
@@ -844,6 +883,11 @@ function projectCard(p,{compact=false}={}){
   for(const s of STAGES){ const e=document.createElement("span"); e.className="s"+(p.stages[s]?" on":"");
     e.textContent=s[0].toUpperCase(); e.title=s+(p.stages[s]?" ✓":""); st.appendChild(e); }
   body.appendChild(st);
+  if(compact){ // quick reschedule without opening the editor
+    const q=document.createElement("button"); q.className="rollbtn"; q.textContent="→ next wk";
+    q.title="Move this to next week"; q.onclick=(e)=>{ e.stopPropagation(); rollToWeek(p, nextWeekStart()); };
+    body.appendChild(q);
+  }
   card.appendChild(body);
   card.addEventListener("click",()=>openDetail(p.id));
   card.addEventListener("keydown",e=>{ if(e.key==="Enter") openDetail(p.id); });
@@ -857,10 +901,10 @@ function renderBoard(){
   const board=document.getElementById("board"); board.innerHTML="";
   for(let i=0;i<7;i++){
     const date=addDays(state.weekStart,i);
-    const col=document.createElement("div"); col.className="day"+(date===TODAY?" today":"");
+    const col=document.createElement("div"); col.className="day"+(date===TODAY?" today":"")+(workdays()[i]?"":" dayoff");
     col.dataset.date=date;
     const h=document.createElement("div"); h.className="day-h";
-    const dows=(state.settings.lang==="fr"?DOW_FR:DOW_EN)[i];
+    const dows=DOW_EN[i];
     const d=parseYMD(date);
     h.innerHTML=`<div class="dow">${dows}</div><div class="dt">${d.getDate()}/${d.getMonth()+1}</div>`;
     const hues=["#f9c6c6","#f7d9b0","#f6efb0","#c8e6c0","#bfe0e6","#c9c6ee","#e6c6e0"];
@@ -868,7 +912,7 @@ function renderBoard(){
     col.appendChild(h);
     const bodyEl=document.createElement("div"); bodyEl.className="day-body";
     const dayProjects=state.projects.filter(p=>p.date===date);
-    if(i===5 && dayProjects.length===0){ const np=document.createElement("div"); np.className="nopost"; np.textContent="NO POST"; bodyEl.appendChild(np); }
+    if(!workdays()[i] && dayProjects.length===0){ const np=document.createElement("div"); np.className="nopost"; np.textContent="NO POST"; bodyEl.appendChild(np); }
     for(const p of dayProjects) bodyEl.appendChild(projectCard(p,{compact:true}));
     const add=document.createElement("button"); add.className="add-card"; add.textContent="＋ add here";
     add.addEventListener("click",()=>{ const np=newProject("reel"); np.date=date; state.projects.push(np); save(); renderAll(); openDetail(np.id); });
@@ -886,11 +930,48 @@ function renderBoard(){
     `${ws.getDate()}/${ws.getMonth()+1} – ${we.getDate()}/${we.getMonth()+1} ${we.getFullYear()}`;
 }
 
+// "Still to do": pieces from past weeks that were never posted. Pinned, always in the same place.
+// Nothing moves on its own; each row offers one tap to roll it forward or mark it posted.
+function renderCatchup(){
+  const box=document.getElementById("catchup"); if(!box) return; box.innerHTML="";
+  const items=overduePieces();
+  if(!items.length){ box.className="catchup empty"; box.textContent="All caught up ✓"; return; }
+  box.className="catchup";
+  const head=document.createElement("div"); head.className="catchup-h";
+  head.textContent="Still to do ("+items.length+"), from earlier, not posted yet";
+  box.appendChild(head);
+  for(const p of items){
+    const row=document.createElement("div"); row.className="catchup-row";
+    const stripes=document.createElement("div"); stripes.className="stripes";
+    const tg=p.targets.length?p.targets:["discovery"];
+    for(const k of TARGET_ORDER){ if(tg.includes(k)){ const i=document.createElement("i"); i.style.background=targetColor(k); stripes.appendChild(i);} }
+    const badge=document.createElement("span"); badge.className="badge"; badge.style.background=TYPES[p.type].color;
+    badge.textContent=TYPES[p.type].short; badge.title=TYPES[p.type].label;
+    const ttl=document.createElement("button"); ttl.className="linkbtn cu-ttl"; ttl.textContent=p.title||"Untitled";
+    ttl.title="Open"; ttl.onclick=()=>openDetail(p.id);
+    const when=document.createElement("span"); when.className="muted cu-when";
+    { const d=parseYMD(p.date); when.textContent=d.getDate()+"/"+(d.getMonth()+1); }
+    const acts=document.createElement("div"); acts.className="cu-acts";
+    const bThis=document.createElement("button"); bThis.className="pill"; bThis.textContent="→ this week";
+    bThis.onclick=()=>rollToWeek(p, curWeekStart());
+    const bNext=document.createElement("button"); bNext.className="pill"; bNext.textContent="→ next week";
+    bNext.onclick=()=>rollToWeek(p, nextWeekStart());
+    const bDone=document.createElement("button"); bDone.className="pill"; bDone.textContent="✓ posted";
+    bDone.title="Mark as posted (moves it out of here, into your history)";
+    bDone.onclick=()=>{ p.stages.posted=true; save(); renderAll(); };
+    acts.append(bThis,bNext,bDone);
+    row.append(stripes,badge,ttl,when,acts);
+    box.appendChild(row);
+  }
+}
+
+let libStatus="all"; // all | todo | posted
 function renderLibrary(){
   const grid=document.getElementById("libgrid"); grid.innerHTML="";
   const q=(document.getElementById("libSearch").value||"").toLowerCase();
   state.projects
     .filter(p=>!q || p.title.toLowerCase().includes(q) || (p.notes||"").toLowerCase().includes(q))
+    .filter(p=> libStatus==="all" ? true : libStatus==="posted" ? !!(p.stages&&p.stages.posted) : !(p.stages&&p.stages.posted))
     .forEach(p=>grid.appendChild(projectCard(p,{})));
 }
 
@@ -945,7 +1026,7 @@ function renderHookList(listId,filterId,onPick){
 
 function renderAll(){
   applyColors();
-  if(currentView==="board") renderBoard();
+  if(currentView==="board"){ renderBoard(); renderCatchup(); }
   if(currentView==="library") renderLibrary();
   if(currentView==="turnover") renderTurnover();
   renderBalance();
@@ -1010,8 +1091,12 @@ function openDetail(id){
   const dwrap=document.createElement("div"); dwrap.className="row";
   const di=document.createElement("input"); di.type="date"; di.value=p.date||"";
   di.onchange=()=>{ p.date=di.value||null; softSave(); renderAll(); };
+  const today=document.createElement("button"); today.textContent="today"; today.title="Put it on today";
+  today.onclick=()=>{ p.date=TODAY; softSave(); openDetail(id); renderAll(); };
+  const nextWk=document.createElement("button"); nextWk.textContent="→ next week"; nextWk.title="First working day of next week";
+  nextWk.onclick=()=>{ p.date=firstWorkday(nextWeekStart(), TODAY); softSave(); openDetail(id); renderAll(); };
   const clr=document.createElement("button"); clr.textContent="clear"; clr.onclick=()=>{p.date=null;softSave();openDetail(id);renderAll();};
-  dwrap.append(di,clr);
+  dwrap.append(di,today,nextWk,clr);
   s.appendChild(field("Date (sets where it lands on the board)", dwrap));
 
   const iwrap=document.createElement("div");
@@ -1166,6 +1251,11 @@ document.getElementById("nextWeek").onclick=()=>{state.weekStart=addDays(state.w
 document.getElementById("thisWeek").onclick=()=>{state.weekStart=isoWeekStart(parseYMD(TODAY));save();renderBoard();};
 
 document.getElementById("libSearch").oninput=renderLibrary;
+document.querySelectorAll('#libFilter [data-status]').forEach(b=>b.onclick=()=>{
+  libStatus=b.dataset.status;
+  document.querySelectorAll('#libFilter [data-status]').forEach(x=>x.setAttribute("aria-pressed", x.dataset.status===libStatus));
+  renderLibrary();
+});
 
 document.getElementById("d-close").onclick=closeDrawer;
 document.getElementById("d-done").onclick=closeDrawer;
@@ -1184,7 +1274,11 @@ document.getElementById("settingsBtn").onclick=()=>{ buildSettings(); settingsMo
 document.getElementById("settingsClose").onclick=()=>settingsModal.classList.remove("open");
 function buildSettings(){
   document.getElementById("lowstim").checked=!!state.settings.lowstim;
-  document.querySelectorAll('[data-lang]').forEach(b=>b.setAttribute("aria-pressed",b.dataset.lang===state.settings.lang));
+  const wd=document.getElementById("workdays"); wd.innerHTML="";
+  DOW_EN.forEach((name,i)=>{ const b=document.createElement("button"); b.type="button"; b.textContent=name;
+    b.setAttribute("aria-pressed", !!workdays()[i]);
+    b.onclick=()=>{ const w=workdays().slice(); w[i]=!w[i]; state.settings.workdays=w; save(); buildSettings(); renderAll(); };
+    wd.appendChild(b); });
   const cr=document.getElementById("colorRemap"); cr.innerHTML="";
   TARGET_ORDER.forEach(k=>{ const it=document.createElement("div"); it.className="item";
     const ci=document.createElement("input"); ci.type="color"; ci.value=rgbToHex(targetColor(k)); ci.style.width="44px"; ci.style.height="34px"; ci.style.padding="2px";
@@ -1194,7 +1288,6 @@ function buildSettings(){
   refreshDataStatus();
 }
 document.getElementById("lowstim").onchange=e=>{ state.settings.lowstim=e.target.checked; document.body.classList.toggle("lowstim",e.target.checked); save(); };
-document.querySelectorAll('[data-lang]').forEach(b=>b.onclick=()=>{ state.settings.lang=b.dataset.lang; save(); buildSettings(); renderBoard(); });
 function rgbToHex(c){ if(c.startsWith("#"))return c.length===4?("#"+[...c.slice(1)].map(x=>x+x).join("")):c;
   const m=c.match(/\d+/g); if(!m)return "#000000"; return "#"+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,"0")).join(""); }
 

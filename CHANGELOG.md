@@ -2,6 +2,19 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.2.0], 2026-06-10
+- **Roll the week over.** A new **"Still to do"** strip sits above the board and gathers anything from
+  earlier weeks you never posted. Each one has a single tap: **→ this week**, **→ next week**, or
+  **✓ posted**. Nothing ever moves on its own, you decide, and posted pieces drop out into your history.
+- **Set the days you work.** In Settings, pick which weekdays you work (Sarah, Mondays are off by
+  default for you now). Days you don't work show greyed with "NO POST" and are skipped when rolling
+  something forward, so nothing lands on a day off.
+- **Quick reschedule.** Every card on the board has a little **"→ next wk"**, and the detail panel has
+  **today** and **→ next week** buttons next to the date, so you don't have to pick a date by hand.
+- **Library filter.** Filter your library by **All / Still to do / Posted** to look back over what's done.
+- **French removed** from settings (it changed almost nothing), and your data file quietly upgrades to
+  remember your work-day choices (a backup is written before the upgrade).
+
 ## [1.1.2], 2026-06-10
 - **Window title, full-screen, and tidier filter buttons.** The app name no longer appears twice in the
   window title (the manifest name now matches the page title). The installed app opens at the full size

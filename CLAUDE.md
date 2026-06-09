@@ -64,10 +64,16 @@ state = {
     storyCodes:[1..5], image:<dataURL>|null, imageName:<filename>|null,   // see Images below
     stages:{prep,shot,edited,posted}, tasks:[{id,text,activity,done}]   // activity ∈ brainstorm|shoot|edit|priority|justdo
   } ],
-  settings: { lang:"en"|"fr", lowstim:bool, colors:{<target>:<hex>} },   // per-user colour remap
-  weekStart, schemaVersion, updatedAt
+  settings: { lowstim:bool, colors:{<target>:<hex>},        // per-user colour remap
+              workdays:[bool x7] },                          // Mon..Sun working/posting days (v1.2.0)
+  weekStart, schemaVersion, updatedAt   // schemaVersion is 2 since v1.2.0
 }
 ```
+
+`settings.lang` may still exist in old saved data (the FR toggle was removed in v1.2.0); it's ignored,
+the board is always English. **Schema is at 2**: migration `1→2` adds `settings.workdays` (default
+`[T,T,T,T,T,F,T]`, Sat off) and auto-backs-up the file before migrating. A piece is "done/out the door"
+when `stages.posted` is true.
 
 **Two independent colour languages, keep them separate, never let them collide:**
 - **type colour** (reel/post/story) + **target colour** (the 4-funnel stripes), describe the piece.
@@ -116,6 +122,25 @@ Key behaviours (don't regress these):
   `📁 <folder>` (just the folder name) and is clickable to change (or set) the folder via the shared
   `chooseLocation()` (same flow as Settings). Browsers don't expose a folder's absolute OS path to a web
   app, so the folder name is the deepest identifier available, this is a platform limit, not a TODO.
+
+## Rolling work forward + work-day preferences (v1.2.0)
+
+Grounded in `ANALYSIS.md` (autism: predictable, low-surprise, nothing relies on memory, stable layout,
+never lose data). The unit that rolls is a **piece** (it owns the `date`), not a loose task.
+
+- **Work-day preferences:** `settings.workdays` (7 bools, Mon..Sun). Settings shows 7 toggles
+  (`#workdays`). `workdays()` reads them with a safe default. A board day with `workdays[i]===false`
+  gets `.day.dayoff` (greyed, hatched) and shows "NO POST" when empty, this **generalises** the old
+  hard-coded Saturday rule. **All 7 days always render** (stable grid), days off are never hidden.
+- **Catch-up tray (`#catchup`, `renderCatchup()`):** a pinned strip above the board. `isOverdue(p)` =
+  `p.date < curWeekStart() && !stages.posted`; `overduePieces()` lists them oldest-first. Each row has
+  one tap: **→ this week** / **→ next week** (`rollToWeek`) / **✓ posted** / open. Empty → "All caught
+  up ✓". **Nothing moves automatically**, this is the autism-safe contract (no surprises on open).
+- **Quick reschedule:** `rollToWeek(p, weekStart)` sets the date to `firstWorkday(weekStart, notBefore)`,
+  the first **working** day of that week (skips days off), never before today. Wired to the per-card
+  `.rollbtn` ("→ next wk"), the drawer's **today** / **→ next week** buttons, and the tray. Drag-drop stays.
+- **History:** nothing is deleted. Library has an All / Still to do / Posted filter (`libStatus`,
+  `#libFilter`) so past work stays reviewable; posted past pieces live there, not in the tray.
 
 ## Install gate (browser tab vs installed app)
 

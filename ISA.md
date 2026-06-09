@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 64/66
+progress: 76/78
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -169,6 +169,20 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-65: The `clear ✕` button is disabled/greyed (`disabled` + `.pill.disabled` opacity) when `activeFilters` is empty, and enabled once a filter is active.
 - [x] ISC-66: The "hide non-matching" toggle is disabled when `activeFilters` is empty (and unticked + `filterHide` reset), and enabled once a colour filter is active.
 
+### v1.2.0: roll the week over (autism-first), work-day preferences, French removed
+- [x] ISC-67: The French/language option is gone (no `data-lang`, no `DOW_FR`, no "Français" in the markup); the board always uses English day names. `settings.lang` in old data is ignored, not a crash.
+- [x] ISC-68: `settings.workdays` (7 bools, Mon..Sun) exists; Settings renders 7 day toggles (`#workdays`); toggling a day saves and re-renders the board.
+- [x] ISC-69: Loading schema-1 data migrates to schema 2, adding `settings.workdays` (default `[T,T,T,T,T,F,T]`, Sat off), and the loader auto-backs-up the file before migrating.
+- [x] ISC-70: A board day with `workdays[i]===false` renders greyed (`.day.dayoff`) and shows "NO POST" when empty; all 7 day columns always render (grid never changes shape).
+- [x] ISC-71: The catch-up tray (`#catchup`) lists exactly the pieces dated before this week and not posted (`isOverdue`/`overduePieces`), oldest first; posted pieces never appear.
+- [x] ISC-72: Tray "→ this week" / "→ next week" (`rollToWeek`) sets the date to the first **working** day of that week (skips days off) and never before today.
+- [x] ISC-73: Tray "✓ posted" sets `stages.posted=true` and the piece leaves the tray (becomes history).
+- [x] ISC-74: An empty catch-up tray shows the calm "All caught up ✓" state (predictable, always-present location).
+- [x] ISC-75: Every board card carries a quick "→ next wk" button (`.rollbtn`) that reschedules to next week's first working day without opening the editor; `stopPropagation` so it doesn't open the card.
+- [x] ISC-76: The detail drawer has "today" and "→ next week" quick-date buttons beside the date picker.
+- [x] ISC-77: The Library filters by All / Still to do / Posted (`libStatus`, `#libFilter`).
+- [x] ISC-78: Anti: no piece ever changes date or leaves the board/tray without an explicit tap (no auto-roll); the weekly grid always shows all 7 days (days off greyed, never removed); no past data is deleted (history stays in the Library); the v1→v2 migration backs up first and drops no existing fields.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -191,6 +205,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 | ISC-54,55,56,57 | behaviour | jsdom mock dir handle: attach writes file + sets imageName, fallback to data URL, imageSrcFor | node verify |
 | ISC-58 | content | grep wa.me + FEEDBACK_WHATSAPP, assert no mailto | Grep/jsdom |
 | ISC-59,60 | code | grep try/catch + perm guards; assert image name vs prune regex | Grep/jsdom |
+| ISC-67,68 | code+behaviour | grep no data-lang/DOW_FR; jsdom counts 7 workday toggles | Grep/jsdom |
+| ISC-69 | behaviour | jsdom migrate schema-1 → assert v2 + workdays[5]=false | node verify |
+| ISC-70 | behaviour | jsdom set a day off, renderBoard, assert .dayoff + NO POST, 7 cols | node verify |
+| ISC-71,72,73,74 | behaviour | jsdom + real-Chrome: overduePieces, rollToWeek skips off-day, posted leaves, empty state | node/Chrome |
+| ISC-75,76,77 | code+behaviour | assert .rollbtn on cards, drawer quick dates, #libFilter 3 buttons | Grep/jsdom |
+| ISC-78 | code | grep: no auto-roll path; grid always 7; migration backup-before | Grep |
 
 ## Features
 
@@ -208,6 +228,10 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 | Footer storage location (clickable, change-folder) | ISC-52,53 | store | no |
 | Image saved into folder (filename ref + cache) | ISC-54..57,59,60 | store | no |
 | WhatsApp feedback | ISC-58 |, | yes |
+| Remove French | ISC-67 |, | yes |
+| Work-day preferences (greyed days-off) | ISC-68,69,70 | store | no |
+| Catch-up tray + quick roll (autism-first) | ISC-71..76,78 | workdays | no |
+| Library status filter | ISC-77 |, | yes |
 
 ## Decisions
 
@@ -246,6 +270,15 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.2.0): **"Roll the week over" designed autism-first; manual, never automatic.** Harry
+  asked (grounded in `ANALYSIS.md`: predictable, low-surprise, nothing relies on memory, stable layout,
+  never lose data) for a way to carry unfinished past work forward, day-off preferences, and quick
+  reschedule. Two forks were put to Harry and both resolved to the autism-safe option: (1) a **manual
+  catch-up tray she controls** over auto-roll (auto-move is a surprise on open); (2) **show days-off
+  greyed, never hide columns** (stable grid shape). Decisions that follow: the rolling unit is the
+  **piece** (it owns the date, not loose tasks); "done" = `stages.posted`; `rollToWeek` skips days off
+  and never lands before today; nothing moves without a tap (ISC-78 anti); schema bumped 1 to 2 with
+  backup-before-migrate. French removed (changed almost nothing; `lang` left in data, ignored).
 - 2026-06-10 (v1.1.2): **Window title dedup, maximize-on-open, conditional filter controls.** Harry's
   screenshot3 showed the app name twice in the installed-window title (`{manifest name} - {document.title}`,
   which differed). Fix: set manifest `name` identical to `<title>`. Also: open the installed app at full
@@ -430,3 +463,19 @@ overwriting. ISC-20/21/22 now [x]. No deferred criteria remain.
   Live window resize is DEFERRED-VERIFY (FU-3).
 - ISC-65: jsdom drives `clearFilters()` → `#clearFilter.disabled===true`; `toggleFilter('discovery')` →
   `disabled===false`. ISC-66: same for `#filterMode`, plus checked-state resets to false + disabled on clear.
+
+**v1.2.0 (roll the week over, work-days, French removed):** full suite **86/86** (70 jsdom + 13
+real-Chrome + 3 upgrade) via `node tests/run.mjs`, plus a real-Chrome probe (`/tmp/probe120.mjs`,
+screenshot `/tmp/tcv-120-board.png`).
+- ISC-67: jsdom asserts no `data-lang`/`DOW_FR`/`Français`. ISC-68: 7 `#workdays` toggles render.
+- ISC-69: `migrateState({schemaVersion:1,…})` → `schemaVersion===2`, `workdays.length===7`, `workdays[5]===false`.
+- ISC-70: with a day off set, `#board .day.dayoff` ≥1 and `#board .nopost` ≥1; 7 columns always present.
+- ISC-71/73: pushing a piece dated `2026-01-01` unposted → in `overduePieces()`; setting `stages.posted`
+  removes it. ISC-72: with Monday off, `rollToWeek(p,nextWeekStart())` → date `2026-06-16` (Tue, Monday
+  skipped), `isWorkday` true, `>= nextWeekStart()`. ISC-74: empty tray text matches `All caught up`.
+- ISC-75: `#board .card .rollbtn` ≥1 (real-Chrome probe: 6). ISC-76: drawer source has
+  `firstWorkday(nextWeekStart(), TODAY)`. ISC-77: `#libFilter` has 3 `[data-status]` buttons.
+- **Real-Chrome probe** (authoritative for the user-facing tray): tray reads "Still to do (1), from
+  earlier, not posted yet" with 1 row; 2 greyed days-off (Mon+Sat) + 1 "NO POST"; 6 card roll buttons;
+  no "Français"; rolling the overdue piece moved it to Tue 2026-06-16 and emptied the tray. Screenshot
+  shows greyed hatched Mon/Sat columns, the tray, and "→ next wk" on cards.
