@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 40/43
+progress: 48/48
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-09
@@ -99,9 +99,9 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 
 ### M2, Store layer + "ask where to store data"
 - [x] ISC-19: A `Store` abstraction exists with init/load/save/setLocation/export/import/backup/status; UI calls route through it.
-- [DEFERRED-VERIFY] ISC-20: Store writes the data file via File System Access (`createWritable`) when a handle exists; reads via `getFile()`. (Code inspection-verified; live picker flow needs a user gesture, follow-up: FU-1 Harry's real-install folder-pick test.)
-- [DEFERRED-VERIFY] ISC-21: The file handle persists in IndexedDB so the location is chosen once. (Inspection-verified; follow-up: FU-1.)
-- [DEFERRED-VERIFY] ISC-22: On launch with a lapsed permission, a single "Reconnect your data file" action re-grants and loads. (Inspection-verified; follow-up: FU-1.)
+- [x] ISC-20: Store writes the data file via File System Access (`createWritable`) when a handle exists; reads via `getFile()`. (FU-1 closed: Harry's fresh-install test 2026-06-09 confirmed file write + existing-folder load.)
+- [x] ISC-21: The file handle persists in IndexedDB so the location is chosen once. (FU-1 closed: confirmed in Harry's fresh-install test.)
+- [x] ISC-22: On launch with a lapsed permission, a single "Reconnect your data file" action re-grants and loads. (FU-1 closed: confirmed in Harry's fresh-install test.)
 - [x] ISC-23: First-run onboarding modal: welcome → "where to keep your work" (Choose folder) → done, seeded.
 - [x] ISC-24: Onboarding has a "Decide later" escape hatch → IndexedDB/localStorage-only with a standing reminder banner.
 - [x] ISC-25: `navigator.storage.persist()` is requested on first run.
@@ -134,6 +134,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-42: First load fires exactly one navigation, the SW's first-load `controllerchange` (from `clients.claim()`) no longer triggers a reload; only a user-accepted update does.
 - [x] ISC-43: In a public browser tab (non-localhost, non-standalone) a frosted install-gate overlay covers the UI; it's dormant when running standalone (installed) or on localhost dev.
 - [x] ISC-44: `beforeinstallprompt` is captured and an in-gate Install button triggers the prompt; Mac + Windows install steps (incl. dragging to the Desktop) are shown.
+
+### v1.0.4–1.0.5: data safety, install UX, test suite
+- [x] ISC-45: Choosing a folder that already holds `Technicolour-Planner-Data.json` loads it instead of overwriting (onboarding + Settings both adopt existing data).
+- [x] ISC-46: In a browser tab on a device where the app is installed, the gate shows "Open the App" (not "Install"); detection via a localStorage flag + `getInstalledRelatedApps()`.
+- [x] ISC-47: A committed test suite (`tests/`) runs via `bun run test` (jsdom unit + real-Chrome integration); a CI workflow runs it on push and PR.
+- [x] ISC-48: Browser tests prove true offline reload (network emulated offline → cached shell renders) and that the three Office exports are valid OOXML zips.
 
 ## Test Strategy
 
@@ -233,6 +239,15 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   real data with the seed, since onboarding state is the seed. learned: setLocation now reads any
   existing `Technicolour-Planner-Data.json` in the chosen folder and adopts it; the caller loads that
   instead of saving over it. criterion_now: ISC-20 covers load-existing-on-folder-pick (no clobber).
+- conjectured: throwaway verification scripts in /tmp are enough. refuted_by: every change risked
+  silent regressions with nothing committed to catch them, and the manual harnesses were rebuilt each
+  session. learned: committed a real suite (tests/: jsdom unit + real-Chrome integration via DevTools,
+  a runner, and a CI workflow) so `bun run test` reproduces all verification. criterion_now: ISC-47/48
+  require the suite to exist and pass, including a true-offline reload probe.
+- conjectured: a browser tab can launch the installed PWA so "Open the App" could auto-open it.
+  refuted_by: browsers expose no API to launch an installed app from a page (security). learned:
+  detect installed state (localStorage flag + getInstalledRelatedApps) and relabel to "Open the App"
+  with guidance to open from the Desktop; no auto-launch. criterion_now: ISC-46 checks the relabel.
 
 ## Verification
 
@@ -271,10 +286,17 @@ Live curl: real title/brand, `noindex` meta present, manifest link + SW registra
 placeholder text gone, onboarding markup live. All 8 shell resources HTTP 200 (manifest, SW, 2 icons,
 src/export.js, 3 vendor libs). manifest valid (display:standalone, 3 icons). GitHub Release `v1.0.0` cut.
 
-**Deferred (require Sarah's real machine):**
-- ISC-20/21/22 [DEFERRED-VERIFY → FU-1]: File System Access picker/persist/reconnect, needs a real
-  user gesture on a real install; code inspection-verified + conflict-aware. Closes on Sarah/Harry's
-  first install folder-pick test (the one hands-on acceptance check left).
+**FU-1 closed (2026-06-09):** Harry ran the fresh-install test and confirmed the File System Access
+flow: install, pick folder, write data, and (v1.0.4) re-pick an existing folder loads it instead of
+overwriting. ISC-20/21/22 now [x]. No deferred criteria remain.
+
+**v1.0.4–1.0.5 (test suite, install UX):**
+- ISC-45/46/47/48: the committed suite passes **49/49** (37 jsdom unit + 12 real-Chrome). Browser
+  layer proves: SW cache shellCached + controller, board renders, exactly 1 load (no flash), gate
+  dormant on localhost, `.gbox` computes `display:block` (collision regression), all 3 exports valid
+  OOXML zips, **true offline reload renders from cache** (CDP network offline), and an installed
+  device shows "Open the App". Unit layer proves the existing-folder load (mocked picker) and the
+  install relabel. `bun run test` + CI workflow `.github/workflows/tests.yml`.
 
 **v1.0.1 (deployed 2026-06-09), live-probed on `harryf.github.io`:**
 - ISC-42 (flash fixed): reproduced first (DevTools: 2 navigations on v1.0.0); after fix, **exactly 1

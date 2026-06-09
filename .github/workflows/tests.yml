@@ -1,0 +1,32 @@
+name: Tests
+
+# Runs the jsdom + real-Chrome test suite on every push to main and every pull request.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dev dependencies (jsdom)
+        run: bun install
+
+      - name: Set up Chrome
+        id: setup-chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Run tests
+        run: node tests/run.mjs
+        env:
+          CHROME_PATH: ${{ steps.setup-chrome.outputs.chrome-path }}

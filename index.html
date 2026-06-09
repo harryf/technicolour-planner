@@ -403,7 +403,7 @@
   <div class="gbox">
     <h2>🌈 Sarah's Amazing Technicolour Planner</h2>
     <div class="colourline"></div>
-    <p>This planner runs as an installed app on your computer, in its own window. That keeps your
+    <p id="gateLead">This planner runs as an installed app on your computer, in its own window. That keeps your
        work private and lets it open offline. Install it once, then open it from your Desktop.</p>
     <button class="big" id="installBtn" hidden>⬇ Install the app</button>
     <div class="os">
@@ -432,9 +432,9 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.4";
-const CHANGELOG_LATEST = "If you point the app at a folder that already has your planner file, it now " +
-  "loads that file instead of replacing it.";
+const VERSION = "1.0.5";
+const CHANGELOG_LATEST = "If the app is already installed, opening the web page now shows an \"Open the App\" " +
+  "button instead of asking you to install it again.";
 const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
 
 const TARGETS = {
@@ -1213,17 +1213,49 @@ function isStandalone(){
 function isLocalDev(){ return ["127.0.0.1","localhost"].includes(location.hostname) || location.protocol === "file:"; }
 function gateActive(){ return !isStandalone() && !isLocalDev(); }
 
+function markInstalled(){ try{ localStorage.setItem("installed","1"); }catch(e){} }
+if(isStandalone()) markInstalled(); // running as the app proves it's installed on this device
+async function detectInstalled(){
+  if(localStorage.getItem("installed")==="1") return true;
+  if(navigator.getInstalledRelatedApps){
+    try{ const apps = await navigator.getInstalledRelatedApps(); if(apps && apps.length){ markInstalled(); return true; } }catch(e){}
+  }
+  return false;
+}
+
 let deferredPrompt = null;
 window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredPrompt = e;
-  const b = document.getElementById("installBtn"); if(b) b.hidden = false; });
+  const b = document.getElementById("installBtn"); if(b && b.dataset.mode !== "open") b.hidden = false; });
 document.getElementById("installBtn").onclick = async ()=>{
+  const btn = document.getElementById("installBtn");
+  if(btn.dataset.mode === "open"){
+    alert("This planner is already installed. Open it from your Desktop, Applications, or the Start menu.");
+    return;
+  }
   if(deferredPrompt){ deferredPrompt.prompt(); try{ await deferredPrompt.userChoice; }catch(e){} deferredPrompt = null; }
-  else alert("Use your browser's install control: the install icon in the address bar, or the ⋮ menu → \"Install\".");
+  else alert("Use your browser's install control: the install icon in the address bar, or the menu, then \"Install\".");
 };
-window.addEventListener("appinstalled", ()=>{ const b=document.getElementById("installBtn"); if(b) b.hidden=true; });
+window.addEventListener("appinstalled", ()=>{ markInstalled(); setGateMode(true); });
+
+// Switch the gate between "Install the app" and "Open the App" based on whether it's already installed here.
+function setGateMode(installed){
+  const btn = document.getElementById("installBtn");
+  const lead = document.getElementById("gateLead");
+  const steps = document.querySelector("#installGate .os");
+  if(installed){
+    btn.dataset.mode = "open"; btn.textContent = "Open the App"; btn.hidden = false;
+    if(lead) lead.textContent = "You've already installed this planner. Open it from your Desktop, Applications, or the Start menu, not this browser tab.";
+    if(steps) steps.style.display = "none";
+  } else {
+    btn.dataset.mode = "install"; btn.textContent = "⬇ Install the app";
+    if(steps) steps.style.display = "";
+  }
+}
+
 function applyInstallGate(){ document.getElementById("installGate").classList.toggle("open", gateActive()); }
 try{ window.matchMedia("(display-mode: standalone)").addEventListener("change", applyInstallGate); }catch(e){}
 applyInstallGate(); // synchronous, before the async board render, so the frosted layer is up from first paint
+detectInstalled().then(setGateMode); // swap to "Open the App" if it's already installed on this device
 
 /* ========================= BOOT ========================= */
 async function boot(){

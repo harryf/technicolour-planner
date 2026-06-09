@@ -1,0 +1,15 @@
+{
+  "name": "technicolour-planner",
+  "private": true,
+  "version": "1.0.5",
+  "description": "Tests and dev tooling for Sarah's Amazing Technicolour Planner. The app itself is buildless (plain index.html); this package only holds the test suite.",
+  "type": "module",
+  "scripts": {
+    "test": "node tests/run.mjs",
+    "test:unit": "node tests/unit.mjs",
+    "test:browser": "node tests/browser.mjs"
+  },
+  "devDependencies": {
+    "jsdom": "^29.1.1"
+  }
+}

@@ -2,6 +2,14 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.0.5], 2026-06-09
+- **"Open the App" when already installed.** Visiting the web page on a device where the planner is
+  already installed now shows an "Open the App" button and a short "open it from your Desktop" note,
+  instead of the install steps. Browsers can't launch an installed app from a tab, so the button
+  guides you to open it rather than auto-launching.
+- **Committed test suite** (`tests/`, run with `bun run test`): jsdom unit tests plus real-Chrome
+  integration tests (service worker, offline reload, Office exports, install gate), and a CI workflow.
+
 ## [1.0.4], 2026-06-09
 - **Choosing an existing folder loads it instead of overwriting.** When you point the app (in
   onboarding or in Settings) at a folder that already contains `Technicolour-Planner-Data.json`, it

@@ -44,6 +44,8 @@ README.md               # Sarah-facing + dev notes
 CHANGELOG.md            # per-release "what's new" (feeds the in-app version-badge text)
 FEATURES.md             # feature/bug backlog, the Sarah → Harry → us → ship loop
 robots.txt              # non-authoritative on a Pages subpath; the noindex META is the real control
+tests/                  # committed test suite: unit.mjs (jsdom) + browser.mjs (Chrome) + run.mjs + lib/
+package.json            # dev-only: the `test` scripts + jsdom devDependency (the app stays buildless)
 ```
 
 `.gitignore` excludes Sarah's runtime data, **never commit** `*-Data.json`, `*-Data.md`,
@@ -105,6 +107,11 @@ decides. When **not** standalone **and** not localhost dev (`gateActive()`), a f
 `beforeinstallprompt`); `boot()` returns early so prompts/onboarding don't fire behind it. Installed
 app or `localhost`/`127.0.0.1`/`file:` → no gate. Don't show Sarah's data in a public browser tab.
 
+If the app is already installed on the device (tracked by a `localStorage` "installed" flag set when
+it runs standalone, plus `navigator.getInstalledRelatedApps()`), the gate's button switches from
+"Install the app" to "Open the App" via `setGateMode()`. Browsers can't launch an installed PWA from
+a tab, so that button shows a short "open it from your Desktop" note; it does not auto-launch.
+
 Note: updates are automatic. The service worker calls `skipWaiting()` on install and `clients.claim()`
 on activate. The page reloads once on `controllerchange`, but only if it already had a controller at
 load (a real update), so the first open never reloads. There is no manual update prompt. Keep the
@@ -122,16 +129,17 @@ need the exact approach). If you change the brand mark, regenerate all three.
 - **Run locally:** serve the folder with any static server, e.g. `python3 -m http.server 8731`,
   then open `http://127.0.0.1:8731/`. (Service worker + File System Access need `http`/`https`, not
   `file://`.)
-- **Verify:** there is no test runner. Two harnesses are used (scripts live in `/tmp` during a
-  session, recreate as needed):
-  - **jsdom** functional harness (run under **Node**, not Bun, Bun's jsdom hits a Proxy error):
-    loads `index.html`, drives the UI, asserts render/seed/Store/onboarding logic.
-  - **Real Chrome** via the **DevTools Protocol** (launch `--headless=new --remote-debugging-port`,
-    drive over the `/json` WebSocket with Node's global `WebSocket`): the only honest way to verify
-    the service-worker cache, the offline shell, and the Office exports (the UMD libs hang jsdom).
-    **Always re-verify under the real `/technicolour-planner/` subpath**, not just root, that's
-    where Pages-specific path/scope bugs surface. (If the `Interceptor` skill is installed, prefer
-    it for browser verification; it wasn't available when v1 shipped.)
+- **Verify:** committed test suite in `tests/`. Run `bun install` once, then `bun run test` (full),
+  `bun run test:unit` (jsdom only), or `bun run test:browser` (Chrome only). It runs under **Node**,
+  not Bun (Bun's jsdom hits a Proxy error); `bun run` just launches the npm scripts, which call `node`.
+  - **jsdom unit tests** (`tests/unit.mjs`): render, seed, Store, schema migration, markdown mirror,
+    onboarding, the `.gbox` gate collision regression, the existing-folder load (mocked picker),
+    install detection, and the "Open the App" relabel.
+  - **Real-Chrome integration** (`tests/browser.mjs`, DevTools Protocol): serves the repo's parent so
+    the app runs at the real `/technicolour-planner/` subpath, then checks the service-worker cache,
+    true offline reload, the three Office exports (valid OOXML zips), no first-load flash, and the
+    install relabel. Skips cleanly if no Chrome (set `CHROME_PATH`). CI runs it on push and PR
+    (`.github/workflows/tests.yml`). **When you add a behaviour, add a test.**
 - **Deploy:** GitHub Pages via `.github/workflows/deploy.yml` (fires on push to `main` and on `v*`
   tags). `release.yml` cuts a GitHub Release on a `v*` tag. All asset paths are **relative** so the
   app works on the Pages subpath, keep them relative.
