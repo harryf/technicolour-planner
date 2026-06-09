@@ -61,7 +61,7 @@ state = {
   projects: [ {
     id, title, type:"reel"|"post"|"story", targets:[...],   // targets ⊆ discovery|authority|conversion|retention
     date:"YYYY-MM-DD"|null, music, hook, desc, notes,
-    storyCodes:[1..5], image:<dataURL>|null,
+    storyCodes:[1..5], image:<dataURL>|null, imageName:<filename>|null,   // see Images below
     stages:{prep,shot,edited,posted}, tasks:[{id,text,activity,done}]   // activity ∈ brainstorm|shoot|edit|priority|justdo
   } ],
   settings: { lang:"en"|"fr", lowstim:bool, colors:{<target>:<hex>} },   // per-user colour remap
@@ -102,6 +102,19 @@ Key behaviours (don't regress these):
   `Store.checkpoint()` writes one silently on app start (only if a folder is connected and permission
   is already granted). `pruneBackups()` keeps the last `MAX_BACKUPS` (20). Import/Export live in
   Settings, not the header, because the live JSON + `.md` already mirror every change.
+- **Images** (v1.1.0): when a folder is connected, attaching a picture to a piece writes a copy into
+  that folder as `Technicolour-Planner-image-<projectId>-<ISO>.<ext>` and stores **only the filename**
+  in `imageName` (the JSON stays small, the picture is a real file she owns). With no folder, it falls
+  back to the inline `image` data URL. `IMG_CACHE[projectId]` holds an object URL read back from the
+  folder so render stays synchronous; `prewarmImages()` fills it at boot / after reconnect / after a
+  folder change. `imageSrcFor(p)` (cache → inline data URL → none) is the single source for thumbnails
+  on the board and detail drawer. Removing clears both refs and `removeEntry`s the file. The image
+  filename pattern is deliberately outside `pruneBackups`' `backup|checkpoint` regex, so checkpoints
+  never delete pictures.
+- **Footer storage location** (v1.1.0): the footer `#dataLocation` shows `📁 <folder>/<JSON_NAME>` and
+  is clickable to change (or set) the folder via the shared `chooseLocation()` (same flow as Settings).
+  Browsers don't expose a folder's absolute OS path to a web app, so the folder name is the deepest
+  identifier shown, this is a platform limit, not a TODO.
 
 ## Install gate (browser tab vs installed app)
 
@@ -172,7 +185,8 @@ need the exact approach). If you change the brand mark, regenerate all three.
   (Harry's v1 call). A scrub (neutralise docs, dummy seed data, possibly fresh repo) is tracked in
   `FEATURES.md`, do it before any wider sharing.
 - **Feedback loop:** requests/bugs land in `FEATURES.md` (Sarah → Harry → here → ship). The in-app
-  "Send feedback" button is a `mailto:` to Harry.
+  "Send feedback" button opens a WhatsApp chat to Harry (`wa.me/<FEEDBACK_WHATSAPP>`) with a starter
+  message (was a `mailto:` before v1.1.0).
 - This repo is **not** in PAI's `checkpoint-repos.txt`, commits here are deliberate, never
   auto-committed.
 

@@ -2,6 +2,17 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.1.0], 2026-06-10
+- **Your storage folder, front and centre.** The footer now shows where your data lives
+  (`📁 YourFolder/Technicolour-Planner-Data.json`) and you can click it to change the folder any
+  time, the same as in Settings. (Browsers don't let a web app see a folder's full computer path,
+  so it shows the folder's name, which is the most they'll reveal.)
+- **Pictures are saved into your folder.** When you attach an image to a piece and you have a data
+  folder connected, the app now saves a copy of the picture into that folder and remembers its file
+  name, instead of stuffing the image inside the JSON. Your data file stays small and your pictures
+  are real files you own. With no folder connected it still works, keeping the image inline as before.
+- **"Send feedback" now opens WhatsApp** straight to Harry, with a starter message, instead of email.
+
 ## [1.0.9], 2026-06-09
 - **Fixed updates getting stuck on an old version.** GitHub Pages serves files with a 10-minute cache,
   so when a new version installed, the service worker was precaching a stale `index.html` from the

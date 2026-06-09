@@ -2,10 +2,10 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 51/51
+progress: 60/60
 mode: ALGORITHM
 started: 2026-06-09
-updated: 2026-06-09
+updated: 2026-06-10
 ---
 
 # ISA, 🌈 Sarah's Amazing Technicolour Planner (PWA)
@@ -148,6 +148,17 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 ### v1.0.9: updates actually land (no stale cached page)
 - [x] ISC-51: Deploying a new version fully loads it: the SW precaches the shell with `cache:"reload"` (no stale page from the `max-age=600` HTTP cache), registers with `updateViaCache:"none"`, and reloads on a real `controllerchange` (ignoring only the first claim). Verified by `tests/upgrade.mjs`, which reproduces the cached-server failure and confirms the fix.
 
+### v1.1.0: storage location in footer, images saved into the folder, WhatsApp feedback
+- [x] ISC-52: The footer storage indicator shows the connected folder as `📁 <folder>/Technicolour-Planner-Data.json` when in file mode, and "Storage: this browser …" otherwise. (The File System Access API does not expose a folder's absolute OS path to a web app; the folder name is the deepest identifier available.)
+- [x] ISC-53: Clicking the footer storage indicator opens the folder picker (change-location flow) via the shared `chooseLocation()`, the same path Settings uses; an existing folder's data is adopted, not clobbered.
+- [x] ISC-54: Attaching an image while a folder is connected writes a copy of the file into that folder (`Technicolour-Planner-image-<projectId>-<ISO>.<ext>`) and stores only the filename in `p.imageName`, clearing the inline `p.image` data URL.
+- [x] ISC-55: Attaching an image with no folder connected (or if the folder write fails) stores the inline `p.image` data URL and clears `p.imageName`, so the feature never hard-fails in localStorage mode.
+- [x] ISC-56: A project whose image lives in the folder renders its thumbnail by reading the file back (object URL via `prewarmImages()` → `IMG_CACHE`), on both the board card and the detail drawer, through the single `imageSrcFor(p)` accessor.
+- [x] ISC-57: Removing an image clears both `p.image` and `p.imageName`, revokes the cached object URL, and `removeEntry`s the copied file from the folder when present.
+- [x] ISC-58: The "Send feedback" button opens a WhatsApp chat to `41796476540` via a `wa.me` link with a prefilled message; no `mailto:` remains in the app.
+- [x] ISC-59: Anti: image attach/remove never throws or blocks the UI when folder permission has lapsed or File System Access is unavailable, it degrades to the inline data URL path (guarded by try/catch + perm checks).
+- [x] ISC-60: Anti: the copied image files are not matched by `pruneBackups`' `backup|checkpoint` regex (so checkpoints never delete pictures) and are written only into Sarah's chosen folder, never the git repo.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -166,6 +177,10 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 | ISC-37,38,39 | content+behaviour | grep VERSION/footer/settings/mailto | Grep/jsdom |
 | ISC-40 | deploy | curl live URL, assert app markers + noindex | curl |
 | ISC-41 | experiential | headless-Chrome screenshot of installed-style board | Interceptor |
+| ISC-52,53 | code+behaviour | grep footer label/onclick; jsdom asserts onclick + chooseLocation | Grep/jsdom |
+| ISC-54,55,56,57 | behaviour | jsdom mock dir handle: attach writes file + sets imageName, fallback to data URL, imageSrcFor | node verify |
+| ISC-58 | content | grep wa.me + FEEDBACK_WHATSAPP, assert no mailto | Grep/jsdom |
+| ISC-59,60 | code | grep try/catch + perm guards; assert image name vs prune regex | Grep/jsdom |
 
 ## Features
 
@@ -180,6 +195,9 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 | Office export module (vendored, lazy) | ISC-32..36 | port | YES (Forge) |
 | Polish: version badge, settings, feedback | ISC-37..39 | store | no |
 | Deploy + live verify | ISC-40,41 | all | no |
+| Footer storage location (clickable, change-folder) | ISC-52,53 | store | no |
+| Image saved into folder (filename ref + cache) | ISC-54..57,59,60 | store | no |
+| WhatsApp feedback | ISC-58 |, | yes |
 
 ## Decisions
 
@@ -207,6 +225,21 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   AND publishes Sarah's real personal/seed data. That is outward-facing + hard-to-reverse, so per the
   push/deploy permission boundary the build + local verification are done now and the push/tag is held
   for Harry's explicit confirm (FU-2).
+- 2026-06-10 (v1.1.0): **"Full path" for storage is impossible by web platform design.** Harry asked
+  the footer to show "the full path to the storage directory". The File System Access API deliberately
+  withholds a folder's absolute OS path from web apps (privacy); `dirHandle.name` is the only identifier
+  exposed. Decision: show `📁 <folder>/<JSON_NAME>` (the deepest available), and document the limit in
+  the label/title and CLAUDE.md rather than chase an impossible absolute path.
+- 2026-06-10 (v1.1.0): **Images stored as folder files, not inline, when a folder exists.** Harry asked
+  attached images to be copied into the storage folder with the JSON remembering the location. Decision:
+  in file mode write `Technicolour-Planner-image-<id>-<ISO>.<ext>` and store only `imageName`; in
+  localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
+  (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
+  through every render path.
+- 2026-06-10 (v1.1.0): **Forge auto-include relaxed (soft floor), codex CLI still absent.** `command -v
+  codex` → not installed, same environment gap as the build session. Show-your-math: this is a focused
+  edit to one single-file app plus its committed suite; a second author would add drift risk on
+  inseparable UI code. Verification leaned on the committed jsdom + real-Chrome suite (66/66) instead.
 
 ## Changelog
 
@@ -278,6 +311,15 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   with `firstControllerSeen` (ignore only the initial claim). criterion_now: ISC-51 + a committed
   upgrade test that reproduces the failure and proves the fix. Lesson: an update mechanism needs a
   real cross-version test, not version-bump-and-hope.
+- conjectured (v1.1.0): storing the attached image inline in the JSON is fine. refuted_by: Harry asked
+  for the picture to be a real copy in her folder with the JSON remembering only its location, inline
+  data URLs also bloat the data file and aren't files she can open. learned: in file mode write the
+  image into the folder and store only `imageName`; render reads it back via an object-URL cache, with
+  the inline data URL kept solely as the no-folder fallback. criterion_now: ISC-54..57 (+ anti ISC-59/60).
+- conjectured (v1.1.0): the footer could show the storage folder's full filesystem path. refuted_by:
+  the File System Access API never exposes an absolute path to a web app by design. learned: show the
+  folder name + data file (`📁 <folder>/<JSON_NAME>`), make it click-to-change, and state the platform
+  limit in copy + docs. criterion_now: ISC-52/53.
 
 ## Verification
 
@@ -337,3 +379,18 @@ overwriting. ISC-20/21/22 now [x]. No deferred criteria remain.
   overlay blurring the planner with the install card on top.
 - ISC-44 (install): `installBtnExists:true`; `beforeinstallprompt` wired; Mac/Windows steps rendered.
 - jsdom regression 27/27 after the changes (matchMedia guarded for jsdom).
+
+**v1.1.0 (storage location, folder images, WhatsApp feedback):** full suite **66/66** (50 jsdom unit +
+13 real-Chrome + 3 upgrade) via `node tests/run.mjs`.
+- ISC-52/53: jsdom asserts `#dataLocation.onclick` is a function and the source wires `chooseLocation`;
+  label format `st.name+"/"+JSON_NAME` present.
+- ISC-54: jsdom mock dir handle, `writeFileTo(dir,name,File)` captured a write of `…image-p1-….png`
+  to the folder (not inline). ISC-55: `imageSrcFor({image:'data:…'})` returns the data URL (fallback).
+- ISC-56: `imageSrcFor`/`prewarmImages`/`imageNameFor`/`deleteImageFile` all defined; board + drawer
+  read through `imageSrcFor`. ISC-57: remove path clears refs + `removeEntry` (source-verified).
+- ISC-58: `FEEDBACK_WHATSAPP==="41796476540"`, `wa.me` present, **no `mailto:` anywhere** in the app.
+- ISC-59: attach/remove wrapped in try/catch + `perm()` guards (source). ISC-60: image filename does
+  not match `^Technicolour-Planner-(backup|checkpoint)-.*\.json$` (asserted), so prune never deletes it.
+- Real-Chrome confirms the bump landed cleanly: `caches.keys()` → `["technicolour-v1.1.0"]`,
+  controller+registration true, board 7 cols / 6 cards, all 3 exports valid zips, true offline reload,
+  exactly 1 load (no flash). Upgrade test green (cross-version load).

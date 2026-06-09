@@ -188,6 +188,8 @@
   footer .vbadge{font-weight:700;border:1px solid var(--line);border-radius:999px;padding:2px 10px;
          cursor:pointer;background:var(--panel);color:var(--ink)}
   footer a,footer .linkbtn{color:var(--muted);cursor:pointer;border:0;background:transparent;text-decoration:underline;padding:0;font:inherit}
+  footer #dataLocation.clickable{cursor:pointer;text-decoration:underline;text-decoration-style:dotted}
+  footer #dataLocation.clickable:hover{color:var(--ink)}
 
   /* ---- Install gate: frosted layer shown only in a public browser tab (not the installed app) ---- */
   .gate{position:fixed;inset:0;z-index:200;display:none;place-items:center;padding:24px;
@@ -437,10 +439,11 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.0.9";
-const CHANGELOG_LATEST = "Fixed updates getting stuck: new versions now load fully, instead of the app " +
-  "keeping a cached old page after the update.";
-const FEEDBACK_EMAIL = "harry@gigs.com"; // feature requests / bugs go to Harry
+const VERSION = "1.1.0";
+const CHANGELOG_LATEST = "The footer shows your storage folder and lets you change it with a click. " +
+  "Pictures you attach are now saved as real files in your folder (not buried in the data file). " +
+  "Send feedback now opens WhatsApp to Harry.";
+const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
   discovery:{label:"Discovery",short:"Disc",desc:"Get seen on the For-You page",color:"#9aa0a6"},
@@ -511,7 +514,7 @@ const HOOKS = [
 function seedProjects(){
   const P = (o)=>Object.assign({
     id:uid(), type:"reel", targets:[], date:null, music:"", hook:"", desc:"", notes:"",
-    storyCodes:[], image:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[]
+    storyCodes:[], image:null, imageName:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[]
   }, o);
   return [
     P({title:"Burton dogs", type:"reel", targets:["authority"], date:"2026-06-09",
@@ -703,6 +706,33 @@ const Store = {
   status(){ return {mode:this.mode, fsa:this.fsa, name:(this.dir && this.dir.name) || null}; },
 };
 
+/* ---- Image files: when a folder is connected we save the picture into it and remember only
+   the filename in the JSON (a copy she owns), not a heavy inline data URL. With no folder we
+   fall back to an inline data URL so the feature never hard-fails. IMG_CACHE maps project id →
+   object URL read back from the folder, so render stays synchronous. ---- */
+const IMG_CACHE = {};
+function imageNameFor(p, file){
+  const ext = ((file && file.name || "").match(/\.[a-z0-9]+$/i) || [".png"])[0].toLowerCase();
+  return "Technicolour-Planner-image-" + p.id + "-" + nowISO() + ext;
+}
+// Best available source for a project's picture (object URL from folder → inline data URL → none).
+function imageSrcFor(p){ return (p && (IMG_CACHE[p.id] || p.image)) || null; }
+// Read every folder-stored image back into IMG_CACHE once, so first render shows thumbnails.
+async function prewarmImages(){
+  if(Store.mode!=="file" || !Store.dir || !(await Store.perm(false))) return;
+  for(const p of state.projects){
+    if(p.imageName && !IMG_CACHE[p.id]){
+      try{ const fh=await Store.dir.getFileHandle(p.imageName,{create:false});
+        IMG_CACHE[p.id]=URL.createObjectURL(await fh.getFile()); }catch(e){ /* file gone → silently skip */ }
+    }
+  }
+}
+async function deleteImageFile(name){
+  if(name && Store.mode==="file" && Store.dir && await Store.perm(false)){
+    try{ await Store.dir.removeEntry(name); }catch(e){ /* already gone */ }
+  }
+}
+
 /* ---- human-readable mirror (so her data is extractable in plain text) ---- */
 function toMarkdown(state){
   const L=[]; L.push("# 🌈 Sarah's Amazing Technicolour Planner (your data)");
@@ -715,6 +745,7 @@ function toMarkdown(state){
     if(p.music) o.push("- Music: "+p.music);
     if(p.storyCodes && p.storyCodes.length) o.push("- Story codes: "+p.storyCodes.map(c=>c+" "+(STORY_CODES[c]?STORY_CODES[c].label:"")).join(", "));
     const st=STAGES.filter(s=>p.stages && p.stages[s]); if(st.length) o.push("- Done: "+st.join(", "));
+    if(p.imageName) o.push("- Image file: "+p.imageName);
     if(p.desc) o.push("- Description: "+p.desc.replace(/\n/g," "));
     if(p.tasks && p.tasks.length) o.push("- Tasks:\n"+p.tasks.map(tk=>"  - ["+(tk.done?"x":" ")+"] ("+(ACTIVITIES[tk.activity]?ACTIVITIES[tk.activity].label:tk.activity)+") "+tk.text).join("\n"));
     if(p.notes) o.push("- Notes: "+p.notes.replace(/\n/g," "));
@@ -784,7 +815,7 @@ function projectCard(p,{compact=false}={}){
   badge.title=TYPES[p.type].label;
   const ttl=document.createElement("span"); ttl.className="ttl"; ttl.textContent=p.title;
   tl.append(badge,ttl); body.appendChild(tl);
-  if(p.image){ const im=document.createElement("img"); im.className="thumb"; im.src=p.image; im.alt=""; body.appendChild(im); }
+  { const tsrc=imageSrcFor(p); if(tsrc){ const im=document.createElement("img"); im.className="thumb"; im.src=tsrc; im.alt=""; body.appendChild(im); } }
   const meta=document.createElement("div"); meta.className="meta";
   for(const k of (p.targets.length?p.targets:["discovery"])){
     const s=document.createElement("span"); s.className="ttag";
@@ -913,7 +944,7 @@ function renderAll(){
 /* ========================= DETAIL DRAWER ========================= */
 function newProject(type){
   const p={ id:uid(), title:"", type, targets:[], date:null, music:"", hook:"", desc:"", notes:"",
-    storyCodes:[], image:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[] };
+    storyCodes:[], image:null, imageName:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[] };
   if(type==="reel"){ p.title="New reel"; p.music=""; p.hook="";
     p.tasks=[t("Brainstorm","brainstorm"),t("Shoot","shoot"),t("Edit","edit")]; }
   if(type==="post"){ p.title="New post"; p.tasks=[t("Prep","brainstorm"),t("Caption","justdo")]; }
@@ -961,11 +992,38 @@ function openDetail(id){
   s.appendChild(field("Date (sets where it lands on the board)", dwrap));
 
   const iwrap=document.createElement("div");
-  if(p.image){ const im=document.createElement("img"); im.src=p.image; im.style.cssText="width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin-bottom:8px"; iwrap.appendChild(im); }
+  const isrc=imageSrcFor(p);
+  if(isrc){ const im=document.createElement("img"); im.src=isrc; im.style.cssText="width:100%;max-height:160px;object-fit:cover;border-radius:10px;margin-bottom:8px"; iwrap.appendChild(im); }
   const fi=document.createElement("input"); fi.type="file"; fi.accept="image/*";
-  fi.onchange=()=>{ const f=fi.files[0]; if(!f)return; const r=new FileReader(); r.onload=()=>{p.image=r.result;softSave();openDetail(id);renderAll();}; r.readAsDataURL(f); };
+  fi.onchange=async()=>{
+    const f=fi.files[0]; if(!f) return;
+    // Folder connected → save a copy into it, remember the filename, drop the inline data URL.
+    if(Store.mode==="file" && Store.dir && await Store.perm(true)){
+      try{
+        const old=p.imageName;
+        const name=imageNameFor(p,f);
+        await writeFileTo(Store.dir, name, f);
+        p.imageName=name; p.image=null;
+        if(IMG_CACHE[p.id]) URL.revokeObjectURL(IMG_CACHE[p.id]);
+        IMG_CACHE[p.id]=URL.createObjectURL(f);
+        if(old && old!==name) deleteImageFile(old);
+        softSave(); openDetail(id); renderAll();
+        return;
+      }catch(e){ /* write failed → fall through to inline data URL */ }
+    }
+    // No folder (or write failed) → keep it inline so the feature never hard-fails.
+    const r=new FileReader();
+    r.onload=()=>{ p.image=r.result; p.imageName=null;
+      if(IMG_CACHE[p.id]){ URL.revokeObjectURL(IMG_CACHE[p.id]); delete IMG_CACHE[p.id]; }
+      softSave(); openDetail(id); renderAll(); };
+    r.readAsDataURL(f);
+  };
   iwrap.appendChild(fi);
-  if(p.image){ const rm=document.createElement("button"); rm.textContent="remove image"; rm.style.marginTop="6px"; rm.onclick=()=>{p.image=null;softSave();openDetail(id);renderAll();}; iwrap.appendChild(rm); }
+  if(isrc){ const rm=document.createElement("button"); rm.textContent="remove image"; rm.style.marginTop="6px";
+    rm.onclick=async()=>{ const old=p.imageName; p.image=null; p.imageName=null;
+      if(IMG_CACHE[p.id]){ URL.revokeObjectURL(IMG_CACHE[p.id]); delete IMG_CACHE[p.id]; }
+      await deleteImageFile(old); softSave(); openDetail(id); renderAll(); };
+    iwrap.appendChild(rm); }
   s.appendChild(field("Image / thumbnail", iwrap));
 
   s.appendChild(field("🎵 Music", inputEl(p.music,v=>{p.music=v;softSave();})));
@@ -1126,12 +1184,20 @@ async function refreshDataStatus(){
   try{ if(navigator.storage && navigator.storage.persisted){ const p=await navigator.storage.persisted();
     ps.textContent = p ? "🔒 This browser has promised to keep your data (persistent storage on)." : "ℹ️ Tip: choosing a data folder is the safest way to never lose your work."; } else ps.textContent=""; }catch(e){ ps.textContent=""; }
 }
+// Pick (or change) the data folder. Shared by Settings, onboarding, and the footer location.
+async function chooseLocation(){
+  const res = await Store.setLocation();
+  // Folder changed → old object URLs point at the old folder; drop the cache and re-read.
+  for(const k in IMG_CACHE){ URL.revokeObjectURL(IMG_CACHE[k]); delete IMG_CACHE[k]; }
+  if(res.existing) state = res.state;   // folder already has data: load it, don't clobber
+  await Store.save(state);
+  await prewarmImages();
+  hideFileReminder(); hideReconnect(); refreshDataStatus(); updateDataLocation(); renderAll();
+  return res;
+}
 document.getElementById("setLocationBtn").onclick=async()=>{
   try{
-    const res = await Store.setLocation();
-    if(res.existing){ state = res.state; renderAll(); }   // folder already has data: load it, don't clobber
-    await Store.save(state);
-    hideFileReminder(); hideReconnect(); refreshDataStatus(); updateDataLocation();
+    const res = await chooseLocation();
     alert(res.existing ? "This folder already had a planner file, so I loaded it." : "Saved! Your data now lives in your folder.");
   }
   catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder."); }
@@ -1147,15 +1213,26 @@ document.getElementById("pptxBtn").onclick=e=>officeExport("pptx",e.currentTarge
 /* footer: version + data location + feedback */
 function updateDataLocation(){
   const st=Store.status(); const el=document.getElementById("dataLocation");
-  if(st.mode==="file" && st.name) el.textContent="Storage: 📁 "+st.name;
-  else el.textContent="Storage: this browser";
+  // Browsers never expose a folder's absolute OS path to a web app, so the deepest identifier we
+  // can show is the folder's own name. Clicking changes (or sets) the storage location.
+  if(st.mode==="file" && st.name){ el.textContent="📁 "+st.name+"/"+JSON_NAME; el.title="Click to change where your data is stored"; }
+  else if(st.fsa){ el.textContent="Storage: this browser (click to choose a folder)"; el.title="Click to store your data in a folder you own"; }
+  else { el.textContent="Storage: this browser"; el.title="This browser can't store data in a folder you pick"; }
+  el.classList.toggle("clickable", st.fsa);
 }
+document.getElementById("dataLocation").onclick=async()=>{
+  if(!Store.fsa) return;
+  try{
+    const res = await chooseLocation();
+    alert(res.existing ? "This folder already had a planner file, so I loaded it." : "Saved! Your data now lives in your folder.");
+  }
+  catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder."); }
+};
 document.getElementById("versionBadge").textContent="v"+VERSION;
 document.getElementById("versionBadge").onclick=()=>alert("🌈 Technicolour Planner v"+VERSION+"\n\nWhat's new:\n"+CHANGELOG_LATEST);
 document.getElementById("feedbackBtn").onclick=()=>{
-  const subj=encodeURIComponent("Technicolour Planner feedback (v"+VERSION+")");
-  const body=encodeURIComponent("Hi Harry,\n\n(Tell me what you'd like changed or what went wrong.)\n\nThanks,\nSarah\n\n[app version "+VERSION+"]");
-  window.location.href="mailto:"+FEEDBACK_EMAIL+"?subject="+subj+"&body="+body;
+  const text=encodeURIComponent("Hi Harry, some feedback on the Technicolour Planner (v"+VERSION+"):\n\n");
+  window.open("https://wa.me/"+FEEDBACK_WHATSAPP+"?text="+text, "_blank", "noopener");
 };
 
 /* reconnect + reminder banners */
@@ -1175,6 +1252,7 @@ document.getElementById("reconnectBtn").onclick=async()=>{
       if(fileState && fileState.projects && (fileState.updatedAt||"") > (state.updatedAt||"")) state=migrateState(fileState);
     }catch(e){ /* no file yet → keep current state */ }
     await Store.save(state);
+    await prewarmImages();
     renderAll(); updateDataLocation();
   } else alert("Couldn't reconnect. You can also pick the folder again in Settings.");
 };
@@ -1189,6 +1267,7 @@ document.getElementById("onbChoose").onclick=async()=>{
     const res = await Store.setLocation();
     if(res.existing) state = res.state;   // folder already has a planner file: load it instead of seeding over it
     await Store.save(state);
+    await prewarmImages();
     localStorage.setItem("onb_seen","1"); closeOnboarding(); refreshDataStatus(); updateDataLocation(); renderAll();
   }
   catch(e){ if(e && e.name==="AbortError") return; alert(e && e.message || "Couldn't set the folder. You can pick one later in Settings."); }
@@ -1316,6 +1395,7 @@ async function boot(){
     state=defaultState(); firstRun=true;
   }
 
+  await prewarmImages(); // read folder-stored thumbnails into cache so the first render shows them
   if(state.settings.lowstim) document.body.classList.add("lowstim");
   applyColors();
   setView("board");

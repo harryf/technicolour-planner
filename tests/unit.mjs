@@ -114,7 +114,25 @@ export async function runUnit() {
   s.ok("settings data controls", !!$("#setLocationBtn") && !!$("#backupNowBtn"), "setLocation + checkpoint");
   s.ok("import/export moved into Settings", !!$("#settingsModal #exportBtn") && !!$("#settingsModal #importBtn") && $("header #exportBtn") === null, "not in header");
   s.ok("Store.checkpoint present", ev("typeof Store.checkpoint==='function'"), "startup checkpoint method");
-  s.ok("feedback mailto", !!$("#feedbackBtn") && /mailto:/.test(html), "feedback");
+  s.ok("feedback opens WhatsApp", !!$("#feedbackBtn") && ev('FEEDBACK_WHATSAPP')==="41796476540" && /wa\.me/.test(html) && !/mailto:/.test(html), "wa.me, no mailto");
+
+  // ---- NEW (v1.1.0): clickable storage location + image-to-folder ----
+  s.ok("footer location is clickable", ev('typeof document.getElementById("dataLocation").onclick==="function"') && /chooseLocation/.test(html), "onclick + chooseLocation");
+  s.ok("location label shows folder + file name", /st\.name\+"\/"\+JSON_NAME/.test(html), "name + JSON_NAME");
+  s.ok("image helpers present", ev("typeof imageSrcFor==='function' && typeof prewarmImages==='function' && typeof imageNameFor==='function' && typeof deleteImageFile==='function'"), "imageSrcFor/prewarm/name/delete");
+  s.ok("image filename is project-scoped + timestamped", ev(`(()=>{ const n=imageNameFor({id:'abc'},{name:'x.JPG'}); return /^Technicolour-Planner-image-abc-.*\\.jpg$/.test(n); })()`), "named per project + ext");
+  s.ok("imageSrcFor falls back to inline data url", ev(`imageSrcFor({id:'q', image:'data:image/png;base64,AA'})==='data:image/png;base64,AA'`), "data url fallback");
+  s.ok("attach writes file in file mode (not inline)", await ev(`(async()=>{
+    let wrote=null; Store.mode="file";
+    Store.dir={ name:"F", queryPermission:async()=>"granted", requestPermission:async()=>"granted",
+      getFileHandle:async(n,o)=>({ createWritable:async()=>({ write:async(c)=>{ wrote={name:n,isFile:(c&&c.name)||false}; }, close:async()=>{} }) }),
+      removeEntry:async()=>{}, entries:async function*(){} };
+    const f=new File([new Uint8Array([1,2,3])],"shot.png",{type:"image/png"});
+    const name=imageNameFor({id:'p1'},f);
+    await writeFileTo(Store.dir,name,f);
+    return JSON.stringify({ wrote, named:/image-p1-.*\\.png$/.test(name) });
+  })()`).then(r=>{ const o=JSON.parse(r); return o.named && o.wrote && /image-p1-/.test(o.wrote.name); }), "file written to folder");
+  s.ok("image file not caught by backup pruning regex", !/^Technicolour-Planner-(backup|checkpoint)-.*\.json$/.test("Technicolour-Planner-image-p1-2026.png"), "images survive prune");
   s.ok("office export lazy-loaded", /loadExporter/.test(html) && /import\("\.\/src\/export\.js"\)/.test(html), "dynamic import");
   s.ok("SW registration guarded", /register\("service-worker\.js"/.test(html) && /location\.protocol\.startsWith\("http"\)/.test(html), "guarded");
 
