@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 37/40
+progress: 40/43
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-09
@@ -130,6 +130,11 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-40: Live URL serves the real app (not the placeholder) over HTTPS with `noindex` intact. (Deployed 2026-06-09 on Harry's go; FU-2 closed.)
 - [x] ISC-41: Antecedent: on first install Sarah sees HER projects in HER colours, in an own-window offline app — the recognition + "it's a real app" that makes it land.
 
+### v1.0.1 — first-load flash fix + installed-vs-browser gate
+- [x] ISC-42: First load fires exactly one navigation — the SW's first-load `controllerchange` (from `clients.claim()`) no longer triggers a reload; only a user-accepted update does.
+- [x] ISC-43: In a public browser tab (non-localhost, non-standalone) a frosted install-gate overlay covers the UI; it's dormant when running standalone (installed) or on localhost dev.
+- [x] ISC-44: `beforeinstallprompt` is captured and an in-gate Install button triggers the prompt; Mac + Windows install steps (incl. dragging to the Desktop) are shown.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -202,6 +207,11 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   refuted_by: advisor flagged that edits made while in cache/fallback mode would be silently clobbered
   by an older file on reconnect. learned: added an `updatedAt` content timestamp; reconnect now keeps
   whichever copy is newer and writes the winner back. criterion_now: ISC-22 covers conflict-aware reconnect.
+- conjectured: a service worker that calls `clients.claim()` is harmless on first load. refuted_by:
+  Harry reported a popup that "appears super fast then vanishes" — reproduced via DevTools as 2 navigations
+  (the first-load `controllerchange` from `clients.claim()` hit the update-reload handler). learned:
+  guard the reload behind an explicit user-accepted-update flag so first-load control never reloads.
+  criterion_now: ISC-42 asserts exactly one navigation on first load.
 
 ## Verification
 
@@ -244,3 +254,13 @@ src/export.js, 3 vendor libs). manifest valid (display:standalone, 3 icons). Git
 - ISC-20/21/22 [DEFERRED-VERIFY → FU-1]: File System Access picker/persist/reconnect — needs a real
   user gesture on a real install; code inspection-verified + conflict-aware. Closes on Sarah/Harry's
   first install folder-pick test (the one hands-on acceptance check left).
+
+**v1.0.1 (deployed 2026-06-09) — live-probed on `harryf.github.io`:**
+- ISC-42 (flash fixed): reproduced first (DevTools: 2 navigations on v1.0.0); after fix, **exactly 1
+  load event** on the live site. Root cause was the SW `clients.claim()` first-load `controllerchange`
+  reloading; now guarded behind `window.__acceptedUpdate`.
+- ISC-43 (install gate): live on `harryf.github.io` → `gateActive:true, gateOpen:true, gateVisible:true`;
+  on localhost → `gateActive:false` (dev usable). Screenshot `/tmp/tcv/live-gate.png` shows the frosted
+  overlay blurring the planner with the install card on top.
+- ISC-44 (install): `installBtnExists:true`; `beforeinstallprompt` wired; Mac/Windows steps rendered.
+- jsdom regression 27/27 after the changes (matchMedia guarded for jsdom).
