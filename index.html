@@ -172,6 +172,7 @@
         font-size:17px;background:rgba(255,255,255,.92);box-shadow:0 1px 4px rgba(0,0,0,.25);border:0}
   .thumbwrap .acts button:hover{background:#fff}
   .addimg{display:inline-flex;align-items:center;gap:8px}
+  .datehint{margin-top:7px;font-size:13px;font-weight:700;color:var(--ink)}
   .seg{display:flex;gap:6px;flex-wrap:wrap}
   .seg button{font-weight:700}
   .seg button[aria-pressed="true"]{border-color:var(--ink);background:#fffdf8}
@@ -484,10 +485,9 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.2.3";
-const CHANGELOG_LATEST = "The edit panel is a bit wider and its buttons now line up neatly (no more " +
-  "wrapping onto two lines). When a piece has a picture, it now shows the picture with a 📷 (change) and " +
-  "🗑 (remove) icon right on it, and the image hint says wide/landscape works best.";
+const VERSION = "1.2.4";
+const CHANGELOG_LATEST = "The date now reads in plain language under the picker, like 'Tuesday 9 Jun " +
+  "(this week)' or '(next week)', so you don't have to think in raw dates.";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
@@ -859,6 +859,22 @@ function firstWorkday(weekStart, notBefore){
 }
 function curWeekStart(){ return isoWeekStart(parseYMD(TODAY)); }
 function nextWeekStart(){ return addDays(curWeekStart(),7); }
+// Human-friendly date: weekday + day + month + a relative-week hint (most people don't think in raw dates).
+const WEEKDAYS_FULL=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
+const MONTHS_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function dateLabel(ymdStr){
+  const d=parseYMD(ymdStr);
+  const base=`${WEEKDAYS_FULL[(d.getDay()+6)%7]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
+  const diff=Math.round((parseYMD(isoWeekStart(d))-parseYMD(curWeekStart()))/(7*86400000));
+  let rel;
+  if(ymdStr===TODAY) rel="today";
+  else if(diff===0) rel="this week";
+  else if(diff===1) rel="next week";
+  else if(diff===-1) rel="last week";
+  else if(diff>1) rel="in "+diff+" weeks";
+  else rel=(-diff)+" weeks ago";
+  return base+" ("+rel+")";
+}
 // A piece needs catching up if it's dated before this week and hasn't been posted yet.
 function isOverdue(p){ return !!p.date && p.date < curWeekStart() && !(p.stages && p.stages.posted); }
 function overduePieces(){ return state.projects.filter(isOverdue)
@@ -1114,16 +1130,20 @@ function openDetail(id){
     s.appendChild(field("Story structure", sc));
   }
 
+  const dbox=document.createElement("div");
   const dwrap=document.createElement("div"); dwrap.className="row";
   const di=document.createElement("input"); di.type="date"; di.value=p.date||"";
-  di.onchange=()=>{ p.date=di.value||null; softSave(); renderAll(); };
+  const hint=document.createElement("div"); hint.className="datehint";
+  const setHint=()=>{ hint.textContent = p.date ? dateLabel(p.date) : "No date yet (it won't show on the board)"; };
+  di.onchange=()=>{ p.date=di.value||null; setHint(); softSave(); renderAll(); };
   const today=document.createElement("button"); today.textContent="today"; today.title="Put it on today";
   today.onclick=()=>{ p.date=TODAY; softSave(); openDetail(id); renderAll(); };
   const nextWk=document.createElement("button"); nextWk.textContent="→ next week"; nextWk.title="First working day of next week";
   nextWk.onclick=()=>{ p.date=firstWorkday(nextWeekStart(), TODAY); softSave(); openDetail(id); renderAll(); };
   const clr=document.createElement("button"); clr.textContent="clear"; clr.onclick=()=>{p.date=null;softSave();openDetail(id);renderAll();};
   dwrap.append(di,today,nextWk,clr);
-  s.appendChild(field("Date (sets where it lands on the board)", dwrap));
+  setHint(); dbox.append(dwrap,hint);
+  s.appendChild(field("Date (sets where it lands on the board)", dbox));
 
   const iwrap=document.createElement("div");
   const isrc=imageSrcFor(p);

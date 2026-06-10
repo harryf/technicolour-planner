@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 87/89
+progress: 88/90
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -196,6 +196,9 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-86: When a piece has a picture, the editor shows the picture itself with on-image 📷 (change) and 🗑 (remove) icon buttons driving a hidden file input; with no picture it shows a "🖼 Add a picture" button (no bare file dialog).
 - [x] ISC-87: The Image field label states wide/landscape (~1280×720) is ideal, matching the wide `object-fit:cover` thumbnail.
 
+### v1.2.4: human-friendly date hint
+- [x] ISC-88: Under the date picker the editor shows a plain-language `dateLabel(p.date)` hint, weekday + day + month + a relative-week note in brackets ("(today)" / "(this week)" / "(next week)" / "(last week)" / "(in N weeks)" / "(N weeks ago)"), refreshed on every date change; no date shows a gentle "No date yet" note.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -283,6 +286,10 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.2.4): **Human-friendly date hint.** Harry: a raw `dd.mm.yyyy` picker is hard to read;
+  show the weekday and a "(this week)/(next week)" bracket. Added `dateLabel()` (weekday + day + month +
+  relative-week) under the picker via a `.datehint`, refreshed on every change. Most people don't think
+  in straight dates.
 - 2026-06-10 (v1.2.3): **Editor alignment + on-image picture control.** Harry: the "→ next week" and
   hook "pick" buttons wrapped to multiple lines (taller than neighbours), Music/Hook weren't aligned, the
   task dropdown arrow was cramped, the picture should show the image itself with change/remove icons (not
@@ -526,3 +533,8 @@ screenshot `/tmp/tcv-120-board.png`).
 - ISC-86: jsdom — no image → `.addimg` button present, no `.thumbwrap`; with image → `.thumbwrap` has an
   `img` + 2 `.acts button` (📷/🗑); file input is `display:none`. Real-Chrome shows the icons on the image.
   ISC-87: label regex `wide / landscape works best, about 1280 × 720` present.
+
+**v1.2.4 (date hint):** full suite **104/104**.
+- ISC-88: jsdom `dateLabel(TODAY)` → "Wednesday 10 Jun (today)" (matches `/\(today\)$/` + leads with a
+  weekday); `dateLabel(addDays(nextWeekStart(),1))` ends "(next week)"; opening a piece shows the
+  `.datehint` under the picker. Real-Chrome: "Tuesday 9 Jun (this week)" for the 2026-06-09 piece.

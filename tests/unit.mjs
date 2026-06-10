@@ -195,6 +195,13 @@ export async function runUnit() {
   s.ok("file input hidden (icons drive it)", ev(`(()=>{ const fi=document.querySelector('#d-scroll input[type=file]'); return !!fi && fi.style.display==='none'; })()`), "hidden file input");
   ev("closeDrawer()");
 
+  // ---- NEW (v1.2.4): human-friendly date hint (weekday + this/next week) ----
+  s.ok("date hint reads 'today' for today", ev("/\\(today\\)$/.test(dateLabel(TODAY))"), ev("dateLabel(TODAY)"));
+  s.ok("date hint reads 'next week' for next week", ev("/\\(next week\\)$/.test(dateLabel(addDays(nextWeekStart(),1)))"), "next week");
+  s.ok("date hint leads with a weekday name", ev("/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) /.test(dateLabel(TODAY))"), "weekday");
+  s.ok("drawer shows the date hint under the picker", ev(`(()=>{ const p=state.projects.find(x=>x.date)||state.projects[0]; p.date=TODAY; openDetail(p.id); const h=document.querySelector('#d-scroll .datehint'); return !!h && /\\(today\\)$/.test(h.textContent); })()`), "datehint in drawer");
+  ev("closeDrawer()");
+
   return s;
 }
 

@@ -232,6 +232,9 @@ need the exact approach). If you change the brand mark, regenerate all three.
   when a piece has a picture, `openDetail` renders `.thumbwrap` (the image with on-image 📷 change + 🗑
   remove icon buttons) driving a hidden file input; with no picture it shows a "🖼 Add a picture" button.
   The Image field label states wide/landscape (~1280×720) is ideal, since the thumb is `object-fit:cover`.
+  **Date hint** (v1.2.4): under the date picker, a `.datehint` shows `dateLabel(p.date)`, a plain-language
+  reading like "Tuesday 9 Jun (this week)" / "(next week)" / "(today)" / "(N weeks ago/in N weeks)",
+  refreshed on every date change (most people don't read raw dates). No date → a gentle "No date yet" note.
 - **Relative paths only** (Pages subpath). **Colour model in sync** across `index.html` ↔
   `src/export.js`. **No runtime network calls** after install (export libs are vendored).
 - **Privacy:** the repo is public and currently ships Sarah's real seed data with a `noindex` meta
