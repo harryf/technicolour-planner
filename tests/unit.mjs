@@ -216,6 +216,13 @@ export async function runUnit() {
   s.ok("clicking a piece row opens its editor", ev(`(()=>{ const r=document.querySelector('#targetLegend .ucard.open .urow'); r.click(); return openId!=null && document.getElementById('drawer').classList.contains('open'); })()`), "opens drawer");
   ev("closeDrawer(); setView('board')");
 
+  // ---- NEW (v1.3.1): calmer grouped Settings ----
+  s.ok("settings grouped into 4 calm sections", $$("#settingsModal .set-group").length===4, `${$$("#settingsModal .set-group").length} groups`);
+  s.ok("settings has a sticky header + clear Close", !!$("#settingsModal .set-head") && /✕ Close/.test($("#settingsClose").textContent), $("#settingsClose").textContent.trim());
+  s.ok("settings body scrolls", /\.set-body\{overflow:auto/.test(html), "scroll body");
+  s.ok("all wired settings controls still present", ["lowstim","workdays","colorRemap","dataStatus","setLocationBtn","backupNowBtn","importBtn","exportBtn","persistStatus","xlsxBtn","docxBtn","pptxBtn"].every(id=>!!$("#settingsModal #"+id)), "ids intact");
+  s.ok("no duplicate footer note (noise removed)", !/Use ⬇ Export \(top\) for a plain JSON backup/.test(html), "trimmed");
+
   return s;
 }
 

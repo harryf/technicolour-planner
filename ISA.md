@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 95/97
+progress: 99/101
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -208,6 +208,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-94: Hooks usage respects the existing hook-type filter chips; `renderHookList()` (the hook-picker modal) is left intact and unbroken.
 - [x] ISC-95: Anti: the Turn-over rework does not let a piece be created from that tab, and zero-use cards do not expand (no empty panels).
 
+### v1.3.1: calmer Settings dialog
+- [x] ISC-96: The Settings dialog is grouped into four clearly-headed sections (Look & feel · My week · My data · Export a copy) with generous spacing, replacing the run-together wall.
+- [x] ISC-97: The dialog has a sticky header with a clearly-labelled "✕ Close" and a scrolling body (`.settings-box` > sticky `.set-head` + `.set-body{overflow:auto}`), so it works at any height.
+- [x] ISC-98: Wording is trimmed (long parenthetical labels and the duplicate footer note removed); each section carries at most one short help line.
+- [x] ISC-99: Anti: the regroup is presentation-only, every wired control keeps its ID (`lowstim`, `workdays`, `colorRemap`, `dataStatus`, `setLocationBtn`, `backupNowBtn`, `importBtn`, `exportBtn`, `persistStatus`, `xlsxBtn`, `docxBtn`, `pptxBtn`) and behaviour is unchanged.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -295,6 +301,10 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.3.1): **Settings dialog calmed and regrouped.** Harry: it was cramped and noisy. Kept it
+  scrollable (it already was) but the real fix was visual calm, four spaced `.set-group` sections with
+  short headings, a sticky header + clear "✕ Close", trimmed parentheticals and the duplicate footer note.
+  Presentation-only; all control IDs preserved (ISC-99 anti), behaviour unchanged.
 - 2026-06-10 (v1.3.0): **Turn-over became a colour-first usage index.** Harry: the reference legends were
   static; make them show usage (esp. which hooks are unused), let clicking expand to the pieces/tasks
   that use each one (click to edit), and grey "+ New" there since you can't create from it. Reviewed the
@@ -562,3 +572,9 @@ screenshot `/tmp/tcv-120-board.png`).
   it and lists `.urow`s (real-Chrome: Discovery → "8 pieces", 8 rows); clicking a row sets `openId` and
   opens the drawer. Real-Chrome screenshot shows the greyed "+ New", the "8 pieces" badge, and the
   expanded colour-first piece rows with date hints.
+
+**v1.3.1 (calmer Settings):** full suite **119/119** + real-Chrome screenshot (`/tmp/tcv-settings-after.png`).
+- ISC-96: 4 `.set-group`s with headings ["Look & feel","My week","My data","Export a copy"]. ISC-97:
+  `.set-head` sticky + `#settingsClose` text "✕ Close"; `.set-body{overflow:auto}`. ISC-98: duplicate
+  footer note regex absent; no em-dash in UI (writing-guide check passes). ISC-99: all 12 wired control
+  IDs still present under `#settingsModal`. Screenshot shows the spaced, grouped, legible dialog.

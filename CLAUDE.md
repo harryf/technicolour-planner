@@ -250,6 +250,11 @@ need the exact approach). If you change the brand mark, regenerate all three.
   **Date hint** (v1.2.4): under the date picker, a `.datehint` shows `dateLabel(p.date)`, a plain-language
   reading like "Tuesday 9 Jun (this week)" / "(next week)" / "(today)" / "(N weeks ago/in N weeks)",
   refreshed on every date change (most people don't read raw dates). No date → a gentle "No date yet" note.
+- **Settings dialog (v1.3.1)** is grouped into four calm `.set-group` sections (Look & feel · My week ·
+  My data · Export a copy) inside `.settings-box` (sticky `.set-head` + scrolling `.set-body`). It's a
+  presentation regroup only, every wired control keeps its ID (`lowstim`, `workdays`, `colorRemap`,
+  `dataStatus`, `setLocationBtn`, `backupNowBtn`, `importBtn`, `exportBtn`, `persistStatus`,
+  `xlsxBtn/docxBtn/pptxBtn`); `buildSettings()` still fills `workdays` + `colorRemap`.
 - **Relative paths only** (Pages subpath). **Colour model in sync** across `index.html` ↔
   `src/export.js`. **No runtime network calls** after install (export libs are vendored).
 - **Privacy:** the repo is public and currently ships Sarah's real seed data with a `noindex` meta

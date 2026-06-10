@@ -199,6 +199,21 @@
   .urow .ac{width:13px;height:13px;border-radius:50%;flex:0 0 auto}
   .urow.posted .ttl{color:var(--muted)}
   .hooksw{display:grid;place-items:center;color:#6b6459;font-weight:800}
+  /* Settings: calmer, grouped, sticky header, scrolling body */
+  .settings-box{padding:0;display:flex;flex-direction:column;max-height:88vh;width:min(640px,94vw)}
+  .set-head{position:sticky;top:0;background:var(--panel);display:flex;align-items:center;gap:10px;
+            padding:15px 18px;border-bottom:1px solid var(--line);border-radius:16px 16px 0 0;z-index:1}
+  .set-body{overflow:auto;padding:4px 18px 18px}
+  .set-group{padding:17px 0;border-bottom:1px solid var(--line)}
+  .set-group:last-child{border-bottom:0}
+  .set-group>h3{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0 0 13px}
+  .set-group .help{margin:10px 0 0;line-height:1.4}
+  .set-check{display:flex;align-items:center;gap:9px;font-weight:600}
+  .set-check input{width:auto}
+  .set-sub{font-size:12px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin:15px 0 9px}
+  .set-row{display:flex;gap:9px;flex-wrap:wrap}
+  .set-row+.set-row{margin-top:9px}
+  #colorRemap.legend{gap:10px}
   .seg{display:flex;gap:6px;flex-wrap:wrap}
   .seg button{font-weight:700}
   .seg button[aria-pressed="true"]{border-color:var(--ink);background:#fffdf8}
@@ -414,48 +429,49 @@
 
 <!-- SETTINGS MODAL -->
 <div class="modal" id="settingsModal">
-  <div class="box">
-    <div class="row"><h2 class="grow">Settings</h2><button id="settingsClose">✕</button></div>
+  <div class="box settings-box">
+    <div class="set-head"><h2 class="grow">Settings</h2><button id="settingsClose">✕ Close</button></div>
+    <div class="set-body">
 
-    <div class="field" style="margin-top:12px">
-      <label><input type="checkbox" id="lowstim" style="width:auto" /> Calm mode (less motion & contrast)</label>
-    </div>
-    <div class="field">
-      <label>Days I work (others show as a greyed "NO POST" day and are skipped when rolling)</label>
-      <div class="seg" id="workdays"></div>
-    </div>
-    <div class="field"><label>Your target colours (make them yours)</label>
-      <div id="colorRemap" class="legend"></div>
-    </div>
+      <section class="set-group">
+        <h3>Look &amp; feel</h3>
+        <label class="set-check"><input type="checkbox" id="lowstim" /> <span>Calm mode <span class="muted">(less motion and contrast)</span></span></label>
+        <div class="set-sub">Your target colours</div>
+        <div id="colorRemap" class="legend"></div>
+      </section>
 
-    <div class="field" style="border-top:1px solid var(--line);padding-top:14px">
-      <label>Your data</label>
-      <p class="help" id="dataStatus" style="margin:0 0 8px"></p>
-      <div class="row wrap">
-        <button id="setLocationBtn">📁 Choose / change data folder</button>
-        <button id="backupNowBtn">🛟 Save a checkpoint now</button>
-      </div>
-      <div class="row wrap" style="margin-top:8px">
-        <button id="importBtn">⬆ Restore from a file…</button>
-        <button id="exportBtn">⬇ Download a copy</button>
-      </div>
-      <p class="help" style="margin:8px 0 0">Your latest work saves automatically. A checkpoint is a
-         timestamped copy kept in your folder (the app also saves one each time it starts), so you can
-         go back to an earlier version. The last 20 are kept.</p>
-      <p class="help" id="persistStatus" style="margin:6px 0 0"></p>
-    </div>
+      <section class="set-group">
+        <h3>My week</h3>
+        <div class="seg" id="workdays"></div>
+        <p class="help">Days you don't work show as a greyed "NO POST" and are skipped when rolling work forward.</p>
+      </section>
 
-    <div class="field">
-      <label>Export for Google Drive</label>
-      <div class="row wrap">
-        <button id="xlsxBtn">⬇ Excel (.xlsx)</button>
-        <button id="docxBtn">⬇ Word (.docx)</button>
-        <button id="pptxBtn">⬇ Slides (.pptx)</button>
-      </div>
-      <p class="help">Builds the file on your computer. Nothing is uploaded. Drop it into Google Drive.</p>
-    </div>
+      <section class="set-group">
+        <h3>My data</h3>
+        <p class="help" id="dataStatus" style="margin:0 0 10px"></p>
+        <div class="set-row">
+          <button id="setLocationBtn">📁 Choose / change data folder</button>
+          <button id="backupNowBtn">🛟 Save a checkpoint now</button>
+        </div>
+        <div class="set-row">
+          <button id="importBtn">⬆ Restore from a file…</button>
+          <button id="exportBtn">⬇ Download a copy</button>
+        </div>
+        <p class="help">Your work saves automatically. A checkpoint is a timestamped copy in your folder (last 20 kept).</p>
+        <p class="help" id="persistStatus" style="margin:6px 0 0"></p>
+      </section>
 
-    <p class="help">Everything is saved automatically. Use ⬇ Export (top) for a plain JSON backup any time.</p>
+      <section class="set-group">
+        <h3>Export a copy</h3>
+        <div class="set-row">
+          <button id="xlsxBtn">⬇ Excel (.xlsx)</button>
+          <button id="docxBtn">⬇ Word (.docx)</button>
+          <button id="pptxBtn">⬇ Slides (.pptx)</button>
+        </div>
+        <p class="help">Built on your computer, nothing is uploaded. Drop it into Google Drive.</p>
+      </section>
+
+    </div>
   </div>
 </div>
 
@@ -511,10 +527,10 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.3.0";
-const CHANGELOG_LATEST = "The Turn-over tab now shows how much you've used each target, story code, hook " +
-  "and activity, including which hooks you haven't used yet. Click any one to see the pieces (or tasks) " +
-  "that use it, and click a piece to open it. The '+ New' button is greyed out here (add from Board/Library).";
+const VERSION = "1.3.1";
+const CHANGELOG_LATEST = "The Settings dialog is calmer and clearer: tidy groups (Look & feel, My week, " +
+  "My data, Export a copy) with more breathing room, a sticky header with a clear Close, and trimmed " +
+  "wording. It scrolls when needed.";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
