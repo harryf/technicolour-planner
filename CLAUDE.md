@@ -143,6 +143,21 @@ never lose data). The unit that rolls is a **piece** (it owns the `date`), not a
   (`libStatus`, default `"todo"`, `#libFilter`) so she lands on what's left; posted past pieces live
   there, not in the tray.
 
+## Turn-over tab (usage index, v1.3.0)
+
+The Turn-over tab is the **colour-first usage index** for her reference vocabulary (`renderTurnover()`).
+Each of the four categories renders as stacked `.ucard`s (built by `usageCard()`): a colour swatch +
+label/desc + a **count badge** ("3 pieces" / "not used yet"), expandable on click to the actual items,
+each a `.urow` that opens the editor (`openDetail`) when clicked:
+- **Targets** → pieces having that target. **Story codes** → pieces with that code. **Hooks** → pieces
+  whose `p.hook` matches (so unused hooks show "not used yet" + `.zero` dimming, answering "which hooks
+  haven't I used"); the hook-type filter chips still narrow the list. **Activities** → *tasks* with that
+  activity across all pieces (noun "task"), showing done state.
+- Zero-use cards get `.zero` (dimmed, no expand). `pieceUrow()`/`taskUrow()` build the rows; posted
+  pieces show "✓ posted". `renderHookList()` is untouched (still powers the hook-picker modal).
+- **"+ New" is disabled on this tab** (`setView` sets `#newBtn.disabled` when `v==="turnover"`) — you
+  can't create a piece here; add from Board/Library. `button:disabled{opacity:.45}`.
+
 ## Install gate (browser tab vs installed app)
 
 The app is meant to run as the **installed PWA**, not a public browser tab. `isStandalone()`

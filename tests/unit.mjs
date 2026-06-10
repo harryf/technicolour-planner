@@ -202,6 +202,20 @@ export async function runUnit() {
   s.ok("drawer shows the date hint under the picker", ev(`(()=>{ const p=state.projects.find(x=>x.date)||state.projects[0]; p.date=TODAY; openDetail(p.id); const h=document.querySelector('#d-scroll .datehint'); return !!h && /\\(today\\)$/.test(h.textContent); })()`), "datehint in drawer");
   ev("closeDrawer()");
 
+  // ---- NEW (v1.3.0): Turn-over usage index + 'New' disabled there ----
+  ev("setView('turnover')");
+  s.ok("'New' button greyed on Turn-over", ev('document.getElementById("newBtn").disabled===true'), "disabled");
+  s.ok("'New' button enabled on Board", ev("(()=>{ setView('board'); const d=document.getElementById('newBtn').disabled; setView('turnover'); return d===false; })()"), "enabled on board");
+  s.ok("targets render as 4 usage cards", $$("#targetLegend .ucard").length===4, `${$$("#targetLegend .ucard").length}`);
+  s.ok("story codes render as 5 usage cards", $$("#storyLegend .ucard").length===5, `${$$("#storyLegend .ucard").length}`);
+  s.ok("activities render as 5 usage cards", $$("#activityLegend .ucard").length===5, `${$$("#activityLegend .ucard").length}`);
+  s.ok("every hook shows a usage card", $$("#hookList .ucard").length===ev("HOOKS.length"), `${$$("#hookList .ucard").length}/${ev("HOOKS.length")}`);
+  s.ok("unused hooks are clearly marked", $$("#hookList .ucard.zero").length>0, `${$$("#hookList .ucard.zero").length} unused`);
+  s.ok("usage cards show a count badge", $$("#targetLegend .ucard .ucount").length===4, "ucount present");
+  s.ok("a used target expands to its pieces", ev(`(()=>{ const c=[...document.querySelectorAll('#targetLegend .ucard')].find(x=>!x.classList.contains('zero')); c.querySelector('.uh').click(); return c.classList.contains('open') && c.querySelectorAll('.ubody .urow').length>0; })()`), "expand → pieces");
+  s.ok("clicking a piece row opens its editor", ev(`(()=>{ const r=document.querySelector('#targetLegend .ucard.open .urow'); r.click(); return openId!=null && document.getElementById('drawer').classList.contains('open'); })()`), "opens drawer");
+  ev("closeDrawer(); setView('board')");
+
   return s;
 }
 

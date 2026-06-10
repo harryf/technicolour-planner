@@ -173,6 +173,32 @@
   .thumbwrap .acts button:hover{background:#fff}
   .addimg{display:inline-flex;align-items:center;gap:8px}
   .datehint{margin-top:7px;font-size:13px;font-weight:700;color:var(--ink)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  /* Turn-over usage cards: colour-first, count, expand → pieces/tasks (click to edit) */
+  #targetLegend,#storyLegend,#activityLegend,#hookList{display:block}
+  .ucard{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:9px;overflow:hidden}
+  .ucard.zero{opacity:.6}
+  .ucard .uh{display:flex;align-items:center;gap:12px;padding:11px 13px}
+  .ucard:not(.zero) .uh{cursor:pointer}
+  .ucard .uh:hover{background:#faf8f4}
+  .ucard .uh>.sw{width:30px;height:30px;border-radius:8px;flex:0 0 auto}
+  .ucard .uh .ulabel{flex:1;min-width:0}
+  .ucard .uh .ucount{font-weight:800;border-radius:999px;padding:3px 11px;font-size:13px;background:#efeae1;color:#6b6459;white-space:nowrap;flex:0 0 auto}
+  .ucard .uh .ucount.zero{background:transparent;color:var(--muted);font-weight:600;border:1px dashed var(--line)}
+  .ucard .uh .chev{color:var(--muted);transition:transform var(--t);flex:0 0 auto}
+  .ucard.zero .uh .chev{visibility:hidden}
+  .ucard.open .uh .chev{transform:rotate(90deg)}
+  .ucard .ubody{display:none;flex-direction:column;gap:7px;padding:0 13px 12px}
+  .ucard.open .ubody{display:flex}
+  .urow{display:flex;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:var(--bg)}
+  .urow:hover{background:#fffdf8}
+  .urow .stripes{display:flex;gap:2px;width:16px;height:16px;border-radius:5px;overflow:hidden;flex:0 0 auto}
+  .urow .stripes i{flex:1;display:block}
+  .urow .ttl{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .urow .when{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
+  .urow .ac{width:13px;height:13px;border-radius:50%;flex:0 0 auto}
+  .urow.posted .ttl{color:var(--muted)}
+  .hooksw{display:grid;place-items:center;color:#6b6459;font-weight:800}
   .seg{display:flex;gap:6px;flex-wrap:wrap}
   .seg button{font-weight:700}
   .seg button[aria-pressed="true"]{border-color:var(--ink);background:#fffdf8}
@@ -485,9 +511,10 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.2.4";
-const CHANGELOG_LATEST = "The date now reads in plain language under the picker, like 'Tuesday 9 Jun " +
-  "(this week)' or '(next week)', so you don't have to think in raw dates.";
+const VERSION = "1.3.0";
+const CHANGELOG_LATEST = "The Turn-over tab now shows how much you've used each target, story code, hook " +
+  "and activity, including which hooks you haven't used yet. Click any one to see the pieces (or tasks) " +
+  "that use it, and click a piece to open it. The '+ New' button is greyed out here (add from Board/Library).";
 const FEEDBACK_WHATSAPP = "41796476540"; // feature requests / bugs go to Harry via WhatsApp
 
 const TARGETS = {
@@ -1032,20 +1059,83 @@ function renderBalance(){
   });
 }
 
+// Turn-over is the colour-first usage index: every reference item shows how much it's used (a count,
+// or "not used yet"), and clicking it expands the actual pieces/tasks, each clickable to edit. This
+// lets her see at a glance, e.g., which hooks she hasn't used yet, and jump straight in.
+function pieceUrow(p){
+  const row=document.createElement("div"); row.className="urow"+(p.stages&&p.stages.posted?" posted":"");
+  const stripes=document.createElement("div"); stripes.className="stripes";
+  const tg=p.targets.length?p.targets:["discovery"];
+  for(const k of TARGET_ORDER){ if(tg.includes(k)){ const i=document.createElement("i"); i.style.background=targetColor(k); stripes.appendChild(i);} }
+  const badge=document.createElement("span"); badge.className="badge"; badge.style.background=TYPES[p.type].color;
+  badge.textContent=TYPES[p.type].short; badge.title=TYPES[p.type].label;
+  const ttl=document.createElement("span"); ttl.className="ttl"; ttl.textContent=p.title||"Untitled";
+  const when=document.createElement("span"); when.className="when";
+  when.textContent=(p.stages&&p.stages.posted)?"✓ posted":(p.date?dateLabel(p.date):"no date");
+  row.append(stripes,badge,ttl,when);
+  row.onclick=()=>openDetail(p.id);
+  return row;
+}
+function taskUrow(piece,task){
+  const row=document.createElement("div"); row.className="urow";
+  const dot=document.createElement("span"); dot.className="ac"; dot.style.background=ACTIVITIES[task.activity].color;
+  const txt=document.createElement("span"); txt.className="ttl"; txt.textContent=task.text||"(task)"; if(task.done) txt.style.textDecoration="line-through";
+  const where=document.createElement("span"); where.className="when"; where.textContent=(task.done?"✓ done · ":"")+(piece.title||"Untitled");
+  row.append(dot,txt,where);
+  row.onclick=()=>openDetail(piece.id);
+  return row;
+}
+function usageCard(swatch,labelHTML,descHTML,rows,opts){
+  const noun=(opts&&opts.noun)||"piece", empty=(opts&&opts.empty)||"not used yet";
+  const n=rows.length, zero=n===0;
+  const card=document.createElement("div"); card.className="ucard"+(zero?" zero":"");
+  const uh=document.createElement("div"); uh.className="uh";
+  const lab=document.createElement("div"); lab.className="ulabel";
+  lab.innerHTML=`<b>${labelHTML}</b>`+(descHTML?`<br><span class="muted">${descHTML}</span>`:"");
+  const count=document.createElement("span"); count.className="ucount"+(zero?" zero":"");
+  count.textContent=zero?empty:(n+" "+(n===1?noun:noun+"s"));
+  const chev=document.createElement("span"); chev.className="chev"; chev.textContent="▸";
+  uh.append(swatch,lab,count,chev);
+  const body=document.createElement("div"); body.className="ubody"; rows.forEach(r=>body.appendChild(r));
+  if(!zero) uh.onclick=()=>card.classList.toggle("open");
+  card.append(uh,body); return card;
+}
+function sw(bg,text){ const d=document.createElement("div"); d.className="sw"; if(bg)d.style.background=bg; if(text){d.classList.add("hooksw");d.textContent=text;} return d; }
+
 function renderTurnover(){
   const tl=document.getElementById("targetLegend"); tl.innerHTML="";
-  TARGET_ORDER.forEach(k=>{ const it=document.createElement("div"); it.className="item";
-    it.innerHTML=`<div class="sw" style="background:${targetColor(k)}"></div>
-      <div><b>${TARGETS[k].label}</b> <span class="muted">(${TARGETS[k].short})</span><br>
-      <span class="muted">${TARGETS[k].desc}</span></div>`; tl.appendChild(it); });
+  TARGET_ORDER.forEach(k=>{
+    const pieces=state.projects.filter(p=>(p.targets.length?p.targets:["discovery"]).includes(k));
+    tl.appendChild(usageCard(sw(targetColor(k)), `${TARGETS[k].label} <span class="muted">(${TARGETS[k].short})</span>`, TARGETS[k].desc, pieces.map(pieceUrow)));
+  });
   const sl=document.getElementById("storyLegend"); sl.innerHTML="";
-  Object.entries(STORY_CODES).forEach(([n,v])=>{ const it=document.createElement("div"); it.className="item";
-    it.innerHTML=`<div class="sw" style="display:grid;place-items:center;background:#efeae1;color:#6b6459;font-weight:800">${n}</div>
-      <div><b>${v.label}</b><br><span class="muted">${v.desc}</span></div>`; sl.appendChild(it); });
+  Object.entries(STORY_CODES).forEach(([n,v])=>{
+    const pieces=state.projects.filter(p=>(p.storyCodes||[]).includes(Number(n)));
+    sl.appendChild(usageCard(sw("#efeae1",n), v.label, v.desc, pieces.map(pieceUrow)));
+  });
+  renderTurnoverHooks();
   const al=document.getElementById("activityLegend"); al.innerHTML="";
-  Object.entries(ACTIVITIES).forEach(([k,v])=>{ const it=document.createElement("div"); it.className="item";
-    it.innerHTML=`<div class="sw" style="background:${v.color}"></div><div><b>${v.label}</b></div>`; al.appendChild(it); });
-  renderHookList("hookList","hookFilter",null);
+  Object.entries(ACTIVITIES).forEach(([k,v])=>{
+    const rows=[]; state.projects.forEach(p=>(p.tasks||[]).forEach(t=>{ if(t.activity===k) rows.push(taskUrow(p,t)); }));
+    al.appendChild(usageCard(sw(v.color), v.label, "", rows, {noun:"task", empty:"none yet"}));
+  });
+}
+function hookChip(label,key){
+  const b=document.createElement("button"); b.className="chip"; b.style.boxShadow="none"; b.textContent=label;
+  b.setAttribute("aria-pressed", hookFilterType===key);
+  b.onclick=()=>{ hookFilterType=(key && hookFilterType===key)?null:key; renderTurnoverHooks(); };
+  return b;
+}
+function renderTurnoverHooks(){
+  const f=document.getElementById("hookFilter"); f.innerHTML="";
+  f.appendChild(hookChip("all",null));
+  Object.entries(HOOK_TYPES).forEach(([k,lbl])=> f.appendChild(hookChip(lbl,k)) );
+  const list=document.getElementById("hookList"); list.innerHTML="";
+  HOOKS.filter(([_,types])=>!hookFilterType||types.includes(hookFilterType)).forEach(([name,types])=>{
+    const pieces=state.projects.filter(p=>p.hook===name);
+    const desc=types.map(t=>HOOK_TYPES[t]).join(" · ");
+    list.appendChild(usageCard(sw("#efeae1","🪝"), name, desc, pieces.map(pieceUrow)));
+  });
 }
 
 let hookFilterType=null;
@@ -1316,6 +1406,11 @@ function setView(v){
   document.getElementById("view-board").hidden=v!=="board";
   document.getElementById("view-library").hidden=v!=="library";
   document.getElementById("view-turnover").hidden=v!=="turnover";
+  // You can't create a piece from Turn-over (it's the reference/usage view), so grey out "+ New" there.
+  const nb=document.getElementById("newBtn");
+  nb.disabled = v==="turnover";
+  nb.title = v==="turnover" ? "Add new pieces from the Board or Library" : "";
+  document.getElementById("newMenu").classList.remove("open");
   renderAll();
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>setView(b.dataset.view));

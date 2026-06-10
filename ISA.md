@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 88/90
+progress: 95/97
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -199,6 +199,15 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 ### v1.2.4: human-friendly date hint
 - [x] ISC-88: Under the date picker the editor shows a plain-language `dateLabel(p.date)` hint, weekday + day + month + a relative-week note in brackets ("(today)" / "(this week)" / "(next week)" / "(last week)" / "(in N weeks)" / "(N weeks ago)"), refreshed on every date change; no date shows a gentle "No date yet" note.
 
+### v1.3.0: Turn-over usage index (colour-first, expand-to-edit)
+- [x] ISC-89: The "+ New" button is disabled/greyed while the Turn-over tab is active (you can't create a piece there) and enabled on Board/Library (`setView` sets `#newBtn.disabled`).
+- [x] ISC-90: Each of the four Turn-over categories renders as colour-first usage cards (`.ucard`): targets (4), story codes (5), activities (5), and every hook (`HOOKS.length`), each leading with its colour swatch + label.
+- [x] ISC-91: Each usage card shows a count badge of how much it's used (pieces, or tasks for activities); items with no uses show "not used yet"/"none yet" and a dimmed `.zero` state, so unused hooks are obvious at a glance.
+- [x] ISC-92: Clicking a used card expands it (`.open`) to list the pieces (or tasks) that use it as `.urow`s, colour-first with type badge, title, and date hint / posted state.
+- [x] ISC-93: Clicking a `.urow` opens that piece in the editor drawer (`openDetail`) for editing; closing re-renders so counts stay live.
+- [x] ISC-94: Hooks usage respects the existing hook-type filter chips; `renderHookList()` (the hook-picker modal) is left intact and unbroken.
+- [x] ISC-95: Anti: the Turn-over rework does not let a piece be created from that tab, and zero-use cards do not expand (no empty panels).
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -286,6 +295,13 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   localStorage mode keep the inline `image` data URL (degrade-never-fail). A synchronous `IMG_CACHE`
   (object URLs) + `prewarmImages()` keeps board/drawer render synchronous without threading promises
   through every render path.
+- 2026-06-10 (v1.3.0): **Turn-over became a colour-first usage index.** Harry: the reference legends were
+  static; make them show usage (esp. which hooks are unused), let clicking expand to the pieces/tasks
+  that use each one (click to edit), and grey "+ New" there since you can't create from it. Reviewed the
+  autism principles (colour-first, redundant count labels, predictable repeated card layout, one-glance-
+  one-click, inline expand not a modal-surprise). Design: `usageCard()` over targets/story-codes/hooks
+  (piece-based) and activities (task-based); zero-use → dimmed "not used yet", no expand; rows reuse the
+  board's colour language and open `openDetail`. `renderHookList()` kept for the picker (not broken).
 - 2026-06-10 (v1.2.4): **Human-friendly date hint.** Harry: a raw `dd.mm.yyyy` picker is hard to read;
   show the weekday and a "(this week)/(next week)" bracket. Added `dateLabel()` (weekday + day + month +
   relative-week) under the picker via a `.datehint`, refreshed on every change. Most people don't think
@@ -538,3 +554,11 @@ screenshot `/tmp/tcv-120-board.png`).
 - ISC-88: jsdom `dateLabel(TODAY)` → "Wednesday 10 Jun (today)" (matches `/\(today\)$/` + leads with a
   weekday); `dateLabel(addDays(nextWeekStart(),1))` ends "(next week)"; opening a piece shows the
   `.datehint` under the picker. Real-Chrome: "Tuesday 9 Jun (this week)" for the 2026-06-09 piece.
+
+**v1.3.0 (Turn-over usage index):** full suite **114/114** + real-Chrome probe (`/tmp/tcv-turnover-after.png`).
+- ISC-89: jsdom `#newBtn.disabled` true on turnover, false on board. ISC-90: 4 target / 5 story / 5
+  activity `.ucard`s, and 29 hook cards (= `HOOKS.length`). ISC-91: 27 hook cards carry `.zero` ("not
+  used yet") with only 2 used; target cards show `.ucount`. ISC-92/93: clicking a used target card opens
+  it and lists `.urow`s (real-Chrome: Discovery → "8 pieces", 8 rows); clicking a row sets `openId` and
+  opens the drawer. Real-Chrome screenshot shows the greyed "+ New", the "8 pieces" badge, and the
+  expanded colour-first piece rows with date hints.
