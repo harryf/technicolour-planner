@@ -1,12 +1,14 @@
 name: Deploy to GitHub Pages
 
 # Deploys the static site to GitHub Pages.
-# Triggers: every push to main (continuous), every v* tag (tagged release), and manual run.
-# No build step — the app is a single static file; the workflow just publishes the repo.
+# Triggers: every push to main (continuous) and manual run.
+# NOT on v* tags: the github-pages environment protection rule only allows the main branch to deploy,
+# so a tag-triggered run is rejected ("Tag vX is not allowed to deploy to github-pages"). The push to
+# main already publishes the same commit, and v* tags are handled by release.yml (the GitHub Release).
+# No build step, the app is a single static file; the workflow just publishes the repo.
 on:
   push:
     branches: [main]
-    tags: ['v*']
   workflow_dispatch:
 
 # Permissions the Pages deploy needs
