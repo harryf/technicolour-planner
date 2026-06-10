@@ -103,11 +103,15 @@ Key behaviours (don't regress these):
   (file), then write the winner back. Don't blindly reload the file over session edits.
 - **Schema migrations**: bump `CURRENT_SCHEMA`, add a `migrations[fromVersion]` fn. The loader
   **auto-backs-up the file before migrating**.
-- **Checkpoints**: timestamped `Technicolour-Planner-checkpoint-<ISO>.json` copies in the folder.
-  `Store.backup()` writes one on demand (Settings → "Save a checkpoint now"; downloads if no folder);
-  `Store.checkpoint()` writes one silently on app start (only if a folder is connected and permission
-  is already granted). `pruneBackups()` keeps the last `MAX_BACKUPS` (20). Import/Export live in
-  Settings, not the header, because the live JSON + `.md` already mirror every change.
+- **Checkpoints** (in a `saves/` subfolder since v1.3.2): timestamped
+  `Technicolour-Planner-checkpoint-<ISO>.json` copies. `Store.backup()` writes one on demand
+  (Settings → "Save a checkpoint now"; downloads if no folder); `Store.checkpoint()` writes one
+  silently on app start; `_backupRaw()` writes one before a schema migration. All three route into a
+  **`saves/` subfolder** via `getSavesDir(true)` (mirrors `getImagesDir`), with a `|| this.dir` root
+  fallback so it never hard-fails. `pruneBackups(savesDir)` keeps the last `MAX_BACKUPS` (20) **inside
+  saves/**. `migrateSavesToSubfolder()` runs once on boot to sweep any pre-1.3.2 checkpoints out of the
+  folder root into `saves/`, so the main folder holds just the two data files + `images/` + `saves/`.
+  Import/Export live in Settings, not the header, because the live JSON + `.md` already mirror every change.
 - **Images** (v1.1.0, subfolder since v1.1.1): when a folder is connected, attaching a picture writes a
   copy into an **`images/` subfolder** of the data folder (`getImagesDir(true)` →
   `getDirectoryHandle("images",{create:true})`) as `Technicolour-Planner-image-<projectId>-<ISO>.<ext>`,
@@ -255,6 +259,14 @@ need the exact approach). If you change the brand mark, regenerate all three.
   presentation regroup only, every wired control keeps its ID (`lowstim`, `workdays`, `colorRemap`,
   `dataStatus`, `setLocationBtn`, `backupNowBtn`, `importBtn`, `exportBtn`, `persistStatus`,
   `xlsxBtn/docxBtn/pptxBtn`); `buildSettings()` still fills `workdays` + `colorRemap`.
+- **Calm mode (`body.lowstim`, meaningful since v1.3.2)** is a real reduction in stimulation, *not* a
+  removal of colour, the whole app is colour-first, so the rule **pastel-shifts** (`filter:saturate(.7)
+  brightness(1.02)`, hues kept and still distinct) rather than desaturating to grey. It also kills all
+  motion (`body.lowstim *{transition:none!important;animation:none!important}`), drops shadows
+  (`box-shadow:none!important`), removes the button hover-flash, and softens chrome/focus. A separate
+  `@media (prefers-reduced-motion: reduce)` block kills motion for everyone regardless of the toggle.
+  Guardrail: when touching calm mode, keep colours legible (never `saturate(0)`); the unit suite asserts
+  the motion-kill, the pastel filter, the no-shadow/no-hover-flash, the media query, and the toggle wiring.
 - **Relative paths only** (Pages subpath). **Colour model in sync** across `index.html` ↔
   `src/export.js`. **No runtime network calls** after install (export libs are vendored).
 - **Privacy:** the repo is public and currently ships Sarah's real seed data with a `noindex` meta

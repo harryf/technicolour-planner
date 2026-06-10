@@ -6,7 +6,7 @@
    ========================================================================= */
 
 // Bump this string on every release (matches the in-app VERSION constant).
-const VERSION = "1.3.1";
+const VERSION = "1.3.2";
 const CACHE = "technicolour-v" + VERSION;
 
 // The full offline shell. Relative URLs so it works on the /technicolour-planner/ subpath.

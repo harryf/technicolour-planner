@@ -91,17 +91,22 @@ export async function runUnit() {
   })()`));
   s.ok("setLocation on empty folder does not claim existing", empty.existing === false, JSON.stringify(empty));
 
-  // NEW: timestamped checkpoint written to the folder (mock the dir handle)
+  // NEW: timestamped checkpoint written into the saves/ subfolder (mock the dir + subdir handles)
   const chk = JSON.parse(await ev(`(async()=>{
-    let written = null;
+    let written = null, askedFor = null;
+    const subdir = (label)=>({ name:label,
+      getFileHandle: async(n)=>({ createWritable: async()=>({ write: async(c)=>{ written = { name:n, len:String(c).length }; }, close: async()=>{} }) }),
+      removeEntry: async()=>{}, entries: async function*(){} });
     Store.mode = "file";
     Store.dir = { name:"F", queryPermission: async()=>"granted", requestPermission: async()=>"granted",
+      getDirectoryHandle: async(n)=>{ askedFor = n; return subdir(n); },
       getFileHandle: async(n)=>({ createWritable: async()=>({ write: async(c)=>{ written = { name:n, len:String(c).length }; }, close: async()=>{} }) }),
-      entries: async function*(){} };
+      removeEntry: async()=>{}, entries: async function*(){} };
     const name = await Store.checkpoint(state);
-    return JSON.stringify({ name, written });
+    return JSON.stringify({ name, written, askedFor });
   })()`));
   s.ok("checkpoint writes timestamped file to folder", /Technicolour-Planner-checkpoint-.*\.json/.test(chk.name) && chk.written && chk.written.name === chk.name, JSON.stringify(chk).slice(0, 90));
+  s.ok("checkpoint routes into the saves/ subfolder", chk.askedFor === "saves", "askedFor=" + chk.askedFor);
 
   // ---- NEW: install detection + Open-the-App relabel ----
   s.ok("detectInstalled true when flag set", await ev("(async()=>{ localStorage.setItem('installed','1'); return await detectInstalled(); })()") === true, "localStorage flag");
@@ -135,6 +140,23 @@ export async function runUnit() {
     return JSON.stringify({ wrote, named:/image-p1-.*\\.png$/.test(name) });
   })()`).then(r=>{ const o=JSON.parse(r); return o.named && o.wrote && /image-p1-/.test(o.wrote.name); }), "file written to folder");
   s.ok("image file not caught by backup pruning regex", !/^Technicolour-Planner-(backup|checkpoint)-.*\.json$/.test("Technicolour-Planner-image-p1-2026.png"), "images survive prune");
+
+  // ---- NEW (v1.3.2): checkpoints live in a saves/ subfolder ----
+  s.ok("saves subfolder helpers present", ev("typeof getSavesDir==='function' && SAVES_DIR==='saves' && typeof migrateSavesToSubfolder==='function'"), "getSavesDir + SAVES_DIR + migrate");
+  s.ok("all three checkpoint writers target getSavesDir", (html.match(/getSavesDir\(true\)\) \|\| this\.dir/g)||[]).length>=3, "_backupRaw + backup + checkpoint");
+  s.ok("legacy checkpoints swept into saves on boot", /migrateSavesToSubfolder\(\)/.test(html) && /sweep any root checkpoints/.test(html), "boot calls migrate");
+  s.ok("migrate moves a root checkpoint into saves and deletes the original", await ev(`(async()=>{
+    let movedTo=null, removed=null;
+    const sub={ name:"saves", getFileHandle:async(n)=>({ createWritable:async()=>({ write:async(c)=>{ movedTo={name:n,len:String(c).length}; }, close:async()=>{} }) }), removeEntry:async()=>{}, entries:async function*(){} };
+    Store.mode="file";
+    Store.dir={ name:"F", queryPermission:async()=>"granted", requestPermission:async()=>"granted",
+      getDirectoryHandle:async()=>sub,
+      getFileHandle:async(n)=>({ getFile:async()=>({ text:async()=>'{"projects":[]}' }) }),
+      removeEntry:async(n)=>{ removed=n; },
+      entries:async function*(){ yield ["Technicolour-Planner-checkpoint-2026-01-01.json",{kind:"file"}]; yield ["Technicolour-Planner-Data.json",{kind:"file"}]; } };
+    await migrateSavesToSubfolder();
+    return JSON.stringify({ movedTo, removed });
+  })()`).then(r=>{ const o=JSON.parse(r); return o.movedTo && /checkpoint-2026/.test(o.movedTo.name) && /checkpoint-2026/.test(o.removed||""); }), "moved + removed root copy");
   s.ok("office export lazy-loaded", /loadExporter/.test(html) && /import\("\.\/src\/export\.js"\)/.test(html), "dynamic import");
   s.ok("SW registration guarded", /register\("service-worker\.js"/.test(html) && /location\.protocol\.startsWith\("http"\)/.test(html), "guarded");
 
@@ -222,6 +244,14 @@ export async function runUnit() {
   s.ok("settings body scrolls", /\.set-body\{overflow:auto/.test(html), "scroll body");
   s.ok("all wired settings controls still present", ["lowstim","workdays","colorRemap","dataStatus","setLocationBtn","backupNowBtn","importBtn","exportBtn","persistStatus","xlsxBtn","docxBtn","pptxBtn"].every(id=>!!$("#settingsModal #"+id)), "ids intact");
   s.ok("no duplicate footer note (noise removed)", !/Use ⬇ Export \(top\) for a plain JSON backup/.test(html), "trimmed");
+
+  // ---- NEW (v1.3.2): Calm mode actually calms ----
+  s.ok("calm mode kills all motion", /body\.lowstim \*[^{]*\{[^}]*transition:none !important/.test(html) && /animation:none !important/.test(html), "transition+animation off");
+  s.ok("calm mode pastel-shifts (hue kept, neon gone)", /body\.lowstim\{[^}]*filter:saturate\(\.7\) brightness\(1\.02\)/.test(html), "saturate+brightness");
+  s.ok("calm mode removes shadows + hover flash", /body\.lowstim[^]*box-shadow:none !important/.test(html) && /body\.lowstim button:hover\{ background:var\(--panel\)/.test(html), "no shadow, no hover flash");
+  s.ok("OS reduce-motion preference honoured", /@media \(prefers-reduced-motion: reduce\)/.test(html), "prefers-reduced-motion block");
+  s.ok("calm mode is described in settings (the 'define' ask)", /Stops all movement, softens the colours/.test(html), "what-it-does help line");
+  s.ok("calm toggle adds the lowstim body class", ev(`(()=>{ document.body.classList.remove('lowstim'); const cb=document.getElementById('lowstim'); cb.checked=true; cb.onchange({target:cb}); const on=document.body.classList.contains('lowstim'); cb.checked=false; cb.onchange({target:cb}); return on && !document.body.classList.contains('lowstim'); })()`), "toggle on/off");
 
   return s;
 }

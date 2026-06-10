@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 99/101
+progress: 107/109
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -214,6 +214,16 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-98: Wording is trimmed (long parenthetical labels and the duplicate footer note removed); each section carries at most one short help line.
 - [x] ISC-99: Anti: the regroup is presentation-only, every wired control keeps its ID (`lowstim`, `workdays`, `colorRemap`, `dataStatus`, `setLocationBtn`, `backupNowBtn`, `importBtn`, `exportBtn`, `persistStatus`, `xlsxBtn`, `docxBtn`, `pptxBtn`) and behaviour is unchanged.
 
+### v1.3.2: Calm mode that actually calms + checkpoints in a saves/ subfolder
+- [x] ISC-100: Calm mode stops all motion — `body.lowstim *,::before,::after{ transition:none !important; animation:none !important }` so transitions, slide-ins, and any animation are dead while the toggle is on.
+- [x] ISC-101: Calm mode pastel-shifts the whole palette via `body.lowstim{ filter:saturate(.7) brightness(1.02) }`, keeping every hue's identity (real-Chrome computed filter = `saturate(0.7) brightness(1.02)` when on, `none` when off).
+- [x] ISC-102: Calm mode removes shadows (`box-shadow:none !important`) and the per-button hover flash (`body.lowstim button:hover{ background:var(--panel) }`); real-Chrome computed button `box-shadow` is `none` when on.
+- [x] ISC-103: The OS `prefers-reduced-motion: reduce` preference is honoured globally (a `@media` block kills transitions/animations/scroll-behavior for everyone, independent of the Calm toggle).
+- [x] ISC-104: Settings explains what Calm mode does (the "define" ask) in one short help line ("Stops all movement, softens the colours into gentle pastels, and removes shadows. Your colour codes stay clear, just quieter.").
+- [x] ISC-105: Every checkpoint writer (`_backupRaw`, `backup`, `checkpoint`) writes into a `saves/` subfolder — `const sdir = (await getSavesDir(true)) || this.dir;` with `SAVES_DIR==="saves"` — and prunes within that subfolder (last 20).
+- [x] ISC-106: On boot `migrateSavesToSubfolder()` sweeps any pre-existing checkpoints from the folder root into `saves/` once and deletes the root copies, so the main folder ends up with just the two data files plus `images/` and `saves/`.
+- [x] ISC-107: Anti: routing into `saves/` never hard-fails — if the subfolder can't be created the writer falls back to the folder root (`|| this.dir`), Calm mode never washes colours to grey (hues stay distinct), and no wired Settings control changed ID or behaviour.
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -242,6 +252,12 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 | ISC-71,72,73,74 | behaviour | jsdom + real-Chrome: overduePieces, rollToWeek skips off-day, posted leaves, empty state | node/Chrome |
 | ISC-75,76,77 | code+behaviour | assert .rollbtn on cards, drawer quick dates, #libFilter 3 buttons | Grep/jsdom |
 | ISC-78 | code | grep: no auto-roll path; grid always 7; migration backup-before | Grep |
+| ISC-100,101,102 | code+behaviour | grep calm-mode CSS rules; real-Chrome computed filter + button box-shadow on/off | Grep/Chrome |
+| ISC-103 | code | grep `@media (prefers-reduced-motion: reduce)` block | Grep |
+| ISC-104 | content | grep the calm-mode help-line copy in Settings | Grep |
+| ISC-105 | code+behaviour | grep 3× `getSavesDir(true)) \|\| this.dir`; jsdom mock dir asserts checkpoint asks for "saves" | Grep/jsdom |
+| ISC-106 | behaviour | jsdom mock: migrate moves a root checkpoint into saves + removes original | node verify |
+| ISC-107 | code | grep `\|\| this.dir` fallback; pastel keeps hue (saturate .7 not 0) | Grep |
 
 ## Features
 
@@ -263,6 +279,8 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 | Work-day preferences (greyed days-off) | ISC-68,69,70 | store | no |
 | Catch-up tray + quick roll (autism-first) | ISC-71..76,78 | workdays | no |
 | Library status filter | ISC-77 |, | yes |
+| Calm mode that actually calms (motion off, pastel, no shadows) | ISC-100..104,107 |, | no |
+| Checkpoints in a saves/ subfolder + one-time sweep | ISC-105,106,107 | store | no |
 
 ## Decisions
 
@@ -437,6 +455,19 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   the File System Access API never exposes an absolute path to a web app by design. learned: show the
   folder name + data file (`📁 <folder>/<JSON_NAME>`), make it click-to-change, and state the platform
   limit in copy + docs. criterion_now: ISC-52/53.
+- conjectured (v1.3.2): Calm mode was "really not doing very much". refuted_by: it only nudged the bg
+  and applied `saturate(.78)`, no perceptible change. The risk was over-correcting into grey, which
+  would destroy the colour language Sarah reads by. learned: calm = remove *intensity*, not *colour*.
+  Pastel-shift (`saturate(.7) brightness(1.02)` keeps every hue distinct), kill all motion, drop
+  shadows + hover flashes, soften chrome; plus honour the OS reduce-motion preference globally. Verified
+  in real Chrome: computed filter flips on/off, button shadow goes to none, colour codes stay legible.
+  criterion_now: ISC-100..104,107.
+- conjectured (v1.3.2): writing checkpoints to the folder root was fine. refuted_by: Harry wants the
+  main folder to hold only the two data files plus `images/` and `saves/`, root checkpoints made it
+  noisy. learned: mirror the images/ pattern with `getSavesDir()`/`SAVES_DIR`, route all three writers
+  (`_backupRaw`/`backup`/`checkpoint`) into `saves/` with a `|| this.dir` root fallback so it never
+  hard-fails, prune within `saves/`, and sweep any legacy root checkpoints into `saves/` once on boot.
+  criterion_now: ISC-105/106/107.
 
 ## Verification
 
@@ -478,6 +509,21 @@ src/export.js, 3 vendor libs). manifest valid (display:standalone, 3 icons). Git
 **FU-1 closed (2026-06-09):** Harry ran the fresh-install test and confirmed the File System Access
 flow: install, pick folder, write data, and (v1.0.4) re-pick an existing folder loads it instead of
 overwriting. ISC-20/21/22 now [x]. No deferred criteria remain.
+
+**v1.3.2 (2026-06-10), Calm mode + saves/ subfolder:**
+- ISC-100/101/102 (real Chrome, authoritative): board screenshots OFF vs ON (`/tmp/tcv-calm-off.png`,
+  `/tmp/tcv-calm-on.png`). Computed `getComputedStyle(body).filter` = `none` when off,
+  `saturate(0.7) brightness(1.02)` when on; first button `box-shadow` computes to `none` when on.
+  ON board is visibly softer/pastel (Authority pink + Conversion blue bars muted, cards flat) while
+  every colour code (target chips, type dots, P/S/E/P badges) stays clearly legible.
+- ISC-100/101/102/103/104 (jsdom, source): calm CSS rules present (motion-kill, pastel filter,
+  no-shadow + no hover-flash), `@media (prefers-reduced-motion: reduce)` block present, calm help-line
+  copy present, and toggling `#lowstim` adds/removes `body.lowstim`.
+- ISC-105 (jsdom): mock dir handle confirms `Store.checkpoint` calls `getDirectoryHandle("saves")`
+  and writes the timestamped file into that subdir; source has 3× `getSavesDir(true)) || this.dir`.
+- ISC-106 (jsdom): `migrateSavesToSubfolder()` mock moves a root `…-checkpoint-…json` into the saves
+  sub-handle and calls `removeEntry` on the root copy.
+- Suite: 130/130 (114 jsdom + 13 real-Chrome + 3 upgrade), up from 119.
 
 **v1.0.4–1.0.5 (test suite, install UX):**
 - ISC-45/46/47/48: the committed suite passes **49/49** (37 jsdom unit + 12 real-Chrome). Browser

@@ -2,6 +2,14 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.3.2], 2026-06-10
+- **Calm mode actually calms now.** Turning it on stops all movement, softens the colours into gentle
+  pastels (your colour codes stay clear, just quieter), and removes shadows. There's a short line in
+  Settings saying exactly what it does. It also follows your device's "reduce motion" setting on its own.
+- **Tidier folder.** Your automatic checkpoints now tuck into a **"saves"** subfolder, so your main
+  folder ends up with just the two data files plus **images** and **saves**. Old checkpoints sitting in
+  the main folder are moved into "saves" for you the next time you open the app.
+
 ## [1.2.3], 2026-06-10
 - **Tidier, better-aligned editor.** Buttons no longer wrap onto two lines, so the date row
   (today / → next week / clear) and the hook's "pick" button line up at the same height, and Music and
