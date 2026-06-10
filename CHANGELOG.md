@@ -2,6 +2,12 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.3.3], 2026-06-10
+- **The week heading tells you which week you're on.** It now starts with plain words, **This week**,
+  **Next week**, **Last week**, **2 weeks from now**, and so on, so you always know where you are.
+- **Friendlier dates.** Dates read with dots like **8.6 to 14.6.2026** (the Swiss way) instead of
+  slashes and a dash. The same dotted style is used on the day columns and the card date tags.
+
 ## [1.3.2], 2026-06-10
 - **Calm mode actually calms now.** Turning it on stops all movement, softens the colours into gentle
   pastels (your colour codes stay clear, just quieter), and removes shadows. There's a short line in

@@ -254,6 +254,11 @@ need the exact approach). If you change the brand mark, regenerate all three.
   **Date hint** (v1.2.4): under the date picker, a `.datehint` shows `dateLabel(p.date)`, a plain-language
   reading like "Tuesday 9 Jun (this week)" / "(next week)" / "(today)" / "(N weeks ago/in N weeks)",
   refreshed on every date change (most people don't read raw dates). No date → a gentle "No date yet" note.
+  **Week heading** (v1.3.3): `#weekLabel` is prefixed by `weekPrefix(state.weekStart)` ("This week" /
+  "Next week" / "Last week" / "N weeks from now" / "N weeks ago") and the range reads in Swiss dotted form
+  "8.6 to 14.6.2026" (the word "to", no slash, no dash). The same dotted `d.m` date format is used on the
+  day-column headers (`.dt`) and the card date badge, so all three stay consistent. Sarah is in Lausanne,
+  dd.mm with dots is the local convention.
 - **Settings dialog (v1.3.1)** is grouped into four calm `.set-group` sections (Look & feel · My week ·
   My data · Export a copy) inside `.settings-box` (sticky `.set-head` + scrolling `.set-body`). It's a
   presentation regroup only, every wired control keeps its ID (`lowstim`, `workdays`, `colorRemap`,

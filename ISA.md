@@ -2,7 +2,7 @@
 project: technicolour-planner
 effort: E3
 phase: complete
-progress: 107/109
+progress: 110/112
 mode: ALGORITHM
 started: 2026-06-09
 updated: 2026-06-10
@@ -224,6 +224,11 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 - [x] ISC-106: On boot `migrateSavesToSubfolder()` sweeps any pre-existing checkpoints from the folder root into `saves/` once and deletes the root copies, so the main folder ends up with just the two data files plus `images/` and `saves/`.
 - [x] ISC-107: Anti: routing into `saves/` never hard-fails — if the subfolder can't be created the writer falls back to the folder root (`|| this.dir`), Calm mode never washes colours to grey (hues stay distinct), and no wired Settings control changed ID or behaviour.
 
+### v1.3.3: week heading — relative prefix + dotted dates, no dash
+- [x] ISC-108: The `#weekLabel` heading is prefixed with a plain-language relative-week phrase from `weekPrefix(state.weekStart)` — "This week" / "Next week" / "Last week" / "N weeks from now" / "N weeks ago" — and updates when paging Previous/Next/This week (real-Chrome: This/Next/Last all correct).
+- [x] ISC-109: Dates render in Swiss dotted `d.m` form across the week label, the day-column headers (`.dt`), and the card date badge; the week label range reads `d.m to d.m.yyyy` (e.g. "8.6 to 14.6.2026") using the word "to", not a slash and not a dash.
+- [x] ISC-110: Anti: the week label contains no "/", no en-dash "–", and no em-dash "—".
+
 ## Test Strategy
 
 | isc | type | check | tool |
@@ -258,6 +263,8 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 | ISC-105 | code+behaviour | grep 3× `getSavesDir(true)) \|\| this.dir`; jsdom mock dir asserts checkpoint asks for "saves" | Grep/jsdom |
 | ISC-106 | behaviour | jsdom mock: migrate moves a root checkpoint into saves + removes original | node verify |
 | ISC-107 | code | grep `\|\| this.dir` fallback; pastel keeps hue (saturate .7 not 0) | Grep |
+| ISC-108 | behaviour | jsdom asserts weekPrefix for this/next/last/±2; real-Chrome pages weeks | node/Chrome |
+| ISC-109,110 | behaviour | jsdom: weekLabel matches `d.m to d.m.yyyy`, `.dt` all dotted, no `/`/dash | node verify |
 
 ## Features
 
@@ -281,6 +288,7 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
 | Library status filter | ISC-77 |, | yes |
 | Calm mode that actually calms (motion off, pastel, no shadows) | ISC-100..104,107 |, | no |
 | Checkpoints in a saves/ subfolder + one-time sweep | ISC-105,106,107 | store | no |
+| Week heading: relative prefix + dotted dates, no dash | ISC-108,109,110 |, | no |
 
 ## Decisions
 
@@ -462,6 +470,28 @@ colour-first behaviour the prototype already shipped and seeded with her real pr
   shadows + hover flashes, soften chrome; plus honour the OS reduce-motion preference globally. Verified
   in real Chrome: computed filter flips on/off, button shadow goes to none, colour codes stay legible.
   criterion_now: ISC-100..104,107.
+- 2026-06-10: **Windows + Chrome compatibility review (read-only, no code changed).** Audited every
+  OS-specific surface against source. Verdict: works smoothly, Chrome is the same Chromium engine on
+  macOS and Windows (same JS, same File System Access API, same service worker, same CSS), so behaviour
+  is near-identical. Narrow OS-specific surface, all safe: (1) generated filenames are Windows-legal —
+  `nowISO()` strips `:` and `.` (`replace(/[:.]/g,"-")`), `uid()` is `p`+base36 (alphanumeric), image
+  ext is regex-bounded `\.[a-z0-9]+`, `TODAY=ymd()` is `YYYY-MM-DD`; no `< > : " / \ | ? *` reach a
+  name. (2) Folder/file writes are handle-based (`getFileHandle`/`getDirectoryHandle`), never string
+  paths, so `/` vs `\` is a non-issue. (3) Font stack leads with `system-ui`/`Segoe UI` (Windows
+  native); emoji render via Segoe UI Emoji. (4) Keyboard handler uses only `e.key` (Escape, 1-4) with
+  no Cmd/Ctrl, identical on Windows; the on-screen chips are the primary control regardless of layout.
+  (5) No absolute paths, backslashes, `file://`, or platform branches in the app. Cosmetic-only notes:
+  `maximizeWindow()` (`moveTo`/`resizeTo`) is best-effort + try/catch and Chrome may no-op it for PWA
+  windows on Windows (app opens at default size, not maximized — the already-deferred ISC-64); the `.md`
+  mirror uses `\n` line endings (modern Win10/11 Notepad renders fine, only pre-1809 Notepad would show
+  one line; the app reads the `.json`, not the `.md`); no custom scrollbar CSS so Windows shows its
+  native scrollbars. No blocking issues; no required changes.
+- 2026-06-10 (v1.3.3): **Week heading made human, and a Swiss date format.** The heading read "8/6 – 14/6 2026"
+  (slashes + an en-dash, and no clue which week it was). refined: prefix with `weekPrefix()` plain phrasing
+  ("This week"/"Next week"/"Last week"/"N weeks from now"/"ago"), switch the date separators to dots (Sarah
+  is in Lausanne; Swiss dates are dd.mm.yyyy), and replace the dash with the word "to" → "This week · 8.6 to
+  14.6.2026". Scope note: the same dotted format was applied to the day-column headers and the card date badge
+  too (same `N/N` pattern on the same screen) so the screen stays consistent, not just the heading.
 - conjectured (v1.3.2): writing checkpoints to the folder root was fine. refuted_by: Harry wants the
   main folder to hold only the two data files plus `images/` and `saves/`, root checkpoints made it
   noisy. learned: mirror the images/ pattern with `getSavesDir()`/`SAVES_DIR`, route all three writers
@@ -524,6 +554,15 @@ overwriting. ISC-20/21/22 now [x]. No deferred criteria remain.
 - ISC-106 (jsdom): `migrateSavesToSubfolder()` mock moves a root `…-checkpoint-…json` into the saves
   sub-handle and calls `removeEntry` on the root copy.
 - Suite: 130/130 (114 jsdom + 13 real-Chrome + 3 upgrade), up from 119.
+
+**v1.3.3 (2026-06-10), human week heading + dotted dates:**
+- ISC-108/109/110 (real Chrome, authoritative): paging the board shows "This week · 8.6 to 14.6.2026",
+  "Next week · 15.6 to 21.6.2026", "Last week · 1.6 to 7.6.2026"; day columns render "1.6 | 2.6 | … | 7.6".
+  No "/", no dash anywhere in the heading.
+- ISC-108/109/110 (jsdom): `weekPrefix` returns This/Next/Last week and "2 weeks from now"/"2 weeks ago";
+  `#weekLabel` matches `^This week · ` + `d.m to d.m.yyyy` with no slash/en-dash/em-dash; all 7 `.dt`
+  headers match `^\d+\.\d+$`.
+- Suite: 133/133 (117 jsdom + 13 real-Chrome + 3 upgrade).
 
 **v1.0.4–1.0.5 (test suite, install UX):**
 - ISC-45/46/47/48: the committed suite passes **49/49** (37 jsdom unit + 12 real-Chrome). Browser

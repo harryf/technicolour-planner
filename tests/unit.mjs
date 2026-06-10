@@ -196,6 +196,11 @@ export async function runUnit() {
   s.ok("quick next-week button on board cards", $$("#board .card .rollbtn").length>=1 && /→ next wk/.test(html), `${$$("#board .card .rollbtn").length} rollbtns`);
   s.ok("detail drawer has today + next-week quick dates", /firstWorkday\(nextWeekStart\(\), TODAY\)/.test(html), "drawer quick dates");
 
+  // ---- NEW (v1.3.3): week label = relative prefix + dotted dates, no slash/dash ----
+  s.ok("weekPrefix reads the relative week", ev(`weekPrefix(curWeekStart())==="This week" && weekPrefix(nextWeekStart())==="Next week" && weekPrefix(addDays(curWeekStart(),-7))==="Last week" && weekPrefix(addDays(curWeekStart(),14))==="2 weeks from now" && weekPrefix(addDays(curWeekStart(),-14))==="2 weeks ago"`), "this/next/last/±2");
+  s.ok("week label shows prefix + dotted range, no slash or dash", ev(`(()=>{ state.weekStart=curWeekStart(); renderBoard(); const t=document.getElementById('weekLabel').textContent; return /^This week · /.test(t) && /\\d+\\.\\d+ to \\d+\\.\\d+\\.\\d{4}/.test(t) && !t.includes('/') && !t.includes('–') && !t.includes('—'); })()`), "This week · 8.6 to 14.6.2026");
+  s.ok("day-column dates use dots not slashes", ev(`(()=>{ renderBoard(); const dts=[...document.querySelectorAll('#board .dt')]; return dts.length===7 && dts.every(e=>/^\\d+\\.\\d+$/.test(e.textContent.trim())); })()`), "Mon 8.6 etc");
+
   // ---- NEW (v1.2.2): wider drawer, 'Bigger' editor, no confusing Done button ----
   s.ok("confusing 'Done' button removed from drawer", $("#d-done")===null, "no d-done");
   s.ok("close button clearly labelled", /✕ Close/.test($("#d-close").textContent), $("#d-close").textContent.trim());
