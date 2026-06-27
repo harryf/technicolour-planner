@@ -2,6 +2,23 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [2.0.0], 2026-06-27
+First batch of changes from Sarah's review: the quick wins. (The bigger pieces, an editable
+tools/hooks library and a lighter Stories area, come next in 2.1 and 2.2.)
+- **A reel can carry as many hooks as you like.** Hooks are now a row of little chips, add as many as
+  you want from the picker (tap to attach, tap again to remove), and remove any with its ✕. Your
+  existing single hook carries across automatically.
+- **Filter by type, Reels · Posts · Stories.** A new **Type:** row sits under the colour filter, so you
+  can show just your reels (or posts, or stories) and spot at a glance if a week is, say, all posts. It
+  combines with the colour filter, and works on the Board, the Calendar and the Library.
+- **Fix a task without deleting it.** Each task can now be edited in place, change its **wording**, swap
+  its **colour** (the kind of work), or **drag the grip to reorder** them. No more delete-and-retype.
+- **A Storyboard space for reels.** Above Notes there's now a **🎬 Storyboard** box for writing out the
+  structure of a reel. It shows for reels (and for anything you've already written one on), so posts
+  stay tidy.
+- **"Priority" is gone from task colours.** It wasn't a kind of work, so it's been removed, leaving
+  Brainstorm · Shoot · Edit · Just do it. Any old "Priority" task quietly becomes "Just do it".
+
 ## [1.6.2], 2026-06-27
 - **Dragging a "Still to do" item shows just the piece.** When you drag an item from the *Still to do*
   strip onto the board or calendar, the drag now shows only the little project (colour + title), not the

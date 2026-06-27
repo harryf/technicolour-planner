@@ -85,7 +85,7 @@ export async function exportXlsx(state){
   /* ----- Projects ----- */
   const ws = wb.addWorksheet("Projects");
   headerRow(ws,
-    ["Project","Type","Disc","Auth","Conv","Ret","Date","Music","Hook","Description","Prep","Shot","Edited","Posted","Notes"],
+    ["Project","Type","Disc","Auth","Conv","Ret","Date","Music","Hooks","Description","Prep","Shot","Edited","Posted","Notes"],
     [26,7,6,6,6,6,12,26,22,40,6,6,7,7,28]);
   projects.forEach((p,i)=>{
     const r = ws.getRow(i+2);
@@ -99,12 +99,13 @@ export async function exportXlsx(state){
       if(k==="retention") cell.font = white; cell.alignment = { horizontal:"center" }; });
     r.getCell(7).value = p.date || "";
     r.getCell(8).value = p.music || "";
-    r.getCell(9).value = p.hook || "";
+    r.getCell(9).value = (p.hooks||[]).join(", ");
     r.getCell(10).value = p.desc || "";
     STAGES.forEach((s,si)=>{ const cell=r.getCell(11+si);
       if(p.stages && p.stages[s]){ cell.value="✓"; cell.fill=fill(ARGB.post); cell.font=white; cell.alignment={horizontal:"center"}; } });
     const story = (p.storyCodes&&p.storyCodes.length) ? " · story "+p.storyCodes.join("/") : "";
-    r.getCell(15).value = (p.notes || "") + story;
+    const sb = (p.storyboard||"").trim() ? " · storyboard: "+p.storyboard.replace(/\n/g," ") : "";
+    r.getCell(15).value = (p.notes || "") + story + sb;
   });
   // conditional formatting so NEW rows auto-colour by type letter / target x
   ws.addConditionalFormatting({ ref:"B2:B500", rules:[
@@ -154,7 +155,7 @@ export async function exportXlsx(state){
     const sw=r.getCell(1); sw.value=name; sw.fill=fill(color); sw.font={bold:true,...(dark?white:{})};
     r.getCell(3).value=desc; });
   turn.getCell("A8").value="ACTIVITY COLOURS"; turn.getCell("A8").font={bold:true,size:14};
-  [["Brainstorm",ARGB.brainstorm],["Shoot",ARGB.shoot],["Edit",ARGB.edit],["Priority",ARGB.priority],["Just do it",ARGB.justdo]]
+  [["Brainstorm",ARGB.brainstorm],["Shoot",ARGB.shoot],["Edit",ARGB.edit],["Just do it",ARGB.justdo]]
     .forEach(([name,color],i)=>{ const r=turn.getRow(i+9); const sw=r.getCell(1); sw.value=name; sw.fill=fill(color); sw.font={bold:true,...white}; });
   turn.getCell("A15").value="STORY CODES"; turn.getCell("A15").font={bold:true,size:14};
   Object.entries(STORY_CODES).forEach(([n,d],i)=>{ const r=turn.getRow(i+16); r.getCell(1).value=n; r.getCell(1).font={bold:true}; r.getCell(3).value=d; });
@@ -192,18 +193,19 @@ export async function exportDocx(state){
     if(p.date) kids.push(label("Date"), line(p.date));
     if(p.storyCodes&&p.storyCodes.length) kids.push(label("Story structure"), line(p.storyCodes.map(c=>c+" "+(STORY_CODES[c]||"")).join(" · ")));
     kids.push(label("🎵 Music"), line(p.music));
-    kids.push(label("🪝 Hook"), line(p.hook));
+    kids.push(label("🪝 Hooks"), line((p.hooks||[]).join(", ")));
     kids.push(label("Description / caption"), line(p.desc));
     kids.push(label("Tasks"),
       new Paragraph({ children:[
         chip("brainstorm",HEX.brainstorm), new TextRun("  "), chip("shoot",HEX.shoot), new TextRun("  "),
-        chip("edit",HEX.edit), new TextRun("  "), chip("priority",HEX.priority), new TextRun("  "), chip("just do it",HEX.justdo),
+        chip("edit",HEX.edit), new TextRun("  "), chip("just do it",HEX.justdo),
       ]}));
     ( p.tasks || [] ).forEach(tk=> kids.push(new Paragraph({ spacing:{after:20}, children:[
       new TextRun({ text:(tk.done?"☑ ":"☐ "), bold:true }),
       new TextRun({ text:"("+(ACT_LABEL[tk.activity]||tk.activity)+") ", color:HEX[tk.activity]||"7C776F", bold:true }),
       new TextRun(tk.text || ""),
     ]})));
+    if(p.storyboard) kids.push(label("🎬 Storyboard"), line(p.storyboard));
     if(p.notes) kids.push(label("Notes"), line(p.notes));
     kids.push(new Paragraph({ border:{ bottom:{ style:BorderStyle.SINGLE, size:6, color:"E3DDD3", space:8 } }, spacing:{after:220}, children:[ new TextRun("") ] }));
     return kids;

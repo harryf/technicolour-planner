@@ -58,10 +58,10 @@ export async function runUnit() {
   s.ok("import guard present", /doesn't look like a planner export/.test(html), "validates shape");
 
   // ---- Library sort (v? — created/updated timestamps + 4 sort options) ----
-  s.ok("schema bumped to 3", ev("CURRENT_SCHEMA===3"), `CURRENT_SCHEMA=${ev("CURRENT_SCHEMA")}`);
+  s.ok("schema bumped to 4", ev("CURRENT_SCHEMA===4"), `CURRENT_SCHEMA=${ev("CURRENT_SCHEMA")}`);
   s.ok("seed pieces carry timestamps", ev("state.projects.every(p=>typeof p.createdAt==='string' && typeof p.updatedAt==='string')"), "createdAt/updatedAt on all");
-  s.ok("migrate 2→3 backfills order", ev(`(()=>{const x=migrateState({schemaVersion:2,settings:{},projects:[{id:'a'},{id:'b'},{id:'c'}]});
-    return x.schemaVersion===3 && x.projects.every(p=>p.createdAt) && x.projects[0].createdAt < x.projects[2].createdAt;})()`), "oldest→newest preserved");
+  s.ok("migrate 2→4 backfills order", ev(`(()=>{const x=migrateState({schemaVersion:2,settings:{},projects:[{id:'a'},{id:'b'},{id:'c'}]});
+    return x.schemaVersion===CURRENT_SCHEMA && x.projects.every(p=>p.createdAt) && x.projects[0].createdAt < x.projects[2].createdAt;})()`), "oldest→newest preserved");
   s.ok("default sort is 'recent'", ev("libSort()==='recent' && state.settings.libSort==='recent'"), ev("state.settings.libSort"));
   s.ok("touch() bumps updatedAt", ev(`(()=>{const p={id:'z',createdAt:'2000-01-01T00:00:00.000Z',updatedAt:'2000-01-01T00:00:00.000Z'};touch(p);return p.updatedAt>p.createdAt;})()`), "updatedAt moved forward");
   // sort comparators are deterministic on a synthetic set
@@ -270,7 +270,7 @@ export async function runUnit() {
   s.ok("'New' button enabled on Board", ev("(()=>{ setView('board'); const d=document.getElementById('newBtn').disabled; setView('turnover'); return d===false; })()"), "enabled on board");
   s.ok("targets render as 4 usage cards", $$("#targetLegend .ucard").length===4, `${$$("#targetLegend .ucard").length}`);
   s.ok("story codes render as 5 usage cards", $$("#storyLegend .ucard").length===5, `${$$("#storyLegend .ucard").length}`);
-  s.ok("activities render as 5 usage cards", $$("#activityLegend .ucard").length===5, `${$$("#activityLegend .ucard").length}`);
+  s.ok("activities render as 4 usage cards", $$("#activityLegend .ucard").length===4, `${$$("#activityLegend .ucard").length}`);
   s.ok("every hook shows a usage card", $$("#hookList .ucard").length===ev("HOOKS.length"), `${$$("#hookList .ucard").length}/${ev("HOOKS.length")}`);
   s.ok("unused hooks are clearly marked", $$("#hookList .ucard.zero").length>0, `${$$("#hookList .ucard.zero").length} unused`);
   s.ok("usage cards show a count badge", $$("#targetLegend .ucard .ucount").length===4, "ucount present");
@@ -306,7 +306,7 @@ export async function runUnit() {
     const got=JSON.stringify([...c.querySelectorAll('.ubody .urow .ttl')].map(e=>e.textContent));
     return exp===got; })()`), "DOM order matches sortPiecesT(title)");
   s.ok("sort choice persists", ev("state.settings.turnoverSort==='title'"), ev("state.settings.turnoverSort"));
-  s.ok("new turnover settings are additive (still schema 3)", ev("CURRENT_SCHEMA===3 && migrateState({schemaVersion:2,settings:{},projects:[]}).settings.turnoverTab==='targets'"), "defaulted, no bump");
+  s.ok("new turnover settings are additive (defaulted on migrate)", ev("migrateState({schemaVersion:2,settings:{},projects:[]}).settings.turnoverTab==='targets'"), "defaulted");
 
   // ---- NEW: the "Show me:" target chips now filter the Turn-over tab too, same as Board/Library ----
   s.ok("matchesFilter respects activeFilters", ev(`(()=>{ activeFilters.clear(); activeFilters.add('retention');
@@ -345,9 +345,9 @@ export async function runUnit() {
   s.ok("calm toggle adds the lowstim body class", ev(`(()=>{ document.body.classList.remove('lowstim'); const cb=document.getElementById('lowstim'); cb.checked=true; cb.onchange({target:cb}); const on=document.body.classList.contains('lowstim'); cb.checked=false; cb.onchange({target:cb}); return on && !document.body.classList.contains('lowstim'); })()`), "toggle on/off");
 
   // ---- NEW (v1.6.0): Board calendar view ----
-  s.ok("calendar: boardMode is additive (still schema 3)",
-    ev("CURRENT_SCHEMA===3 && defaultState().settings.boardMode==='week' && migrateState({projects:[]}).settings.boardMode==='week'"),
-    "boardMode defaulted, no schema bump");
+  s.ok("calendar: boardMode is additive (defaulted on migrate)",
+    ev("defaultState().settings.boardMode==='week' && migrateState({projects:[]}).settings.boardMode==='week'"),
+    "boardMode defaulted");
   s.ok("calendar: Week/Calendar toggle switches view + persists", ev(`(()=>{ setView('board'); setBoardMode('calendar');
     const onCal = boardMode()==='calendar' && document.getElementById('calendar').hidden===false && document.getElementById('board').style.display==='none';
     setBoardMode('week');
@@ -436,7 +436,96 @@ export async function runUnit() {
   s.ok("calendar scrolls with the page (no inner scroll box)",
     !/\.cal-wrap\{[^}]*overflow/.test(html) && !/\.cal-wrap\{[^}]*max-height/.test(html),
     "no overflow/max-height on .cal-wrap");
-  ev("setBoardMode('week'); setView('board')");
+
+  // ---- NEW (v2.0): quick wins ----
+  // 1) multiple hooks per piece (single hook → array, lossless)
+  s.ok("v2: schema 3→4 migrates single hook to a hooks array (lossless)", ev(`(()=>{
+    const x=migrateState({schemaVersion:3,settings:{},projects:[{id:'h',hook:'Fast cuts',tasks:[]}]});
+    const p=x.projects[0];
+    return x.schemaVersion===4 && Array.isArray(p.hooks) && p.hooks.length===1 && p.hooks[0]==='Fast cuts' && !('hook' in p) && p.storyboard==='';
+  })()`), "hooks=['Fast cuts'], old key gone");
+  s.ok("v2: hooks show as removable chips + an 'add hooks' button", ev(`(()=>{
+    const p={id:'mh',title:'MH',type:'reel',targets:['discovery'],hooks:['Fast cuts'],storyboard:'',storyCodes:[],stages:{prep:false,shot:false,edited:false,posted:false},tasks:[]};
+    state.projects.push(p); openDetail('mh');
+    const chips=document.querySelectorAll('#d-scroll .hookchip');
+    const hasAdd=!![...document.querySelectorAll('#d-scroll button')].find(b=>/add hooks/.test(b.textContent));
+    const ok = chips.length===1 && /Fast cuts/.test(chips[0].textContent) && !!chips[0].querySelector('.x');
+    closeDrawer(); state.projects=state.projects.filter(x=>x.id!=='mh');
+    return ok && hasAdd;
+  })()`), "1 chip + add button");
+  s.ok("v2: picker attaches a 2nd hook and toggles it off", ev(`(()=>{
+    const p={id:'mh2',title:'MH2',type:'reel',targets:['discovery'],hooks:['Fast cuts'],storyboard:'',storyCodes:[],stages:{},tasks:[]};
+    state.projects.push(p); openHookPicker(p,()=>{});
+    const item=[...document.querySelectorAll('#hookModalList .hook')].find(h=>/Opinion/.test(h.textContent));
+    item.click(); const added=p.hooks.includes('Opinion');
+    const sel=[...document.querySelectorAll('#hookModalList .hook')].find(h=>/Opinion/.test(h.textContent)).classList.contains('sel');
+    item.click(); const removed=!p.hooks.includes('Opinion');
+    document.getElementById('hookModal').classList.remove('open');
+    state.projects=state.projects.filter(x=>x.id!=='mh2');
+    return added && sel && removed;
+  })()`), "toggle on (sel) then off");
+  // 2) editable + reorderable tasks
+  s.ok("v2: a task is editable in place (text + colour) and has a drag grip", ev(`(()=>{
+    const p={id:'tk1',title:'TK',type:'reel',targets:['discovery'],hooks:[],storyboard:'',storyCodes:[],stages:{},
+      tasks:[{id:'a',text:'first',activity:'shoot',done:false},{id:'b',text:'second',activity:'edit',done:false}]};
+    state.projects.push(p); openDetail('tk1');
+    const row=document.querySelector('#d-scroll .task');
+    const editable=!!row.querySelector('input.taskedit') && !!row.querySelector('select.taskact') && !!row.querySelector('.grip');
+    const ti=row.querySelector('input.taskedit'); ti.value='first-edited'; ti.dispatchEvent(new window.Event('input'));
+    const sel=row.querySelector('select.taskact'); sel.value='brainstorm'; sel.dispatchEvent(new window.Event('change'));
+    const r = editable && p.tasks[0].text==='first-edited' && p.tasks[0].activity==='brainstorm';
+    closeDrawer(); state.projects=state.projects.filter(x=>x.id!=='tk1');
+    return r;
+  })()`), "edit text + activity, grip present");
+  s.ok("v2: dragging a task reorders the list", ev(`(()=>{
+    const p={id:'tk2',title:'TK2',type:'reel',targets:['discovery'],hooks:[],storyboard:'',storyCodes:[],stages:{},
+      tasks:[{id:'a',text:'first',activity:'shoot',done:false},{id:'b',text:'second',activity:'edit',done:false}]};
+    state.projects.push(p); openDetail('tk2');
+    const rows=[...document.querySelectorAll('#d-scroll .task')];
+    const evt=new window.Event('drop',{bubbles:true,cancelable:true});
+    Object.defineProperty(evt,'dataTransfer',{value:{getData:()=>'0',types:['text/task-idx']}});
+    rows[1].dispatchEvent(evt);
+    const r = p.tasks[0].id==='b' && p.tasks[1].id==='a';
+    closeDrawer(); state.projects=state.projects.filter(x=>x.id!=='tk2');
+    return r;
+  })()`), "drop row 0 onto row 1 swaps order");
+  // 3) "Priority" task colour retired
+  s.ok("v2: Priority activity removed (4 colours left)", ev("!('priority' in ACTIVITIES) && Object.keys(ACTIVITIES).length===4"), "no priority key");
+  s.ok("v2: migration folds a 'priority' task into 'Just do it'", ev(`(()=>{
+    const x=migrateState({schemaVersion:3,settings:{},projects:[{id:'pr',tasks:[{id:'t',text:'x',activity:'priority',done:false}]}]});
+    return x.projects[0].tasks[0].activity==='justdo';
+  })()`), "priority→justdo");
+  s.ok("v2: actColor tolerates a retired key without crashing", ev("actColor('priority')===ACTIVITIES.justdo.color && actColor('shoot')===ACTIVITIES.shoot.color"), "fallback to justdo");
+  // 4) Storyboard field
+  s.ok("v2: Storyboard shows for reels, hidden for empty posts, shown once a post has content", ev(`(()=>{
+    const reel={id:'sb1',title:'SB',type:'reel',targets:['discovery'],hooks:[],storyboard:'',storyCodes:[],stages:{},tasks:[]};
+    const post={id:'sb2',title:'PB',type:'post',targets:['discovery'],hooks:[],storyboard:'',storyCodes:[],stages:{},tasks:[]};
+    state.projects.push(reel,post);
+    const lab=()=>[...document.querySelectorAll('#d-scroll label')].some(l=>/Storyboard/.test(l.textContent));
+    openDetail('sb1'); const reelHas=lab();
+    openDetail('sb2'); const postHidden=!lab();
+    post.storyboard='structure here'; openDetail('sb2'); const postShown=lab();
+    closeDrawer(); state.projects=state.projects.filter(x=>!['sb1','sb2'].includes(x.id));
+    return reelHas && postHidden && postShown;
+  })()`), "reel yes, empty post no, filled post yes");
+  // 5) type filter (reels/posts/stories), an independent axis combined with the target filter
+  s.ok("v2: Type filter chips exist (reel/post/story)", $$('.chip[data-type]').length===3 && ["reel","post","story"].every(t=>!!$('.chip[data-type="'+t+'"]')), `${$$('.chip[data-type]').length}`);
+  s.ok("v2: type filter narrows by format and clears", ev(`(()=>{
+    clearFilters(); const all=pieceMatches({type:'reel',targets:['discovery']});
+    toggleTypeFilter('post'); const reelOut=pieceMatches({type:'reel',targets:['discovery']}); const postIn=pieceMatches({type:'post',targets:['discovery']});
+    clearFilters(); const cleared=pieceMatches({type:'reel',targets:['discovery']});
+    return all && !reelOut && postIn && cleared;
+  })()`), "post-only hides reels");
+  s.ok("v2: target + type filters combine with AND", ev(`(()=>{
+    clearFilters(); toggleFilter('authority'); toggleTypeFilter('reel');
+    const a=pieceMatches({type:'reel',targets:['authority']});
+    const b=pieceMatches({type:'post',targets:['authority']});
+    const c=pieceMatches({type:'reel',targets:['discovery']});
+    clearFilters();
+    return a && !b && !c;
+  })()`), "authority AND reel only");
+
+  ev("clearFilters(); setBoardMode('week'); setView('board')");
 
   return s;
 }

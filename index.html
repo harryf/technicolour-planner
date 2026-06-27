@@ -289,9 +289,20 @@
   .stagebtns{display:flex;gap:6px;flex-wrap:wrap}
   .stagebtns button[aria-pressed="true"]{background:var(--post);border-color:var(--post);color:#fff}
   .tasklist{display:flex;flex-direction:column;gap:6px}
-  .task{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:6px 8px}
+  .task{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:6px 8px;background:var(--panel)}
   .task .ac{width:12px;height:12px;border-radius:50%;flex:none}
   .task .x{margin-left:auto;border:0;background:transparent;color:var(--muted);padding:2px 6px}
+  .task .grip{cursor:grab;color:var(--muted);font-size:15px;line-height:1;flex:none;user-select:none;padding:0 2px}
+  .task .taskact{width:auto;flex:none;max-width:140px;padding:4px 6px;border-radius:7px}
+  .task .taskedit{min-width:0}
+  .task.dragging{opacity:.4}
+  .task.drop-target{border-color:var(--ink);box-shadow:0 0 0 2px rgba(0,0,0,.08) inset}
+  /* hooks: removable chips on a piece + the picker's selected state */
+  .hookchips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;align-items:center}
+  .hookchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 10px;background:#fffdf8;font-size:13px}
+  .hookchip .x{border:0;background:transparent;color:var(--muted);padding:0 4px;cursor:pointer;font-size:12px}
+  .addhook{font-weight:700}
+  .hook.sel{border-color:var(--ink);background:#fffdf8;box-shadow:0 0 0 2px rgba(0,0,0,.06) inset}
   .drawer .foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
   .danger{color:#b91c1c;border-color:#f1c4c4}
 
@@ -394,6 +405,14 @@
     <button id="clearFilter" class="pill" title="Clear (Esc)">clear ✕</button>
     <label id="filterModeLabel" class="pill" style="gap:6px"><input type="checkbox" id="filterMode" style="width:auto" /> hide non-matching</label>
     <span class="help">press <kbd>1</kbd>–<kbd>4</kbd> to filter · <kbd>Esc</kbd> clears</span>
+  </div>
+
+  <!-- type filter (reels / posts / stories) -->
+  <div class="row filters wrap" style="margin-top:6px">
+    <span class="muted" style="font-weight:700;font-size:12px">Type:</span>
+    <button class="chip" data-type="reel" aria-pressed="false"><span class="dot" style="background:var(--reel)"></span>Reels</button>
+    <button class="chip" data-type="post" aria-pressed="false"><span class="dot" style="background:var(--post)"></span>Posts</button>
+    <button class="chip" data-type="story" aria-pressed="false"><span class="dot" style="background:var(--story)"></span>Stories</button>
   </div>
 
   <!-- balance bar -->
@@ -520,10 +539,11 @@
 <!-- HOOK PICKER MODAL -->
 <div class="modal" id="hookModal">
   <div class="box">
-    <div class="row"><h2 class="grow">Pick a hook</h2><button id="hookModalClose">✕</button></div>
-    <p class="muted">Roll through your library. Filter by what it taps, then click to attach.</p>
+    <div class="row"><h2 class="grow">Pick hooks</h2><button id="hookModalClose">✕</button></div>
+    <p class="muted">Tap as many as you like to attach them (tap again to remove). Filter by what each one taps. Close when you're done.</p>
     <div class="row wrap" id="hookModalFilter" style="margin:10px 0"></div>
     <div class="hooklist" id="hookModalList"></div>
+    <div class="row" style="margin-top:12px;justify-content:flex-end"><button id="hookModalDone" class="primary">Done ✓</button></div>
   </div>
 </div>
 
@@ -628,7 +648,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.6.2";
+const VERSION = "2.0.0";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -650,9 +670,12 @@ const ACTIVITIES = {
   brainstorm:{label:"Brainstorm",color:"#3b82f6"},
   shoot:{label:"Shoot",color:"#eab308"},
   edit:{label:"Edit",color:"#22c55e"},
-  priority:{label:"Priority",color:"#ef4444"},
   justdo:{label:"Just do it",color:"#8b5cf6"},
 };
+// Look up an activity's colour, tolerating retired keys (e.g. the old "priority") in any
+// not-yet-migrated data so a stale task can never crash a render.
+function actColor(a){ return (ACTIVITIES[a]||ACTIVITIES.justdo).color; }
+function actLabel(a){ return (ACTIVITIES[a]||ACTIVITIES.justdo).label; }
 const STAGES = ["prep","shot","edited","posted"];
 const STORY_CODES = {
   1:{label:"Presence",desc:"you talking"},
@@ -702,12 +725,12 @@ const HOOKS = [
 /* ---- Seed: HER real projects (so first open = recognition, not lorem ipsum) ---- */
 function seedProjects(){
   const P = (o)=>Object.assign({
-    id:uid(), type:"reel", targets:[], date:null, music:"", hook:"", desc:"", notes:"",
+    id:uid(), type:"reel", targets:[], date:null, music:"", hooks:[], desc:"", notes:"", storyboard:"",
     storyCodes:[], image:null, imageName:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[]
   }, o);
   return stampOrder([
     P({title:"Burton dogs", type:"reel", targets:["authority"], date:"2026-06-09",
-       music:"This is Halloween", hook:"Bold text / statement",
+       music:"This is Halloween", hooks:["Bold text / statement"],
        desc:"\"When you're a tattoo artist and you get this DM\" → text bubble \"Can we do Tim Burton dogs bracelet?\" → the tattoo. We already did Frankenweenie 6 months ago (you see it healed at the end). My client had the best idea!",
        stages:{prep:true,shot:false,edited:false,posted:false},
        tasks:[t("Shoot: halloween-girly on phone, receives DM, happy","shoot"),
@@ -720,12 +743,12 @@ function seedProjects(){
     P({title:"Carla smiley ttt", type:"reel", targets:["conversion","discovery"], date:"2026-06-10",
        tasks:[t("Brainstorm","brainstorm"),t("Prep + edit old footage","edit"),t("Shoot","shoot")]}),
     P({title:"1 TTT / year", type:"reel", targets:["retention","conversion"], date:"2026-06-12",
-       hook:"Fast cuts", notes:"Find photos of me 20→26, choose tattoos per year",
+       hooks:["Fast cuts"], notes:"Find photos of me 20→26, choose tattoos per year",
        tasks:[t("Choose photos per year","brainstorm"),t("Edit","edit")]}),
     P({title:"Eat my ass trend", type:"reel", targets:["discovery"], date:"2026-06-14",
        desc:"draw butts — trend", tasks:[t("Draw","justdo"),t("Shoot","shoot"),t("Edit","edit")]}),
     P({title:"Alysson + Marie bf ttt", type:"reel", targets:["discovery"],
-       music:"Best Friend (feat. Doja Cat) — Saweetie", hook:"Bold text / statement",
+       music:"Best Friend (feat. Doja Cat) — Saweetie", hooks:["Bold text / statement"],
        desc:"Two best friends had a GENIUS tattoo idea — \"same same but different\" unicorn + narwhal. What would you and your best friend get?",
        tasks:[t("Brainstorm after client validation","brainstorm"),
               t("Ask Alysson which photos are OK","justdo"),t("Edit old footage","edit")]}),
@@ -757,7 +780,7 @@ const LS_KEY="technicolour_planner_v1";
 const OLD_LS_KEY="sarah_planner_v1";       // prototype key, read once for continuity
 const JSON_NAME="Technicolour-Planner-Data.json";
 const MD_NAME="Technicolour-Planner-Data.md";
-const CURRENT_SCHEMA=3;
+const CURRENT_SCHEMA=4;
 const DEFAULT_WORKDAYS=[true,true,true,true,true,false,true]; // Mon..Sun; Sat off by default (her "NO POST")
 const MAX_BACKUPS=20; // timestamped checkpoints kept in the folder (oldest pruned)
 
@@ -769,6 +792,15 @@ const migrations = {
   // From schema 2 → 3: give each piece created/updated timestamps so the Library can sort by "recently
   // worked on". Backfilled from the existing array order (oldest→newest) so nothing's order is lost.
   2: (s)=>{ stampOrder(s.projects||[]); },
+  // From schema 3 → 4 (v2.0): a piece can hold MANY hooks now (single hook → array), gains a
+  // Storyboard field, and the retired "Priority" task colour folds into "Just do it". Purely additive
+  // / lossless: we only ever read the old value before replacing it, never discard her content.
+  3: (s)=>{ (s.projects||[]).forEach(p=>{
+      if(!Array.isArray(p.hooks)) p.hooks = p.hook ? [p.hook] : []; // carry the old single hook across
+      delete p.hook;
+      if(typeof p.storyboard!=="string") p.storyboard = "";
+      (p.tasks||[]).forEach(tk=>{ if(tk.activity==="priority") tk.activity="justdo"; }); // retired colour
+    }); },
 };
 // Ensure every piece has monotonic created/updated timestamps, preserving the current array order
 // (oldest first). Only fills what's missing, so it's safe to run on every load.
@@ -994,13 +1026,14 @@ function toMarkdown(state){
     const o=[]; o.push("### "+(p.title||"Untitled")+"  ·  "+(TYPES[p.type]?TYPES[p.type].label:p.type));
     if(p.targets && p.targets.length) o.push("- Targets: "+p.targets.map(k=>TARGETS[k]?TARGETS[k].label:k).join(", "));
     if(p.date) o.push("- Date: "+p.date);
-    if(p.hook) o.push("- Hook: "+p.hook);
+    if(p.hooks && p.hooks.length) o.push("- Hooks: "+p.hooks.join(", "));
     if(p.music) o.push("- Music: "+p.music);
     if(p.storyCodes && p.storyCodes.length) o.push("- Story codes: "+p.storyCodes.map(c=>c+" "+(STORY_CODES[c]?STORY_CODES[c].label:"")).join(", "));
     const st=STAGES.filter(s=>p.stages && p.stages[s]); if(st.length) o.push("- Done: "+st.join(", "));
     if(p.imageName) o.push("- Image file: "+p.imageName);
     if(p.desc) o.push("- Description: "+p.desc.replace(/\n/g," "));
     if(p.tasks && p.tasks.length) o.push("- Tasks:\n"+p.tasks.map(tk=>"  - ["+(tk.done?"x":" ")+"] ("+(ACTIVITIES[tk.activity]?ACTIVITIES[tk.activity].label:tk.activity)+") "+tk.text).join("\n"));
+    if(p.storyboard) o.push("- Storyboard: "+p.storyboard.replace(/\n/g," "));
     if(p.notes) o.push("- Notes: "+p.notes.replace(/\n/g," "));
     return o.join("\n");
   };
@@ -1025,8 +1058,17 @@ function save(){
   saveTimer=setTimeout(()=>{ Store.save(state).then(()=>updateDataLocation()); }, 300);
 }
 
-let activeFilters=new Set();
+let activeFilters=new Set();      // target (pillar) filter: discovery/authority/conversion/retention
+let activeTypeFilters=new Set();  // format filter: reel/post/story, an independent axis
 let filterHide=false;
+// A piece is shown when it matches BOTH active axes (an empty axis means "all"). The two combine with
+// AND so "Reels" + "Authority" shows authority reels only.
+function pieceMatches(p){
+  const tgOK = !activeFilters.size || (p.targets||[]).some(t=>activeFilters.has(t));
+  const tyOK = !activeTypeFilters.size || activeTypeFilters.has(p.type);
+  return tgOK && tyOK;
+}
+function anyFilterActive(){ return activeFilters.size>0 || activeTypeFilters.size>0; }
 let currentView="board";
 let openId=null;
 
@@ -1099,9 +1141,8 @@ function projectCard(p,{compact=false,mini=false}={}){
   card.className="card"; card.dataset.id=p.id; card.tabIndex=0;
   if(mini) card.classList.add("mini"); // calendar cells: colour stripe + badge + title only
   if(!compact) card.classList.add("lib-card");
-  if(activeFilters.size){
-    const match=p.targets.some(t=>activeFilters.has(t));
-    if(!match){ if(filterHide){card.style.display="none";} else {card.classList.add("dim");} }
+  if(anyFilterActive() && !pieceMatches(p)){
+    if(filterHide){card.style.display="none";} else {card.classList.add("dim");}
   }
   const stripes=document.createElement("div"); stripes.className="stripes";
   const tg = p.targets.length?p.targets:["discovery"];
@@ -1398,12 +1439,12 @@ function pieceUrow(p){
 }
 // The "Show me:" target chips / balance bar drive the same activeFilters used on Board + Library.
 // Mirror projectCard's behaviour here: dim non-matching rows, or hide them when "hide non-matching" is on.
-function matchesFilter(p){ return !activeFilters.size || (p.targets||[]).some(t=>activeFilters.has(t)); }
-function applyRowFilter(row,p){ if(activeFilters.size && !matchesFilter(p)){ if(filterHide) row.style.display="none"; else row.classList.add("dim"); } }
-function applyCardFilter(card,pieces){ if(activeFilters.size && !pieces.some(matchesFilter)){ if(filterHide) card.style.display="none"; else card.classList.add("dim"); } }
+function matchesFilter(p){ return pieceMatches(p); }
+function applyRowFilter(row,p){ if(anyFilterActive() && !matchesFilter(p)){ if(filterHide) row.style.display="none"; else row.classList.add("dim"); } }
+function applyCardFilter(card,pieces){ if(anyFilterActive() && !pieces.some(matchesFilter)){ if(filterHide) card.style.display="none"; else card.classList.add("dim"); } }
 function taskUrow(piece,task){
   const row=document.createElement("div"); row.className="urow taskrow"+(task.done?" posted":"");
-  const dot=document.createElement("span"); dot.className="ac"; dot.style.background=ACTIVITIES[task.activity].color;
+  const dot=document.createElement("span"); dot.className="ac"; dot.style.background=actColor(task.activity);
   // Main label: "Project → Task". Project is context (muted), the task itself is the focus (bold).
   const ttl=document.createElement("span"); ttl.className="ttl";
   const proj=document.createElement("span"); proj.className="tproj"; proj.textContent=piece.title||"Untitled";
@@ -1490,7 +1531,7 @@ function renderTurnoverHooks(){
   Object.entries(HOOK_TYPES).forEach(([k,lbl])=> f.appendChild(hookChip(lbl,k)) );
   const list=document.getElementById("hookList"); list.innerHTML="";
   HOOKS.filter(([_,types])=>!hookFilterType||types.includes(hookFilterType)).forEach(([name,types])=>{
-    const pieces=sortPiecesT(state.projects.filter(p=>p.hook===name));
+    const pieces=sortPiecesT(state.projects.filter(p=>(p.hooks||[]).includes(name)));
     const desc=types.map(t=>HOOK_TYPES[t]).join(" · ");
     const card=usageCard(sw("#efeae1","🪝"), name, desc, pieces.map(pieceUrow), {open:true});
     applyCardFilter(card,pieces); list.appendChild(card);
@@ -1498,19 +1539,22 @@ function renderTurnoverHooks(){
 }
 
 let hookFilterType=null;
-function renderHookList(listId,filterId,onPick){
+// The picker is multi-select: opts.selected (live array) drives the highlight, opts.onToggle flips one.
+function renderHookList(listId,filterId,opts){
+  opts=opts||{}; const selected=opts.selected||[];
   const f=document.getElementById(filterId); f.innerHTML="";
   const allBtn=document.createElement("button"); allBtn.className="chip"; allBtn.style.boxShadow="none";
   allBtn.setAttribute("aria-pressed",hookFilterType===null); allBtn.textContent="all";
-  allBtn.onclick=()=>{hookFilterType=null;renderHookList(listId,filterId,onPick);}; f.appendChild(allBtn);
+  allBtn.onclick=()=>{hookFilterType=null;renderHookList(listId,filterId,opts);}; f.appendChild(allBtn);
   Object.entries(HOOK_TYPES).forEach(([k,lbl])=>{ const b=document.createElement("button"); b.className="chip"; b.style.boxShadow="none";
     b.setAttribute("aria-pressed",hookFilterType===k); b.textContent=lbl;
-    b.onclick=()=>{hookFilterType=(hookFilterType===k?null:k);renderHookList(listId,filterId,onPick);}; f.appendChild(b); });
+    b.onclick=()=>{hookFilterType=(hookFilterType===k?null:k);renderHookList(listId,filterId,opts);}; f.appendChild(b); });
   const list=document.getElementById(listId); list.innerHTML="";
   HOOKS.filter(([_,types])=>!hookFilterType||types.includes(hookFilterType)).forEach(([name,types])=>{
-    const h=document.createElement("div"); h.className="hook";
-    h.innerHTML=`<b>${name}</b><div class="types">${types.map(t=>`<span class="htype">${HOOK_TYPES[t]}</span>`).join("")}</div>`;
-    if(onPick){ h.style.cursor="pointer"; h.onclick=()=>onPick(name); }
+    const on=selected.includes(name);
+    const h=document.createElement("div"); h.className="hook"+(on?" sel":"");
+    h.innerHTML=`<b>${on?"✓ ":""}${name}</b><div class="types">${types.map(t=>`<span class="htype">${HOOK_TYPES[t]}</span>`).join("")}</div>`;
+    if(opts.onToggle){ h.style.cursor="pointer"; h.onclick=()=>opts.onToggle(name); }
     list.appendChild(h);
   });
 }
@@ -1521,11 +1565,14 @@ function renderAll(){
   if(currentView==="library") renderLibrary();
   if(currentView==="turnover") renderTurnover();
   renderBalance();
-  const anyFilter=activeFilters.size>0;
+  const anyFilter=anyFilterActive();
   document.querySelectorAll(".chip[data-target]").forEach(c=>{
-    const on=activeFilters.has(c.dataset.target);
-    c.setAttribute("aria-pressed",on);
-    c.dataset.anyactive=anyFilter;
+    c.setAttribute("aria-pressed",activeFilters.has(c.dataset.target));
+    c.dataset.anyactive=activeFilters.size>0; // fade the other targets only when a target is picked
+  });
+  document.querySelectorAll(".chip[data-type]").forEach(c=>{
+    c.setAttribute("aria-pressed",activeTypeFilters.has(c.dataset.type));
+    c.dataset.anyactive=activeTypeFilters.size>0; // fade the other types only when a type is picked
   });
   // Nothing to clear → grey out "clear". Nothing to match → "hide non-matching" can't do anything,
   // so disable it (and untick it) until a filter is active.
@@ -1539,9 +1586,9 @@ function renderAll(){
 /* ========================= DETAIL DRAWER ========================= */
 function newProject(type){
   const now=new Date().toISOString();
-  const p={ id:uid(), createdAt:now, updatedAt:now, title:"", type, targets:[], date:null, music:"", hook:"", desc:"", notes:"",
+  const p={ id:uid(), createdAt:now, updatedAt:now, title:"", type, targets:[], date:null, music:"", hooks:[], desc:"", notes:"", storyboard:"",
     storyCodes:[], image:null, imageName:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[] };
-  if(type==="reel"){ p.title="New reel"; p.music=""; p.hook="";
+  if(type==="reel"){ p.title="New reel"; p.music=""; p.hooks=[];
     p.tasks=[t("Brainstorm","brainstorm"),t("Shoot","shoot"),t("Edit","edit")]; }
   if(type==="post"){ p.title="New post"; p.tasks=[t("Prep","brainstorm"),t("Caption","justdo")]; }
   if(type==="story"){ p.title="New story"; p.storyCodes=[1]; p.tasks=[t("Shoot","shoot")]; }
@@ -1647,12 +1694,29 @@ function openDetail(id){
   const imgField=field("Image / thumbnail (wide / landscape works best, about 1280 × 720)", iwrap);
   s.appendChild(imgField);
 
-  const hookWrap=document.createElement("div"); hookWrap.className="row";
-  const hookIn=inputEl(p.hook,v=>{p.hook=v;softSave();});
-  const pick=document.createElement("button"); pick.textContent="pick ▾"; pick.onclick=()=>openHookPicker(name=>{p.hook=name;softSave();openDetail(id);});
-  hookWrap.append(hookIn,pick);
-  const mh=document.createElement("div"); mh.className="field2"; // Music + Hook share a row to save vertical space
-  mh.append(field("🎵 Music", inputEl(p.music,v=>{p.music=v;softSave();})), field("🪝 Hook", hookWrap));
+  // Hooks: a piece can carry as many as she likes (her goal: pack a reel with hooks). Shown as
+  // removable chips; "add hooks" opens the picker, which toggles selections in place.
+  if(!Array.isArray(p.hooks)) p.hooks = p.hook ? [p.hook] : [];
+  const hookWrap=document.createElement("div");
+  const chips=document.createElement("div"); chips.className="hookchips";
+  const renderHookChips=()=>{
+    chips.innerHTML="";
+    (p.hooks||[]).forEach(name=>{
+      const c=document.createElement("span"); c.className="hookchip";
+      const lbl=document.createElement("span"); lbl.textContent=name;
+      const x=document.createElement("button"); x.className="x"; x.type="button"; x.textContent="✕";
+      x.title="Remove this hook"; x.setAttribute("aria-label","Remove "+name);
+      x.onclick=()=>{ p.hooks=p.hooks.filter(h=>h!==name); softSave(); renderHookChips(); };
+      c.append(lbl,x); chips.appendChild(c);
+    });
+    if(!(p.hooks||[]).length){ const m=document.createElement("span"); m.className="muted help"; m.textContent="none yet"; chips.appendChild(m); }
+  };
+  renderHookChips();
+  const pick=document.createElement("button"); pick.type="button"; pick.className="addhook"; pick.textContent="＋ add hooks";
+  pick.onclick=()=>openHookPicker(p, renderHookChips);
+  hookWrap.append(chips,pick);
+  const mh=document.createElement("div"); mh.className="field2"; // Music + Hooks share a row to save vertical space
+  mh.append(field("🎵 Music", inputEl(p.music,v=>{p.music=v;softSave();})), field("🪝 Hooks", hookWrap));
   s.appendChild(mh);
 
   s.appendChild(expandableField("Description / caption", p.desc, v=>{p.desc=v;softSave();}));
@@ -1663,13 +1727,33 @@ function openDetail(id){
   s.appendChild(field("Progress", sg));
 
   const tl=document.createElement("div"); tl.className="tasklist";
-  (p.tasks||[]).forEach(task=>{
-    const row=document.createElement("div"); row.className="task";
-    const dot=document.createElement("span"); dot.className="ac"; dot.style.background=ACTIVITIES[task.activity].color; dot.title=ACTIVITIES[task.activity].label;
-    const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=task.done; cb.style.width="auto"; cb.onchange=()=>{task.done=cb.checked;softSave();};
-    const txt=document.createElement("span"); txt.className="grow"; txt.textContent=task.text; txt.style.textDecoration=task.done?"line-through":"";
-    const x=document.createElement("button"); x.className="x"; x.textContent="✕"; x.onclick=()=>{p.tasks=p.tasks.filter(t=>t.id!==task.id);softSave();openDetail(id);};
-    row.append(dot,cb,txt,x); tl.appendChild(row);
+  // Each task is now fully editable in place: change its colour (the kind of work), tick it done,
+  // rewrite its text, or drag the grip to reorder. No more delete-and-recreate to fix a typo.
+  (p.tasks||[]).forEach((task,idx)=>{
+    const row=document.createElement("div"); row.className="task"; row.dataset.idx=idx;
+    const grip=document.createElement("span"); grip.className="grip"; grip.textContent="⠿";
+    grip.title="Drag to reorder"; grip.setAttribute("aria-label","Drag to reorder"); grip.draggable=true;
+    const act=document.createElement("select"); act.className="taskact"; act.title="Kind of work";
+    Object.entries(ACTIVITIES).forEach(([k,v])=>{ const o=document.createElement("option"); o.value=k; o.textContent=v.label; act.appendChild(o); });
+    act.value = ACTIVITIES[task.activity] ? task.activity : "justdo";
+    act.style.borderLeft="6px solid "+actColor(act.value);
+    act.onchange=()=>{ task.activity=act.value; act.style.borderLeft="6px solid "+actColor(act.value); softSave(); };
+    const cb=document.createElement("input"); cb.type="checkbox"; cb.checked=task.done; cb.style.width="auto";
+    const txt=document.createElement("input"); txt.className="grow taskedit"; txt.value=task.text||"";
+    txt.style.textDecoration=task.done?"line-through":"";
+    cb.onchange=()=>{ task.done=cb.checked; txt.style.textDecoration=task.done?"line-through":""; softSave(); };
+    txt.oninput=()=>{ task.text=txt.value; softSave(); };
+    const x=document.createElement("button"); x.className="x"; x.type="button"; x.textContent="✕"; x.title="Delete this task";
+    x.onclick=()=>{p.tasks=p.tasks.filter(t=>t.id!==task.id);softSave();openDetail(id);};
+    // Drag-to-reorder: the grip starts the drag, any row is a drop target. Reorder the array, re-render.
+    grip.addEventListener("dragstart",e=>{ e.dataTransfer.setData("text/task-idx",String(idx)); e.dataTransfer.effectAllowed="move"; row.classList.add("dragging"); });
+    grip.addEventListener("dragend",()=>row.classList.remove("dragging"));
+    row.addEventListener("dragover",e=>{ if(e.dataTransfer.types.includes("text/task-idx")){ e.preventDefault(); row.classList.add("drop-target"); } });
+    row.addEventListener("dragleave",()=>row.classList.remove("drop-target"));
+    row.addEventListener("drop",e=>{ e.preventDefault(); row.classList.remove("drop-target");
+      const from=Number(e.dataTransfer.getData("text/task-idx"));
+      if(Number.isInteger(from) && from!==idx){ const m=p.tasks.splice(from,1)[0]; p.tasks.splice(idx,0,m); softSave(); openDetail(id); } });
+    row.append(grip,act,cb,txt,x); tl.appendChild(row);
   });
   const addRow=document.createElement("div"); addRow.className="row";
   const ti=document.createElement("input"); ti.placeholder="add a task…";
@@ -1680,6 +1764,12 @@ function openDetail(id){
   ti.onkeydown=e=>{ if(e.key==="Enter")ab.click(); };
   addRow.append(ti,sel,ab); tl.appendChild(addRow);
   s.appendChild(field("Tasks (colour shows the kind of work)", tl));
+
+  // Storyboard: where she writes the structure of a reel. Always shown for reels; for other types it
+  // only appears if she's already written something there, so posts/stories stay uncluttered.
+  if(p.type==="reel" || (p.storyboard||"").trim()){
+    s.appendChild(expandableField("🎬 Storyboard", p.storyboard, v=>{p.storyboard=v;softSave();}));
+  }
 
   s.appendChild(expandableField("Notes", p.notes, v=>{p.notes=v;softSave();}));
 
@@ -1716,16 +1806,25 @@ function softSave(){ touch(state.projects.find(x=>x.id===openId)); clearTimeout(
 function openDrawer(){ document.getElementById("scrim").classList.add("open"); document.getElementById("drawer").classList.add("open"); }
 function closeDrawer(){ document.getElementById("scrim").classList.remove("open"); document.getElementById("drawer").classList.remove("open"); openId=null; save(); renderAll(); }
 
-/* ========================= HOOK PICKER ========================= */
-function openHookPicker(onPick){
+/* ========================= HOOK PICKER (multi-select) ========================= */
+// Toggling a hook attaches/removes it on the piece and keeps the modal open so she can pick several;
+// onChange refreshes the chips behind it. She closes with Done / ✕ / Esc when finished.
+function openHookPicker(p, onChange){
   hookFilterType=null;
-  renderHookList("hookModalList","hookModalFilter",(name)=>{ onPick(name); document.getElementById("hookModal").classList.remove("open"); });
+  if(!Array.isArray(p.hooks)) p.hooks = p.hook ? [p.hook] : [];
+  const rerender=()=>renderHookList("hookModalList","hookModalFilter",{
+    selected:p.hooks,
+    onToggle:(name)=>{ const i=p.hooks.indexOf(name); if(i<0)p.hooks.push(name); else p.hooks.splice(i,1);
+      softSave(); if(onChange)onChange(); rerender(); }
+  });
+  rerender();
   document.getElementById("hookModal").classList.add("open");
 }
 
 /* ========================= FILTERS ========================= */
 function toggleFilter(k){ if(activeFilters.has(k)) activeFilters.delete(k); else activeFilters.add(k); renderAll(); }
-function clearFilters(){ activeFilters.clear(); renderAll(); }
+function toggleTypeFilter(k){ if(activeTypeFilters.has(k)) activeTypeFilters.delete(k); else activeTypeFilters.add(k); renderAll(); }
+function clearFilters(){ activeFilters.clear(); activeTypeFilters.clear(); renderAll(); }
 
 /* ========================= EXPORT / IMPORT (JSON) ========================= */
 function exportData(){ downloadJSON(state, "technicolour-planner-"+TODAY+".json"); }
@@ -1781,6 +1880,7 @@ newMenu.querySelectorAll("button").forEach(b=>b.onclick=()=>{ newMenu.classList.
 document.addEventListener("click",()=>newMenu.classList.remove("open"));
 
 document.querySelectorAll(".chip[data-target]").forEach(c=>c.onclick=()=>toggleFilter(c.dataset.target));
+document.querySelectorAll(".chip[data-type]").forEach(c=>c.onclick=()=>toggleTypeFilter(c.dataset.type));
 document.getElementById("clearFilter").onclick=clearFilters;
 document.getElementById("filterMode").onchange=e=>{filterHide=e.target.checked;renderAll();};
 
@@ -1813,6 +1913,7 @@ document.getElementById("scrim").onclick=closeDrawer;
 document.getElementById("d-delete").onclick=()=>{ if(openId&&confirm("Delete this project?")){ state.projects=state.projects.filter(p=>p.id!==openId); closeDrawer(); } };
 
 document.getElementById("hookModalClose").onclick=()=>document.getElementById("hookModal").classList.remove("open");
+document.getElementById("hookModalDone").onclick=()=>document.getElementById("hookModal").classList.remove("open");
 
 document.getElementById("exportBtn").onclick=exportData;
 document.getElementById("importBtn").onclick=()=>document.getElementById("importFile").click();

@@ -63,28 +63,32 @@ state = {
   projects: [ {
     id, createdAt:<ISO>, updatedAt:<ISO>,                   // per-piece timestamps (v1.4.0) — drive Library sort
     title, type:"reel"|"post"|"story", targets:[...],        // targets ⊆ discovery|authority|conversion|retention
-    date:"YYYY-MM-DD"|null, music, hook, desc, notes,
+    date:"YYYY-MM-DD"|null, music, hooks:[...], desc, notes, storyboard,   // hooks is an ARRAY (v2.0); storyboard text (v2.0)
     storyCodes:[1..5], image:<dataURL>|null, imageName:<filename>|null,   // see Images below
-    stages:{prep,shot,edited,posted}, tasks:[{id,text,activity,done}]   // activity ∈ brainstorm|shoot|edit|priority|justdo
+    stages:{prep,shot,edited,posted}, tasks:[{id,text,activity,done}]   // activity ∈ brainstorm|shoot|edit|justdo (priority removed v2.0)
   } ],
   settings: { lowstim:bool, colors:{<target>:<hex>},        // per-user colour remap
               workdays:[bool x7],                            // Mon..Sun working/posting days (v1.2.0)
               libSort:"recent"|"date"|"colour"|"title",       // remembered Library sort (v1.4.0)
               turnoverTab, turnoverSort,                       // remembered Turn-over sub-tab + sort (v1.5.0)
               boardMode:"week"|"calendar" },                   // remembered Board view (v1.6.0)
-  weekStart, schemaVersion, updatedAt   // schemaVersion is 3 since v1.4.0
+  weekStart, schemaVersion, updatedAt   // schemaVersion is 4 since v2.0
 }
 ```
 
 `settings.lang` may still exist in old saved data (the FR toggle was removed in v1.2.0); it's ignored,
-the board is always English. **Schema is at 3**: migration `1→2` adds `settings.workdays` (default
+the board is always English. **Schema is at 4**: migration `1→2` adds `settings.workdays` (default
 `[T,T,T,T,T,F,T]`, Sat off); migration `2→3` adds per-piece `createdAt`/`updatedAt` (backfilled from the
-existing array order, oldest→newest, via `stampOrder()`, so no piece's relative order is lost). Both
-auto-back-up the file before migrating. A piece is "done/out the door" when `stages.posted` is true.
+existing array order, oldest→newest, via `stampOrder()`, so no piece's relative order is lost);
+migration `3→4` (v2.0) converts the single `hook` string to a `hooks` array, adds the `storyboard`
+field (default `""`), and folds any retired `priority` task colour into `justdo` — all lossless
+(old value read before replacing). Migrations auto-back-up the file before running. A piece is
+"done/out the door" when `stages.posted` is true.
 
 **Two independent colour languages, keep them separate, never let them collide:**
 - **type colour** (reel/post/story) + **target colour** (the 4-funnel stripes), describe the piece.
-- **activity colour** (brainstorm/shoot/edit/priority/justdo), describes a *task inside* a piece.
+- **activity colour** (brainstorm/shoot/edit/justdo), describes a *task inside* a piece. Look it up via
+  `actColor()`/`actLabel()`, which fall back to `justdo` for any retired key (e.g. old `priority` data).
 
 The colour/label constants (`TARGETS`, `TYPES`, `ACTIVITIES`, `STORY_CODES`, `HOOKS`) are defined
 near the top of `index.html`. If you change a colour or label, mirror it in `src/export.js`
@@ -162,7 +166,7 @@ never lose data). The unit that rolls is a **piece** (it owns the `date`), not a
 
 The Board has two modes, chosen by a **View: Week · Calendar** `.seg` (`#boardMode`) in the board
 toolbar. The choice persists in `settings.boardMode` (default `"week"`; additive, defaulted in
-`migrateState`/`defaultState`, **no schema bump**, still schema 3). `boardMode()` reads it,
+`migrateState`/`defaultState`, **no schema bump**). `boardMode()` reads it,
 `setBoardMode()` writes+saves, `syncBoardMode()` reflects the toggle and shows/hides the right
 container. **Gotcha:** `.board` (`display:grid`) and `#weekNav` (`.row`, `display:flex`) set an
 explicit `display`, which overrides the `[hidden]` attribute, so `syncBoardMode()` hides them with
@@ -224,9 +228,9 @@ The Turn-over tab is the **colour-first usage index** for her reference vocabula
 Each category renders as `.ucard`s (built by `usageCard()`): a colour swatch + label/desc + a **count
 badge** ("3 pieces" / "not used yet"); each row is a `.urow` that opens the editor (`openDetail`).
 - **Targets** → pieces having that target. **Story codes** → pieces with that code. **Hooks** → pieces
-  whose `p.hook` matches (so unused hooks show "not used yet" + `.zero` dimming, answering "which hooks
-  haven't I used"); the hook-type filter chips still narrow the list. **Activities** → *tasks* with that
-  activity across all pieces (noun "task"), showing done state.
+  where `(p.hooks||[]).includes(name)` (hooks is an array as of v2.0; unused hooks show "not used yet" +
+  `.zero` dimming, answering "which hooks haven't I used"); the hook-type filter chips still narrow the
+  list. **Activities** → *tasks* with that activity across all pieces (noun "task"), showing done state.
 - **Sub-tabs (v1.5.0):** to kill the long vertical scroll, the four categories are now **sub-tabs**
   (`#turnoverTabs`, `.subtabs` styled like the main `.tabs`) shown one at a time — order **Targets ·
   Activities · Story codes · Hooks** (`#sub-targets/-activities/-story/-hooks` `.subpanel`s; non-active
@@ -250,14 +254,28 @@ badge** ("3 pieces" / "not used yet"); each row is a `.urow` that opens the edit
   "Sunday 28 Jun (this week)" / "no date"). `✓` prefix + line-through when done; built with DOM nodes
   (no innerHTML — titles/tasks are user data). Replaces the old task-text-only label + "✓ done · project".
 - **Target filter (v1.5.1):** the global "Show me:" chips / balance bar (`activeFilters` + `filterHide`)
-  now apply to Turn-over too, the same way as Board/Library. `matchesFilter(p)` mirrors `projectCard`'s
-  raw `p.targets.some(...)`; `applyRowFilter(row,piece)` dims (`.urow.dim`) or hides non-matching rows,
-  and `applyCardFilter(card,pieces)` dims/hides (`.ucard.dim`) a card whose pieces none match. Wired in
-  `pieceUrow`/`taskUrow` (rows) and `renderTurnover`/`renderTurnoverHooks` (cards). `renderAll()` already
-  re-renders Turn-over on filter change, so the chips, balance bar, `1`–`4` keys and Esc all work there.
-- Zero-use cards get `.zero` (dimmed, no expand). `renderHookList()` is untouched (still powers the
-  hook-picker modal). Both new settings (`turnoverTab`, `turnoverSort`) are **additive** — defaulted in
-  `migrateState`/`defaultState`, **no schema bump** (still schema 3).
+  now apply to Turn-over too, the same way as Board/Library. As of v2.0, `matchesFilter(p)` delegates to
+  `pieceMatches(p)` (the unified target+type test); `applyRowFilter`/`applyCardFilter` gate on
+  `anyFilterActive()`. Wired in `pieceUrow`/`taskUrow` (rows) and `renderTurnover`/`renderTurnoverHooks`
+  (cards). `renderAll()` re-renders Turn-over on filter change, so the chips, balance bar, `1`–`4` keys
+  and Esc all work there.
+- Zero-use cards get `.zero` (dimmed, no expand). `renderHookList()` now takes `{selected,onToggle}` for
+  the **multi-select** hook picker (v2.0). Both `turnoverTab`/`turnoverSort` settings are **additive** —
+  defaulted in `migrateState`/`defaultState`, **no schema bump**.
+
+## Filters: colour (target) + type, two independent axes (v2.0)
+
+Two filter axes combine with **AND** (an empty axis means "all"):
+- **Target/colour** — the "Show me:" chips (`.chip[data-target]`) + balance-bar segments, state in
+  `activeFilters` (Set), keys `1`–`4`.
+- **Type/format** — a "Type:" row of `.chip[data-type]` (Reels/Posts/Stories), state in
+  `activeTypeFilters` (Set). No keyboard shortcuts.
+
+`pieceMatches(p)` is the single source of truth (`targets ∩ activeFilters` AND `type ∈ activeTypeFilters`);
+`anyFilterActive()` is the OR of the two sets' sizes. `filterHide` ("hide non-matching") and `clearFilters()`
+(also Esc) apply to **both** axes. `projectCard`, the Library (via `projectCard`), and Turn-over all route
+through these, so the type filter works everywhere the target filter does. `renderAll()` syncs both chip
+groups' `aria-pressed` + `data-anyactive` (each axis fades its *own* unpicked chips independently).
 - **"+ New" is disabled on this tab** (`setView` sets `#newBtn.disabled` when `v==="turnover"`) — you
   can't create a piece here; add from Board/Library. `button:disabled{opacity:.45}`.
 
@@ -353,8 +371,14 @@ need the exact approach). If you change the brand mark, regenerate all three.
   is `translateX(100%)`, so measuring it before the transition settles reads as off-screen, that's the
   animation, not a bug). Long-text fields use `expandableField()` (a labelled **"⤢ Bigger"** button, no
   magnifying-glass metaphor) which opens `#bigEdit`, a roomy full-height editor overlaid on top, synced
-  live to the inline textarea. Music + Hook share a `.field2` 2-col row to cut scrolling. The header has
+  live to the inline textarea. Music + Hooks share a `.field2` 2-col row to cut scrolling. The header has
   one clear **"✕ Close"**; there is deliberately **no "Done" button** (it confused with "Posted").
+  **v2.0 detail-editor changes:** Hooks render as removable `.hookchip`s + an "＋ add hooks" button that
+  opens the **multi-select** picker (`openHookPicker(p,onChange)` → `renderHookList({selected,onToggle})`;
+  the modal stays open, has a "Done ✓"). Tasks are **editable in place** — a drag `.grip`, a `.taskact`
+  activity `<select>` (coloured left border), the done checkbox, an inline `.taskedit` text input, and ✕
+  delete; drag the grip to reorder (`text/task-idx` payload, `p.tasks.splice` then re-render). A **🎬
+  Storyboard** `expandableField` sits above Notes, shown for reels (or any piece that already has one).
   v1.2.3 alignment: drawer widened to `clamp(520px,38vw,900px)`; `.drawer button{white-space:nowrap}` so
   buttons never wrap to two lines (kept the date row + hook "pick" at one consistent height);
   `.drawer .row>input{flex:1}` lets the text/date input grow while buttons keep natural width;
