@@ -2,6 +2,20 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [2.2.0], 2026-06-27
+A home for stories that's as light as the way you actually plan them, the last big piece from your review.
+- **Stories have their own place now.** A new **🩵 Stories** tab, separate from the Board, because a full
+  project per story was too much. A story is just a **number (1–5) + one line**.
+- **Your story stack.** Every story idea in one list, by number, with a count for each. **Highlight the
+  ones that are ready to upload**; the rest are still to make. Each story moves through **to-do →
+  ready → posted** (just tap the status). Add, edit, delete, or **duplicate** one to reuse it.
+- **A light week planner.** Mon–Sun, with a running count per number up top ("3 Engagement · 4
+  Process"). Add a story straight onto a day, or **drag one from the stack onto a day** (and back to the
+  stack to unplan it). Typing a story **suggests ones you've used before**.
+- **Your existing stories moved across safely.** Every story that was a project has been lifted into the
+  new area, keeping its number, date and status, and **nothing is thrown away** (the full original is
+  kept underneath). Stories no longer clutter the Board, Calendar or Library.
+
 ## [2.1.0], 2026-06-27
 The editable tools & hooks library, the second big piece from Sarah's review.
 - **Your hook library is now yours to edit.** In the Turn-over tab's **Hooks** section you can add your

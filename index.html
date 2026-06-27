@@ -319,6 +319,29 @@
   .tooldim-block{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:14px;background:var(--panel)}
   .tooldim-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
   .tooldim-head b{font-size:15px}
+  /* Stories area (v2.2) */
+  .storycounts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+  .scount{border:1px solid var(--line);border-radius:999px;padding:4px 12px;font-size:13px;background:var(--panel)}
+  .scount.zero{opacity:.5}
+  .scount b{font-weight:800}
+  .storyrow{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:9px;padding:6px 8px;background:var(--panel);margin-bottom:6px}
+  .storyrow.editing{flex-direction:column;align-items:stretch;gap:8px}
+  .storyrow.dragging{opacity:.4}
+  .storyrow[draggable="true"]{cursor:grab}
+  .storyrow.status-ready{border-left:4px solid var(--act-shoot,#eab308);background:#fffdf3}
+  .storyrow.status-posted{opacity:.6}
+  .storyrow.status-posted .stext{text-decoration:line-through}
+  .scodes{display:flex;gap:3px;flex:none}
+  .scode{display:grid;place-items:center;min-width:20px;height:20px;border-radius:6px;background:var(--story,#14b8a6);color:#fff;font-size:12px;font-weight:800;padding:0 4px}
+  .scode.gen{background:#cfc9bf}
+  .stext{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .spill{flex:none;border:1px solid var(--line);border-radius:999px;padding:2px 9px;font-size:12px;font-weight:700;cursor:pointer;background:var(--panel);color:var(--muted)}
+  .spill-ready{background:#fff3cf;border-color:#eab308;color:#7a5c00}
+  .spill-posted{background:#dcfce7;border-color:#22c55e;color:#15803d}
+  .storyacts{display:flex;gap:4px;flex:none}
+  .scodepick .chip[aria-pressed="true"]{border-color:var(--ink);background:#fffdf8}
+  .storyadd{margin-top:6px}
+  #storyStackPanel.dragover{outline:2px dashed #5b8def;outline-offset:3px}
   .drawer .foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
   .danger{color:#b91c1c;border-color:#f1c4c4}
 
@@ -397,6 +420,7 @@
     <div class="tabs" role="tablist" aria-label="Views">
       <button role="tab" data-view="board" aria-selected="true">📅 Board</button>
       <button role="tab" data-view="library" aria-selected="false">🗂️ Library</button>
+      <button role="tab" data-view="stories" aria-selected="false">🩵 Stories</button>
       <button role="tab" data-view="turnover" aria-selected="false">🎯 Turn-over</button>
     </div>
     <div class="row" style="position:relative">
@@ -404,7 +428,6 @@
       <div class="menu" id="newMenu">
         <button data-new="reel">🟣 New Reel</button>
         <button data-new="post">🟢 New Post</button>
-        <button data-new="story">🩵 New Story</button>
       </div>
       <input id="importFile" type="file" accept="application/json" class="visually-hidden" />
       <button id="settingsBtn" title="Colours, labels, calm mode, your data">⚙</button>
@@ -428,7 +451,6 @@
     <span class="muted" style="font-weight:700;font-size:12px">Type:</span>
     <button class="chip" data-type="reel" aria-pressed="false"><span class="dot" style="background:var(--reel)"></span>Reels</button>
     <button class="chip" data-type="post" aria-pressed="false"><span class="dot" style="background:var(--post)"></span>Posts</button>
-    <button class="chip" data-type="story" aria-pressed="false"><span class="dot" style="background:var(--story)"></span>Stories</button>
   </div>
 
   <!-- balance bar -->
@@ -529,6 +551,31 @@
       <p class="muted">Tag a tool with the targets it serves; attaching it to a reel auto-colours that
          target. Use the "Show me:" filter above to see which tools serve a given target.</p>
       <div id="toolManager"></div>
+    </div>
+  </section>
+
+  <!-- STORIES (lightweight: a week planner + the idea stack) -->
+  <section id="view-stories" hidden>
+    <div class="row wrap" style="margin-bottom:10px;position:relative">
+      <span class="muted" style="align-self:center">Week:</span>
+      <span class="weeknav" id="storyNav">
+        <button id="storyPrev">← Previous week</button>
+        <button id="storyThis">This week</button>
+        <button id="storyNext">Next week →</button>
+      </span>
+      <h3 id="storyWeekLabel" class="grow" style="text-align:right;color:var(--muted)"></h3>
+    </div>
+    <div id="storyCounts" class="storycounts"></div>
+    <div class="board" id="storyWeek"></div>
+
+    <div class="panel" id="storyStackPanel" style="margin-top:16px">
+      <div class="row wrap" style="align-items:center">
+        <h2 class="grow">Your story stack</h2>
+        <span class="muted help">every story idea, by number. Highlight the ones ready to upload.</span>
+      </div>
+      <div id="storyAdd"></div>
+      <div class="row wrap" id="storyFilter" style="margin:10px 0"></div>
+      <div id="storyStack"></div>
     </div>
   </section>
 </main>
@@ -674,7 +721,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "2.1.0";
+const VERSION = "2.2.0";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -710,6 +757,15 @@ const STORY_CODES = {
   4:{label:"Soft CTA",desc:"only when relevant"},
   5:{label:"Share",desc:"memes / things to share"},
 };
+const STORY_CODE_ORDER = [1,2,3,4,5];
+// Lightweight story lifecycle (v2.2): still to make → ready to upload (highlighted) → posted.
+const STORY_STATUS = {
+  todo:{label:"To do", short:"○", color:"#efeae1", desc:"still to make"},
+  ready:{label:"Ready", short:"●", color:"#eab308", desc:"asset ready to upload"},
+  posted:{label:"Posted", short:"✓", color:"#22c55e", desc:"posted / done"},
+};
+const STORY_STATUS_ORDER = ["todo","ready","posted"];
+function storyStatus(st){ return STORY_STATUS[st]?st:"todo"; }
 const HOOK_TYPES = {
   curiosity:"Curiosity", "pattern-interrupt":"Pattern interrupt",
   identity:"Identity recognition", visual:"Visual satisfaction", controversy:"Controversy",
@@ -835,7 +891,7 @@ const LS_KEY="technicolour_planner_v1";
 const OLD_LS_KEY="sarah_planner_v1";       // prototype key, read once for continuity
 const JSON_NAME="Technicolour-Planner-Data.json";
 const MD_NAME="Technicolour-Planner-Data.md";
-const CURRENT_SCHEMA=5;
+const CURRENT_SCHEMA=6;
 const DEFAULT_WORKDAYS=[true,true,true,true,true,false,true]; // Mon..Sun; Sat off by default (her "NO POST")
 const MAX_BACKUPS=20; // timestamped checkpoints kept in the folder (oldest pruned)
 
@@ -865,7 +921,26 @@ const migrations = {
       if(!Array.isArray(s.library.toolDims)) s.library.toolDims = defaultLibrary().toolDims;
       (s.projects||[]).forEach(p=>{ if(!Array.isArray(p.tools)) p.tools = []; });
     },
+  // From schema 5 → 6 (v2.2): stories get their own lightweight area and leave the board. Every
+  // type:"story" project moves into state.stories. LOSSLESS: the entire original project is kept under
+  // .legacy, so notes/images/tasks/targets are never thrown away, only lifted off the board.
+  5: (s)=>{ extractStories(s); },
 };
+// One code path for both fresh seed and migration: lift every story-type project into state.stories.
+// Idempotent (once moved, no story-type projects remain), so it's safe to call defensively.
+function storyFromProject(p){
+  const st = (p.stages&&p.stages.posted) ? "posted" : (p.stages&&(p.stages.shot||p.stages.edited)) ? "ready" : "todo";
+  return { id:p.id||uid(), codes:Array.isArray(p.storyCodes)?p.storyCodes.slice():[], text:p.title||"(untitled story)",
+    status:st, date:p.date||null, createdAt:p.createdAt||new Date().toISOString(),
+    updatedAt:p.updatedAt||p.createdAt||new Date().toISOString(), legacy:p };
+}
+function extractStories(s){
+  if(!Array.isArray(s.stories)) s.stories = [];
+  if(!Array.isArray(s.projects)) { s.projects = []; return; }
+  const remaining=[];
+  s.projects.forEach(p=>{ if(p && p.type==="story") s.stories.push(storyFromProject(p)); else remaining.push(p); });
+  s.projects = remaining;
+}
 // Ensure every piece has monotonic created/updated timestamps, preserving the current array order
 // (oldest first). Only fills what's missing, so it's safe to run on every load.
 function stampOrder(projects){
@@ -892,12 +967,16 @@ function migrateState(s){
   s.schemaVersion = CURRENT_SCHEMA;
   // Defensive normalization AFTER migrations (so per-version migrations read the old shape first).
   if(!s.library || !Array.isArray(s.library.hooks) || !Array.isArray(s.library.toolDims)) s.library = defaultLibrary();
+  if(!Array.isArray(s.stories)) s.stories = [];
+  extractStories(s); // idempotent: guarantees no story-type project ever reaches the board
   s.projects.forEach(p=>{ if(!Array.isArray(p.tools)) p.tools=[]; if(!Array.isArray(p.hooks)) p.hooks=[]; });
   return s;
 }
 function defaultState(){
-  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice(),libSort:"recent",turnoverTab:"targets",turnoverSort:"recent",boardMode:"week"},
-           library:defaultLibrary(), weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
+  const s = { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice(),libSort:"recent",turnoverTab:"targets",turnoverSort:"recent",boardMode:"week"},
+           library:defaultLibrary(), stories:[], weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
+  extractStories(s); // seed stories live in their own area, not on the board
+  return s;
 }
 function nowISO(){ return new Date().toISOString().replace(/[:.]/g,"-"); }
 
@@ -1109,6 +1188,15 @@ function toMarkdown(state){
   const undated=state.projects.filter(p=>!p.date);
   if(dated.length){ L.push("## Scheduled"); L.push(""); dated.forEach(p=>{L.push(fmt(p));L.push("");}); }
   if(undated.length){ L.push("## Ideas / not yet dated"); L.push(""); undated.forEach(p=>{L.push(fmt(p));L.push("");}); }
+  const st=Array.isArray(state.stories)?state.stories:[];
+  if(st.length){
+    L.push("## Stories"); L.push("");
+    const line=(s)=>{ const codes=(s.codes&&s.codes.length)?s.codes.join("/")+" ":"";
+      const status=STORY_STATUS[s.status]?STORY_STATUS[s.status].label:s.status;
+      const when=s.date?(" · "+s.date):""; return "- "+codes+(s.text||"(no text)")+" ["+status+"]"+when; };
+    st.slice().sort((a,b)=> (a.date||"~")<(b.date||"~")?-1:1).forEach(s=>L.push(line(s)));
+    L.push("");
+  }
   return L.join("\n");
 }
 function downloadJSON(obj,name){ const blob=new Blob([JSON.stringify(obj,null,2)],{type:"application/json"});
@@ -1706,6 +1794,133 @@ function renderTurnoverTools(){
   addDim.append(di,db); root.appendChild(addDim);
 }
 
+/* ========================= STORIES (lightweight area, v2.2) ========================= */
+let storyFilterCode=null;   // stack filter: null=all, 1..5, or "__general"
+let editingStoryId=null;    // which stack/day row is in inline-edit mode
+function stories(){ if(!Array.isArray(state.stories)) state.stories=[]; return state.stories; }
+function addStory(o){ const now=new Date().toISOString();
+  const s={ id:uid(), codes:Array.isArray(o.codes)?o.codes:[], text:o.text||"", status:o.status||"todo", date:o.date||null, createdAt:now, updatedAt:now };
+  stories().push(s); return s; }
+function deleteStory(id){ state.stories=stories().filter(s=>s.id!==id); }
+function duplicateStory(s){ const now=new Date().toISOString();
+  const c={ id:uid(), codes:(s.codes||[]).slice(), text:s.text, status:"todo", date:null, createdAt:now, updatedAt:now };
+  stories().push(c); return c; }
+function cycleStoryStatus(s){ const i=STORY_STATUS_ORDER.indexOf(storyStatus(s.status));
+  s.status=STORY_STATUS_ORDER[(i+1)%STORY_STATUS_ORDER.length]; s.updatedAt=new Date().toISOString(); }
+function storyCountsForWeek(ws){ const end=addDays(ws,6), c={};
+  stories().forEach(s=>{ if(s.date && s.date>=ws && s.date<=end) (s.codes&&s.codes.length?s.codes:[]).forEach(k=>c[k]=(c[k]||0)+1); });
+  return c; }
+function storyCodeBadges(codes){ const w=document.createElement("span"); w.className="scodes";
+  if(codes&&codes.length) codes.forEach(n=>{ const b=document.createElement("span"); b.className="scode"; b.textContent=n; b.title=(STORY_CODES[n]?STORY_CODES[n].label:""); w.appendChild(b); });
+  else { const b=document.createElement("span"); b.className="scode gen"; b.textContent="–"; b.title="no number"; w.appendChild(b); }
+  return w; }
+function storyStatusPill(s){ const st=STORY_STATUS[storyStatus(s.status)];
+  const b=document.createElement("button"); b.type="button"; b.className="spill spill-"+storyStatus(s.status);
+  b.textContent=st.short+" "+st.label; b.title="Click to change ("+st.desc+")";
+  b.onclick=(e)=>{ e.stopPropagation(); cycleStoryStatus(s); save(); renderStories(); }; return b; }
+// A compact add control: full (stack) or collapsed behind "＋ add story" (day columns).
+function storyAddInline(o){ o=o||{};
+  const wrap=document.createElement("div"); wrap.className="storyadd";
+  const buildForm=()=>{
+    const form=document.createElement("div"); const sel=new Set();
+    const codeRow=document.createElement("div"); codeRow.className="row wrap scodepick";
+    STORY_CODE_ORDER.forEach(n=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.style.boxShadow="none";
+      b.textContent=o.compact?String(n):(n+" "+STORY_CODES[n].label); b.title=STORY_CODES[n].label;
+      const sync=()=>b.setAttribute("aria-pressed",sel.has(n)); sync();
+      b.onclick=()=>{ if(sel.has(n))sel.delete(n); else sel.add(n); sync(); }; codeRow.appendChild(b); });
+    const inp=document.createElement("input"); inp.placeholder=o.placeholder||"add a story…"; inp.setAttribute("list","storyTextOptions");
+    const btn=document.createElement("button"); btn.className="addhook"; btn.textContent="＋ add";
+    const submit=()=>{ const v=inp.value.trim(); if(!v && !sel.size) return;
+      addStory({codes:Array.from(sel).sort((a,b)=>a-b), text:v, date:o.date||null}); save(); if(o.onAdd)o.onAdd(); };
+    btn.onclick=submit; inp.onkeydown=e=>{ if(e.key==="Enter") submit(); };
+    const r=document.createElement("div"); r.className="row wrap"; r.append(inp,btn);
+    form.append(codeRow,r); return form;
+  };
+  if(o.collapsed){ const open=document.createElement("button"); open.type="button"; open.className="add-card"; open.textContent="＋ add story";
+    open.onclick=()=>{ wrap.innerHTML=""; wrap.appendChild(buildForm()); const i=wrap.querySelector("input"); if(i) i.focus(); };
+    wrap.appendChild(open);
+  } else wrap.appendChild(buildForm());
+  return wrap;
+}
+function storyEditRow(s){
+  const row=document.createElement("div"); row.className="storyrow editing"; const sel=new Set(s.codes||[]);
+  const codeRow=document.createElement("div"); codeRow.className="row wrap scodepick";
+  STORY_CODE_ORDER.forEach(n=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.style.boxShadow="none";
+    b.textContent=n+" "+STORY_CODES[n].label; const sync=()=>b.setAttribute("aria-pressed",sel.has(n)); sync();
+    b.onclick=()=>{ if(sel.has(n))sel.delete(n); else sel.add(n); sync(); }; codeRow.appendChild(b); });
+  const inp=document.createElement("input"); inp.className="grow"; inp.value=s.text||""; inp.setAttribute("list","storyTextOptions");
+  const sv=document.createElement("button"); sv.className="addhook"; sv.textContent="Save";
+  const cn=document.createElement("button"); cn.textContent="Cancel";
+  const doSave=()=>{ s.codes=Array.from(sel).sort((a,b)=>a-b); s.text=inp.value.trim(); s.updatedAt=new Date().toISOString(); editingStoryId=null; save(); renderStories(); };
+  sv.onclick=doSave; cn.onclick=()=>{ editingStoryId=null; renderStories(); }; inp.onkeydown=e=>{ if(e.key==="Enter") doSave(); };
+  const r=document.createElement("div"); r.className="row wrap"; r.append(inp,sv,cn);
+  row.append(codeRow,r); return row;
+}
+function storyRow(s, opts){ opts=opts||{};
+  if(editingStoryId===s.id) return storyEditRow(s);
+  const row=document.createElement("div"); row.className="storyrow status-"+storyStatus(s.status); row.dataset.id=s.id; row.draggable=true;
+  row.addEventListener("dragstart",e=>{ e.dataTransfer.setData("text/story", s.id); e.dataTransfer.effectAllowed="move"; row.classList.add("dragging"); });
+  row.addEventListener("dragend",()=>row.classList.remove("dragging"));
+  const txt=document.createElement("span"); txt.className="stext grow"; txt.textContent=s.text||"(no text)";
+  const acts=document.createElement("span"); acts.className="storyacts";
+  if(opts.dayContext){ const un=mkIconBtn("↩","Back to stack (clear the day)");
+    un.onclick=(e)=>{ e.stopPropagation(); s.date=null; s.updatedAt=new Date().toISOString(); save(); renderStories(); }; acts.appendChild(un); }
+  const edit=mkIconBtn("✎","Edit"); edit.onclick=(e)=>{ e.stopPropagation(); editingStoryId=s.id; renderStories(); };
+  const dup=mkIconBtn("⧉","Duplicate (reuse)"); dup.onclick=(e)=>{ e.stopPropagation(); duplicateStory(s); save(); renderStories(); };
+  const del=mkIconBtn("🗑","Delete"); del.onclick=(e)=>{ e.stopPropagation(); deleteStory(s.id); save(); renderStories(); };
+  acts.append(edit,dup,del);
+  row.append(storyCodeBadges(s.codes),txt,storyStatusPill(s),acts);
+  return row;
+}
+function ensureStoryDatalist(){ let dl=document.getElementById("storyTextOptions");
+  if(!dl){ dl=document.createElement("datalist"); dl.id="storyTextOptions"; document.body.appendChild(dl); }
+  dl.innerHTML=""; const seen=new Set();
+  stories().forEach(s=>{ const t=(s.text||"").trim(); if(t && !seen.has(t)){ seen.add(t); const o=document.createElement("option"); o.value=t; dl.appendChild(o); } });
+}
+function renderStories(){ ensureStoryDatalist(); renderStoryWeek(); renderStoryStack(); }
+function renderStoryWeek(){
+  const ws=state.weekStart, ws0=parseYMD(ws), we=parseYMD(addDays(ws,6));
+  document.getElementById("storyWeekLabel").textContent =
+    `${weekPrefix(ws)} · ${ws0.getDate()}.${ws0.getMonth()+1} to ${we.getDate()}.${we.getMonth()+1}.${we.getFullYear()}`;
+  const counts=storyCountsForWeek(ws); const cEl=document.getElementById("storyCounts"); cEl.innerHTML="";
+  STORY_CODE_ORDER.forEach(n=>{ const c=counts[n]||0; const chip=document.createElement("span"); chip.className="scount"+(c?"":" zero");
+    chip.innerHTML=`<b>${c}</b> ${esc(STORY_CODES[n].label)}`; cEl.appendChild(chip); });
+  const wk=document.getElementById("storyWeek"); wk.innerHTML="";
+  for(let i=0;i<7;i++){
+    const date=addDays(ws,i);
+    const col=document.createElement("div"); col.className="day"+(date===TODAY?" today":"")+(workdays()[i]?"":" dayoff"); col.dataset.date=date;
+    const h=document.createElement("div"); h.className="day-h"; const d=parseYMD(date);
+    h.innerHTML=`<div class="dow">${DOW_EN[i]}</div><div class="dt">${d.getDate()}.${d.getMonth()+1}</div>`;
+    col.appendChild(h);
+    const body=document.createElement("div"); body.className="day-body";
+    stories().filter(s=>s.date===date).sort((a,b)=>((a.codes&&a.codes[0])||9)-((b.codes&&b.codes[0])||9))
+      .forEach(s=> body.appendChild(storyRow(s,{dayContext:true})));
+    body.appendChild(storyAddInline({date, compact:true, collapsed:true, onAdd:()=>renderStories()}));
+    col.addEventListener("dragover",e=>{ if(e.dataTransfer.types.includes("text/story")){ e.preventDefault(); col.classList.add("dragover"); } });
+    col.addEventListener("dragleave",()=>col.classList.remove("dragover"));
+    col.addEventListener("drop",e=>{ e.preventDefault(); col.classList.remove("dragover");
+      const id=e.dataTransfer.getData("text/story"); const s=stories().find(x=>x.id===id);
+      if(s){ s.date=date; s.updatedAt=new Date().toISOString(); save(); renderStories(); } });
+    col.appendChild(body); wk.appendChild(col);
+  }
+}
+function renderStoryStack(){
+  const f=document.getElementById("storyFilter"); f.innerHTML="";
+  const mk=(label,key,count)=>{ const b=document.createElement("button"); b.className="chip"; b.style.boxShadow="none";
+    b.innerHTML=`${esc(label)}${count==null?"":` <span class="muted">${count}</span>`}`;
+    b.setAttribute("aria-pressed",storyFilterCode===key);
+    b.onclick=()=>{ storyFilterCode=(key!=null && storyFilterCode===key)?null:key; renderStoryStack(); }; return b; };
+  f.appendChild(mk("all",null,stories().length));
+  STORY_CODE_ORDER.forEach(n=> f.appendChild(mk(n+" "+STORY_CODES[n].label, n, stories().filter(s=>(s.codes||[]).includes(n)).length)) );
+  f.appendChild(mk("General","__general", stories().filter(s=>!(s.codes&&s.codes.length)).length));
+  document.getElementById("storyAdd").replaceChildren(storyAddInline({onAdd:()=>renderStories()}));
+  const list=document.getElementById("storyStack"); list.innerHTML="";
+  const match=s=>{ if(storyFilterCode==null) return true; if(storyFilterCode==="__general") return !(s.codes&&s.codes.length); return (s.codes||[]).includes(storyFilterCode); };
+  const items=stories().filter(match).slice().sort((a,b)=> (a.updatedAt<b.updatedAt?1:a.updatedAt>b.updatedAt?-1:0));
+  if(!items.length){ const m=document.createElement("div"); m.className="muted help"; m.style.padding="8px"; m.textContent="No stories yet. Add one above."; list.appendChild(m); return; }
+  items.forEach(s=> list.appendChild(storyRow(s,{})) );
+}
+
 let hookFilterType=null;  // Turn-over hooks-browse tap filter
 let libFilterTag=null;    // picker-modal tag filter (independent of the browse one)
 // Generic multi-select picker, shared by the Hooks picker and each tool-dimension picker.
@@ -1737,6 +1952,7 @@ function renderAll(){
   if(currentView==="board"){ syncBoardMode(); if(boardMode()==="calendar") renderCalendar(); else renderBoard(); renderCatchup(); }
   if(currentView==="library") renderLibrary();
   if(currentView==="turnover") renderTurnover();
+  if(currentView==="stories") renderStories();
   renderBalance();
   const anyFilter=anyFilterActive();
   document.querySelectorAll(".chip[data-target]").forEach(c=>{
@@ -2101,10 +2317,11 @@ function setView(v){
   document.getElementById("view-board").hidden=v!=="board";
   document.getElementById("view-library").hidden=v!=="library";
   document.getElementById("view-turnover").hidden=v!=="turnover";
-  // You can't create a piece from Turn-over (it's the reference/usage view), so grey out "+ New" there.
+  document.getElementById("view-stories").hidden=v!=="stories";
+  // "+ New" makes reels/posts; stories are made in their own area, Turn-over is reference-only.
   const nb=document.getElementById("newBtn");
-  nb.disabled = v==="turnover";
-  nb.title = v==="turnover" ? "Add new pieces from the Board or Library" : "";
+  nb.disabled = v==="turnover" || v==="stories";
+  nb.title = nb.disabled ? (v==="stories" ? "Add stories below, in the stack or on a day" : "Add new pieces from the Board or Library") : "";
   document.getElementById("newMenu").classList.remove("open");
   renderAll();
 }
@@ -2125,6 +2342,17 @@ window.addEventListener("resize", syncHeaderHeight);
 document.getElementById("prevWeek").onclick=()=>{state.weekStart=addDays(state.weekStart,-7);save();renderBoard();};
 document.getElementById("nextWeek").onclick=()=>{state.weekStart=addDays(state.weekStart,7);save();renderBoard();};
 document.getElementById("thisWeek").onclick=()=>{state.weekStart=isoWeekStart(parseYMD(TODAY));save();renderBoard();};
+// Stories week nav shares state.weekStart with the Board (one "current week").
+document.getElementById("storyPrev").onclick=()=>{state.weekStart=addDays(state.weekStart,-7);save();renderStories();};
+document.getElementById("storyNext").onclick=()=>{state.weekStart=addDays(state.weekStart,7);save();renderStories();};
+document.getElementById("storyThis").onclick=()=>{state.weekStart=isoWeekStart(parseYMD(TODAY));save();renderStories();};
+// Drop a story back onto the stack to clear its day.
+(()=>{ const stack=document.getElementById("storyStackPanel"); if(!stack) return;
+  stack.addEventListener("dragover",e=>{ if(e.dataTransfer.types.includes("text/story")){ e.preventDefault(); stack.classList.add("dragover"); } });
+  stack.addEventListener("dragleave",()=>stack.classList.remove("dragover"));
+  stack.addEventListener("drop",e=>{ e.preventDefault(); stack.classList.remove("dragover");
+    const id=e.dataTransfer.getData("text/story"); const s=stories().find(x=>x.id===id);
+    if(s && s.date){ s.date=null; s.updatedAt=new Date().toISOString(); save(); renderStories(); } }); })();
 
 document.getElementById("libSearch").oninput=renderLibrary;
 document.querySelectorAll('#libFilter [data-status]').forEach(b=>b.onclick=()=>{

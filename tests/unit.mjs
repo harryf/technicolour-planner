@@ -58,7 +58,7 @@ export async function runUnit() {
   s.ok("import guard present", /doesn't look like a planner export/.test(html), "validates shape");
 
   // ---- Library sort (v? — created/updated timestamps + 4 sort options) ----
-  s.ok("schema bumped to 5", ev("CURRENT_SCHEMA===5"), `CURRENT_SCHEMA=${ev("CURRENT_SCHEMA")}`);
+  s.ok("schema bumped to 6", ev("CURRENT_SCHEMA===6"), `CURRENT_SCHEMA=${ev("CURRENT_SCHEMA")}`);
   s.ok("seed pieces carry timestamps", ev("state.projects.every(p=>typeof p.createdAt==='string' && typeof p.updatedAt==='string')"), "createdAt/updatedAt on all");
   s.ok("migrate 2→4 backfills order", ev(`(()=>{const x=migrateState({schemaVersion:2,settings:{},projects:[{id:'a'},{id:'b'},{id:'c'}]});
     return x.schemaVersion===CURRENT_SCHEMA && x.projects.every(p=>p.createdAt) && x.projects[0].createdAt < x.projects[2].createdAt;})()`), "oldest→newest preserved");
@@ -509,7 +509,7 @@ export async function runUnit() {
     return reelHas && postHidden && postShown;
   })()`), "reel yes, empty post no, filled post yes");
   // 5) type filter (reels/posts/stories), an independent axis combined with the target filter
-  s.ok("v2: Type filter chips exist (reel/post/story)", $$('.chip[data-type]').length===3 && ["reel","post","story"].every(t=>!!$('.chip[data-type="'+t+'"]')), `${$$('.chip[data-type]').length}`);
+  s.ok("v2: Type filter chips exist (reel/post; story removed in v2.2)", $$('.chip[data-type]').length===2 && ["reel","post"].every(t=>!!$('.chip[data-type="'+t+'"]')) && !$('.chip[data-type="story"]'), `${$$('.chip[data-type]').length}`);
   s.ok("v2: type filter narrows by format and clears", ev(`(()=>{
     clearFilters(); const all=pieceMatches({type:'reel',targets:['discovery']});
     toggleTypeFilter('post'); const reelOut=pieceMatches({type:'reel',targets:['discovery']}); const postIn=pieceMatches({type:'post',targets:['discovery']});
@@ -529,9 +529,9 @@ export async function runUnit() {
   s.ok("v2.1: library seeded (hooks + 5 tool dimensions)", ev(`Array.isArray(state.library.hooks) && state.library.hooks.length>0
     && Array.isArray(state.library.toolDims) && state.library.toolDims.length===5
     && state.library.toolDims[0].name==='Tool' && state.library.toolDims[0].items.length>0`), "hooks + Tool/Rule/Theme/Subject/Structure");
-  s.ok("v2.1: schema 4→5 builds library + adds p.tools (lossless)", ev(`(()=>{
+  s.ok("v2.1: migrating from schema 4 builds library + adds p.tools (lossless)", ev(`(()=>{
     const x=migrateState({schemaVersion:4,settings:{},projects:[{id:'a',hooks:['X'],tasks:[]}]});
-    return x.schemaVersion===5 && x.library && Array.isArray(x.library.hooks) && Array.isArray(x.library.toolDims)
+    return x.schemaVersion===CURRENT_SCHEMA && x.library && Array.isArray(x.library.hooks) && Array.isArray(x.library.toolDims)
       && Array.isArray(x.projects[0].tools) && x.projects[0].hooks[0]==='X';
   })()`), "library built, tools=[], hooks kept");
   s.ok("v2.1: hook picker reads from the (editable) library", ev(`(()=>{
@@ -617,6 +617,108 @@ export async function runUnit() {
     state.settings.turnoverTab='targets'; setView('board');
     return ok;
   })()`), "authority tool lit, discovery tool dimmed");
+
+  // ---- NEW (v2.2): lightweight Stories area ----
+  s.ok("v2.2: seed stories live in state.stories, none on the board", ev(`Array.isArray(state.stories) && state.stories.length>0 && state.projects.every(p=>p.type!=='story')`), "stories[] populated, no story projects");
+  s.ok("v2.2: Stories tab exists and toggles the view", ev(`(()=>{ setView('stories');
+    const shown=!document.getElementById('view-stories').hidden && document.getElementById('view-board').hidden;
+    const tab=!!document.querySelector('.tabs [data-view="stories"]'); setView('board'); return shown && tab; })()`), "tab + view");
+  s.ok("v2.2: '+ New' offers only reel + post (story removed)", ev(`[...document.querySelectorAll('#newMenu [data-new]')].map(b=>b.dataset.new).join(',')==='reel,post'`), "reel,post");
+  s.ok("v2.2: migration 5→6 extracts a story project losslessly (legacy kept)", ev(`(()=>{
+    const x=migrateState({schemaVersion:5,settings:{},library:{hooks:[],toolDims:[]},
+      projects:[{id:'r1',type:'reel',title:'R',hooks:[],tools:[],tasks:[]},
+                {id:'s1',type:'story',title:'S one',storyCodes:[3],date:'2026-06-10',stages:{posted:true},notes:'keep me'}]});
+    return x.schemaVersion===6 && x.projects.length===1 && x.projects[0].type==='reel'
+      && x.stories.length===1 && x.stories[0].text==='S one' && x.stories[0].codes[0]===3
+      && x.stories[0].status==='posted' && x.stories[0].legacy && x.stories[0].legacy.notes==='keep me';
+  })()`), "story moved, full original under .legacy");
+  s.ok("v2.2: status cycles to-do → ready → posted → to-do", ev(`(()=>{
+    const s=addStory({codes:[1],text:'ZZ cycle'}); const a=s.status; cycleStoryStatus(s); const b=s.status; cycleStoryStatus(s); const c=s.status; cycleStoryStatus(s); const d=s.status;
+    state.stories=state.stories.filter(x=>x.id!==s.id);
+    return a==='todo'&&b==='ready'&&c==='posted'&&d==='todo';
+  })()`), "3-state lifecycle");
+  s.ok("v2.2: a story added to the stack shows + filters by code", ev(`(()=>{
+    const s=addStory({codes:[3],text:'ZZ question',date:null}); setView('stories'); renderStories();
+    const inStack=[...document.querySelectorAll('#storyStack .storyrow')].some(r=>/ZZ question/.test(r.textContent));
+    storyFilterCode=1; renderStoryStack(); const hiddenAt1=![...document.querySelectorAll('#storyStack .storyrow')].some(r=>/ZZ question/.test(r.textContent));
+    storyFilterCode=null; renderStoryStack();
+    state.stories=state.stories.filter(x=>x.id!==s.id); setView('board');
+    return inStack && hiddenAt1;
+  })()`), "appears in stack, code filter works");
+  s.ok("v2.2: a dated story lands in its day column + weekly count", ev(`(()=>{
+    const date=addDays(state.weekStart,2); const s=addStory({codes:[2],text:'ZZ planned',date});
+    setView('stories'); renderStories();
+    const col=[...document.querySelectorAll('#storyWeek .day')].find(c=>c.dataset.date===date);
+    const inDay=!!col && [...col.querySelectorAll('.storyrow')].some(r=>/ZZ planned/.test(r.textContent));
+    const countOk=(storyCountsForWeek(state.weekStart)[2]||0)>=1;
+    state.stories=state.stories.filter(x=>x.id!==s.id); setView('board');
+    return inDay && countOk;
+  })()`), "day cell + count");
+  s.ok("v2.2: dragging a story onto a day sets its date", ev(`(()=>{
+    const s=addStory({codes:[1],text:'ZZ drag',date:null}); setView('stories'); renderStories();
+    const col=document.querySelector('#storyWeek .day'); const tDate=col.dataset.date;
+    const evt=new window.Event('drop',{bubbles:true,cancelable:true});
+    Object.defineProperty(evt,'dataTransfer',{value:{getData:()=>s.id, types:['text/story']}});
+    col.dispatchEvent(evt); const moved=s.date===tDate;
+    state.stories=state.stories.filter(x=>x.id!==s.id); setView('board');
+    return moved;
+  })()`), "drop schedules the story");
+  s.ok("v2.2: duplicate makes an undated to-do copy (for reuse)", ev(`(()=>{
+    const s=addStory({codes:[2],text:'ZZ dup',date:addDays(state.weekStart,1),status:'ready'});
+    const c=duplicateStory(s);
+    const ok=c.id!==s.id && c.text===s.text && c.date===null && c.status==='todo' && JSON.stringify(c.codes)===JSON.stringify(s.codes);
+    state.stories=state.stories.filter(x=>x.id!==s.id&&x.id!==c.id);
+    return ok;
+  })()`), "fresh undated copy");
+  s.ok("v2.2: stories appear in the markdown mirror", ev(`(()=>{
+    const s=addStory({codes:[3],text:'ZZ md story'}); const md=toMarkdown(state);
+    state.stories=state.stories.filter(x=>x.id!==s.id);
+    return /## Stories/.test(md) && /ZZ md story/.test(md);
+  })()`), "## Stories + the line");
+
+  // ---- FULL UPGRADE CHAIN from 1.x (Sarah may be on schema 1, 2 or 3) → current (6) ----
+  s.ok("migration: schema 1 (early 1.x) → 6, lossless across the whole chain", ev(`(()=>{
+    const old={ schemaVersion:1, settings:{lang:'en',lowstim:false,colors:{conversion:'#abcdef'}}, weekStart:'2026-06-08',
+      projects:[
+        {id:'r', type:'reel', title:'Old reel', targets:['discovery'], date:'2026-06-10', music:'m', hook:'Fast cuts', desc:'d', notes:'n',
+         storyCodes:[], image:null, imageName:null, stages:{prep:true,shot:false,edited:false,posted:false}, tasks:[{id:'t',text:'x',activity:'priority',done:false}]},
+        {id:'s', type:'story', title:'Old story', targets:['retention'], date:null, storyCodes:[2], notes:'5.0', stages:{prep:true,shot:true,edited:false,posted:false}}
+      ]};
+    const x=migrateState(JSON.parse(JSON.stringify(old)));
+    const reel=x.projects.find(p=>p.id==='r');
+    return x.schemaVersion===6
+      && Array.isArray(x.settings.workdays) && x.settings.workdays.length===7        // 1→2
+      && x.settings.colors.conversion==='#abcdef'                                    // settings kept
+      && reel && reel.createdAt && reel.updatedAt                                    // 2→3 timestamps
+      && Array.isArray(reel.hooks) && reel.hooks[0]==='Fast cuts' && !('hook' in reel) // 3→4 hook→hooks
+      && typeof reel.storyboard==='string' && reel.tasks[0].activity==='justdo'      // 3→4 storyboard + priority retired
+      && Array.isArray(reel.tools)                                                   // 4→5 tools
+      && x.library && Array.isArray(x.library.hooks) && Array.isArray(x.library.toolDims) // 4→5 library
+      && Array.isArray(x.stories) && x.stories.length===1 && x.stories[0].text==='Old story' // 5→6 story moved
+      && x.stories[0].codes[0]===2 && x.stories[0].status==='ready' && x.stories[0].legacy   // status + lossless legacy
+      && x.projects.every(p=>p.type!=='story');                                      // none left on the board
+  })()`), "schema 1 → 6 end to end");
+  s.ok("migration: no schemaVersion (pre-schema 1.x) → 6 without throwing", ev(`(()=>{
+    let threw=false, x=null;
+    try{ x=migrateState({settings:{lang:'en'}, projects:[{id:'a',type:'post',title:'P',targets:[],date:null,hook:'',stages:{},tasks:[]}]}); }catch(e){ threw=true; }
+    return !threw && x.schemaVersion===6 && Array.isArray(x.stories) && !!x.library
+      && Array.isArray(x.projects[0].hooks) && Array.isArray(x.projects[0].tools);
+  })()`), "missing version normalizes");
+  s.ok("migration: schema 3 (late 1.x: v1.4–1.6) → 6", ev(`(()=>{
+    const x=migrateState({schemaVersion:3, settings:{workdays:[true,true,true,true,true,false,true],libSort:'recent',colors:{}}, weekStart:'2026-06-08',
+      projects:[
+        {id:'a',type:'reel',title:'A',targets:[],date:null,hooks:['Opinion'],desc:'',notes:'',storyboard:'',storyCodes:[],stages:{},tasks:[],createdAt:'2026-01-01T00:00:00Z',updatedAt:'2026-01-01T00:00:00Z'},
+        {id:'b',type:'story',title:'B',storyCodes:[1],stages:{posted:true}}
+      ]});
+    return x.schemaVersion===6 && !!x.library && x.stories.length===1 && x.stories[0].status==='posted'
+      && x.projects.length===1 && Array.isArray(x.projects[0].tools) && x.projects[0].hooks[0]==='Opinion';
+  })()`), "schema 3 → 6");
+  s.ok("migration: re-running migrateState is stable (no duplicate stories)", ev(`(()=>{
+    const once=migrateState({schemaVersion:1,settings:{},projects:[{id:'s',type:'story',title:'X',storyCodes:[1],stages:{}}]});
+    const n1=once.stories.length, p1=once.projects.length;
+    const twice=migrateState(JSON.parse(JSON.stringify(once)));
+    return n1===1 && p1===0 && twice.stories.length===1 && twice.projects.length===0;
+  })()`), "idempotent extraction");
 
   ev("clearFilters(); setBoardMode('week'); setView('board')");
 

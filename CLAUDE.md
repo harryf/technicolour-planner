@@ -74,20 +74,24 @@ state = {
               boardMode:"week"|"calendar" },                   // remembered Board view (v1.6.0)
   library: { hooks:[{id,label,taps:[...]}],                  // editable hook library (v2.1); pieces ref hooks by LABEL
              toolDims:[{id,name,types:["reel"],items:[{id,label,pillars:[...]}]}] },  // tool dims; pieces ref tools by item ID
-  weekStart, schemaVersion, updatedAt   // schemaVersion is 5 since v2.1
+  stories: [ { id, codes:[1..5], text, status:"todo"|"ready"|"posted", date:null|"YMD", createdAt, updatedAt, legacy? } ],  // v2.2: own area, NOT projects
+  weekStart, schemaVersion, updatedAt   // schemaVersion is 6 since v2.2
 }
 ```
 
 `settings.lang` may still exist in old saved data (the FR toggle was removed in v1.2.0); it's ignored,
-the board is always English. **Schema is at 5**: migration `1→2` adds `settings.workdays` (default
+the board is always English. **Schema is at 6**: migration `1→2` adds `settings.workdays` (default
 `[T,T,T,T,T,F,T]`, Sat off); migration `2→3` adds per-piece `createdAt`/`updatedAt` (backfilled from the
 existing array order, oldest→newest, via `stampOrder()`, so no piece's relative order is lost);
 migration `3→4` (v2.0) converts the single `hook` string to a `hooks` array, adds the `storyboard`
 field, and folds any retired `priority` task colour into `justdo`; migration `4→5` (v2.1) builds
-`state.library` (curated `HOOKS` seed the hook library, `TOOL_DIM_SEED` the tool dimensions) and adds
-`p.tools=[]`. **Migration order matters**: per-version migrations run first (they read the old shape),
-then `migrateState` does defensive normalization (fill `library`/`tools`/`hooks` if still missing) —
-never the other way round, or e.g. the `hook→hooks` carry would be pre-empted. All lossless; migrations
+`state.library` and adds `p.tools=[]`; migration `5→6` (v2.2) moves every `type:"story"` project into
+`state.stories` via `extractStories()`/`storyFromProject()` — **lossless: the entire original project is
+kept under the story's `.legacy`**. **Migration order matters**: per-version migrations run first (they
+read the old shape), THEN `migrateState` does defensive normalization (fill `library`/`tools`/`hooks`,
+ensure `stories`, and call `extractStories` idempotently) — never the other way round, or e.g. the
+`hook→hooks` carry would be pre-empted. `defaultState()` runs `extractStories()` too, so fresh seeds and
+migrated data share one path (no story-type project ever reaches the board). All lossless; migrations
 auto-back-up the file before running. A piece is "done/out the door" when `stages.posted` is true.
 
 **Two independent colour languages, keep them separate, never let them collide:**
@@ -130,6 +134,32 @@ curiosity/pattern-interrupt/identity/visual/controversy; none = **General**); **
 - Deleting a hook strips its label from every `p.hooks`; deleting a tool item (or a whole dimension)
   strips the affected ids from every `p.tools`. Exports resolve tool ids via `toolLabel()` (index.html
   markdown) / `toolNamesOf(state,p)` (`src/export.js`).
+
+## Stories area (v2.2)
+
+Stories are **not projects** — they live in `state.stories` and have their own top-level **🩵 Stories**
+view (`#view-stories`, `data-view="stories"`), removed from the Board (the `story` type-filter chip and
+the "New Story" `+ New` option are gone; `setView` disables `+ New` on the Stories tab too). A story is
+deliberately tiny: `codes` (0–many of 1–5, multi-code allowed — e.g. "1/2"), one-line `text`, a
+3-state `status` (todo → ready → posted via `cycleStoryStatus`, `STORY_STATUS`/`STORY_STATUS_ORDER`),
+and an optional `date`.
+
+- **Two surfaces, one render** (`renderStories` → `renderStoryWeek` + `renderStoryStack`):
+  - **Week planner** reuses the Board's `.board/.day` layout for Mon–Sun off **shared `state.weekStart`**
+    (the Stories week-nav buttons move the same week as the Board). Per-code counts via
+    `storyCountsForWeek`. Per-day quick-add is a collapsed `storyAddInline({collapsed:true})`. Days are
+    drop targets for `text/story` drags (sets `date`); `#storyStackPanel` is a drop target that clears
+    `date` (unplan).
+  - **Stack** = all stories, code-filter chips (`storyFilterCode`, incl. `__general` = no codes) with
+    counts, a full `storyAddInline`, and `storyRow`s sorted newest-first.
+- **Helpers**: `stories()`, `addStory`, `deleteStory`, `duplicateStory` (undated to-do copy, for reuse),
+  `storyRow` (draggable; `editingStoryId` swaps it for `storyEditRow`), `storyStatusPill`,
+  `storyCodeBadges`, `ensureStoryDatalist` (powers the `<datalist id="storyTextOptions">` autocomplete).
+- **Migration/seed**: `extractStories(s)` (idempotent) lifts every `type:"story"` project into
+  `state.stories` via `storyFromProject` (status from stages: posted→posted, shot/edited→ready, else
+  todo), keeping the **whole original under `.legacy`**. Run by migration `5→6`, by `defaultState()`, and
+  defensively in `migrateState`. Stories are mirrored in the markdown export (`## Stories`) and get their
+  own **Stories** worksheet in the xlsx export.
 
 ## Storage model (the careful part)
 

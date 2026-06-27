@@ -167,6 +167,20 @@ export async function exportXlsx(state){
   turn.getCell("A15").value="STORY CODES"; turn.getCell("A15").font={bold:true,size:14};
   Object.entries(STORY_CODES).forEach(([n,d],i)=>{ const r=turn.getRow(i+16); r.getCell(1).value=n; r.getCell(1).font={bold:true}; r.getCell(3).value=d; });
 
+  /* ----- Stories (lightweight area, v2.2) ----- */
+  const stories = (state && Array.isArray(state.stories)) ? state.stories : [];
+  if(stories.length){
+    const sh = wb.addWorksheet("Stories");
+    headerRow(sh, ["Codes","Story","Status","Date"], [12,48,12,12]);
+    stories.slice().sort((a,b)=>((a.date||"~")<(b.date||"~")?-1:1)).forEach((s,i)=>{
+      const r=sh.getRow(i+2);
+      r.getCell(1).value=(s.codes||[]).join("/");
+      r.getCell(2).value=s.text||"";
+      r.getCell(3).value=s.status||"todo";
+      r.getCell(4).value=s.date||"";
+    });
+  }
+
   const buf = await wb.xlsx.writeBuffer();
   download(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}), "Technicolour-Planner-"+today()+".xlsx");
 }

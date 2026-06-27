@@ -27,13 +27,20 @@ export async function runUpgradeData() {
   s.ok("fixture has NO timestamps yet", fixture.projects.every(p => !("createdAt" in p) && !("updatedAt" in p)), "no created/updated");
   s.ok("fixture has NO libSort yet", !("libSort" in fixture.settings), "no libSort");
   const beforeTitles = fixture.projects.map(p => p.title);
+  const nonStoryTitles = fixture.projects.filter(p => p.type !== "story").map(p => p.title);
+  const storyTitles = fixture.projects.filter(p => p.type === "story").map(p => p.title);
 
   // ---- the upgrade ----
   const after = migrate(fixture);
-  s.ok("migrates to schema 5", after.schemaVersion === 5, `schema=${after.schemaVersion}`);
-  s.ok("no pieces lost", after.projects.length === fixture.projects.length, `${after.projects.length}/${fixture.projects.length}`);
-  s.ok("every piece gets timestamps", after.projects.every(p => typeof p.createdAt === "string" && typeof p.updatedAt === "string"), "created+updated on all");
-  s.ok("piece order preserved", JSON.stringify(after.projects.map(p => p.title)) === JSON.stringify(beforeTitles), "titles identical, same order");
+  s.ok("migrates to schema 6", after.schemaVersion === 6, `schema=${after.schemaVersion}`);
+  s.ok("nothing lost (projects + stories = original)", after.projects.length + after.stories.length === fixture.projects.length,
+    `${after.projects.length} proj + ${after.stories.length} stories / ${fixture.projects.length}`);
+  s.ok("v2.2: story-type projects extracted to stories", after.stories.length === storyTitles.length &&
+    storyTitles.every(t => after.stories.some(s => s.text === t)), `${after.stories.length} stories`);
+  s.ok("v2.2: extraction is lossless (full original kept under .legacy)",
+    storyTitles.length === 0 || after.stories.every(s => s.legacy && s.legacy.title && typeof s.legacy === "object"), "legacy preserved");
+  s.ok("every remaining project gets timestamps", after.projects.every(p => typeof p.createdAt === "string" && typeof p.updatedAt === "string"), "created+updated on all");
+  s.ok("non-story order preserved", JSON.stringify(after.projects.map(p => p.title)) === JSON.stringify(nonStoryTitles), "titles identical, same order");
   const ts = after.projects.map(p => p.createdAt);
   s.ok("timestamps monotonic (oldest→newest)", ts.every((t, i) => i === 0 || t >= ts[i - 1]), "non-decreasing");
   s.ok("default sort added", after.settings.libSort === "recent", `libSort=${after.settings.libSort}`);
@@ -43,8 +50,8 @@ export async function runUpgradeData() {
   s.ok("colour remap preserved", JSON.stringify(after.settings.colors) === JSON.stringify(fixture.settings.colors), "colors intact");
   s.ok("calm-mode pref preserved", after.settings.lowstim === fixture.settings.lowstim, `lowstim=${after.settings.lowstim}`);
 
-  // ---- no per-piece data loss (spot-check a fully-populated piece) ----
-  const before0 = fixture.projects[0], after0 = after.projects[0];
+  // ---- no per-piece data loss (spot-check a fully-populated NON-story piece) ----
+  const before0 = fixture.projects.find(p => p.type !== "story"), after0 = after.projects[0];
   s.ok("piece keeps its content", after0.title === before0.title && after0.type === before0.type &&
     JSON.stringify(after0.targets) === JSON.stringify(before0.targets) && after0.date === before0.date &&
     JSON.stringify(after0.stages) === JSON.stringify(before0.stages) && JSON.stringify(after0.tasks) === JSON.stringify(before0.tasks),
@@ -52,14 +59,15 @@ export async function runUpgradeData() {
 
   // ---- idempotent: re-running the migrator changes nothing (no re-stamp, no reorder) ----
   const again = migrate(after);
-  s.ok("re-migrate is a no-op", again.schemaVersion === 5 &&
+  s.ok("re-migrate is a no-op", again.schemaVersion === 6 &&
+    again.projects.length === after.projects.length && again.stories.length === after.stories.length &&
     JSON.stringify(again.projects.map(p => [p.title, p.createdAt, p.updatedAt])) ===
     JSON.stringify(after.projects.map(p => [p.title, p.createdAt, p.updatedAt])), "timestamps + order stable");
 
   // ---- functional: after upgrade, default sort puts the newest-created piece top-left ----
   const sortedTitles = JSON.parse(win.eval(`(()=>{ const st=migrateState(${JSON.stringify(fixture)});
     return JSON.stringify(sortProjects(st.projects).map(p=>p.title)); })()`));
-  s.ok("'Recently worked on' = newest first", sortedTitles[0] === beforeTitles[beforeTitles.length - 1], `top: ${sortedTitles[0]}`);
+  s.ok("'Recently worked on' = newest first", sortedTitles[0] === nonStoryTitles[nonStoryTitles.length - 1], `top: ${sortedTitles[0]}`);
 
   // ---- a hand-crafted, messy but realistic schema-2 file also survives ----
   const messy = {
@@ -75,8 +83,11 @@ export async function runUpgradeData() {
   };
   let messyOut = null, threw = false;
   try { messyOut = migrate(messy); } catch (e) { threw = true; }
-  s.ok("messy schema-2 file migrates without throwing", !threw && messyOut && messyOut.schemaVersion === 5, threw ? "threw" : "schema 5");
-  s.ok("messy file: both pieces timestamped", !!messyOut && messyOut.projects.every(p => p.createdAt && p.updatedAt), "all stamped");
+  s.ok("messy schema-2 file migrates without throwing", !threw && messyOut && messyOut.schemaVersion === 6, threw ? "threw" : "schema 6");
+  s.ok("messy file: pieces + stories all timestamped", !!messyOut &&
+    messyOut.projects.every(p => p.createdAt && p.updatedAt) && messyOut.stories.every(s => s.createdAt && s.updatedAt), "all stamped");
+  s.ok("messy file: the story piece moved to stories (lossless)", !!messyOut && messyOut.projects.length === 1 &&
+    messyOut.stories.length === 1 && messyOut.stories[0].text === "Minimal idea" && !!messyOut.stories[0].legacy, "Minimal idea → stories");
   s.ok("messy file: custom workdays + colours kept", !!messyOut &&
     JSON.stringify(messyOut.settings.workdays) === JSON.stringify(messy.settings.workdays) &&
     messyOut.settings.colors.conversion === "#123456", "settings intact");
@@ -95,11 +106,12 @@ export async function runUpgradeData() {
   });
   const win2 = dom2.window;
   await sleep(700); // let boot() load from storage + migrate
-  s.ok("boot loads her file (no clean reseed)", win2.eval("state.projects.length") === fixture.projects.length,
-    `${win2.eval("state.projects.length")} pieces loaded`);
-  s.ok("boot upgraded her file to schema 5", win2.eval("state.schemaVersion") === 5, `schema=${win2.eval("state.schemaVersion")}`);
+  s.ok("boot loads her file (no clean reseed)", win2.eval("state.projects.length") === nonStoryTitles.length,
+    `${win2.eval("state.projects.length")} projects + ${win2.eval("state.stories.length")} stories`);
+  s.ok("boot extracted stories", win2.eval("state.stories.length") === storyTitles.length, `${win2.eval("state.stories.length")} stories`);
+  s.ok("boot upgraded her file to schema 6", win2.eval("state.schemaVersion") === 6, `schema=${win2.eval("state.schemaVersion")}`);
   s.ok("boot stamped every piece", win2.eval("state.projects.every(p=>!!p.createdAt && !!p.updatedAt)"), "timestamps present after boot");
-  s.ok("boot kept her piece order", win2.eval(`JSON.stringify(state.projects.map(p=>p.title))`) === JSON.stringify(beforeTitles), "same order");
+  s.ok("boot kept her piece order", win2.eval(`JSON.stringify(state.projects.map(p=>p.title))`) === JSON.stringify(nonStoryTitles), "same order");
   s.ok("boot had no jsdom errors", errs2.length === 0, errs2.slice(0, 2).join(" | ") || "clean");
 
   return s;
