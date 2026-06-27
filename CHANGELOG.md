@@ -2,6 +2,11 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.5.2], 2026-06-27
+- **Library cards now show their planned date.** Each card that has a date shows it at the bottom
+  (on its own line under the progress squares) in plain words — *📅 Monday 8 Jun (this week)* — so you
+  can see when a piece is set to go out without opening it. Cards with no date yet stay clean.
+
 ## [1.5.1], 2026-06-27
 - **The colour buttons at the top now work on the Turn-over tab too.** Tapping **Discovery**,
   **Authority**, **Conversion**, or **Retention** now greys out everything that isn't about that

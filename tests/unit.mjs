@@ -76,6 +76,16 @@ export async function runUnit() {
   const expectedAZ = JSON.parse(ev("JSON.stringify(sortProjects(state.projects).map(p=>p.title))"));
   s.ok("A→Z grid matches locale sort", JSON.stringify(sortedTitles)===JSON.stringify(expectedAZ), sortedTitles.slice(0,3).join(" | "));
   s.ok("sort buttons reflect choice", ev(`document.querySelector('#libSort [data-sort=\\"title\\"]').getAttribute('aria-pressed')==='true'`), "title pressed");
+  // dated library cards show the planned date (📅 + friendly dateLabel) next to the progress buttons
+  ev("state.settings.libSort='recent'; libStatus='all'; renderLibrary();");
+  s.ok("library cards show the planned date", ev(`(()=>{ const dated=state.projects.find(p=>p.date);
+    const card=[...document.querySelectorAll('#libgrid .card')].find(c=>c.dataset.id===dated.id);
+    const d=card&&card.querySelector('.carddate');
+    return !!d && d.textContent.includes(dateLabel(dated.date)); })()`), "carddate = 📅 dateLabel");
+  s.ok("undated library card shows no date line", ev(`(()=>{ const u=state.projects.find(p=>!p.date); if(!u) return true;
+    const card=[...document.querySelectorAll('#libgrid .card')].find(c=>c.dataset.id===u.id);
+    return !!card && !card.querySelector('.carddate'); })()`), "no date → no carddate");
+  s.ok("board (compact) cards have no library date line", ev(`(()=>{ setView('board'); return ![...document.querySelectorAll('#board .card')].some(c=>c.querySelector('.carddate')); })()`), "compact omits carddate");
   ev("state.settings.libSort='recent'; libStatus='todo'; setView('board');");
 
   // ---- onboarding + install gate ----

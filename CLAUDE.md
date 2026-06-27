@@ -152,6 +152,13 @@ never lose data). The unit that rolls is a **piece** (it owns the `date`), not a
   (`libStatus`, default `"todo"`, `#libFilter`) so she lands on what's left; posted past pieces live
   there, not in the tray.
 
+## Library card date (v1.5.2)
+
+`projectCard()` shows the piece's planned date on **Library cards only** (`!compact`, so the Board's
+compact cards are unaffected): a `.carddate` span (`📅 ` + friendly `dateLabel()`) appended into the
+`.stages` row with `flex-basis:100%`, so it sits on its **own line under** the progress squares,
+**left-aligned** (`.stages` is `flex-wrap:wrap`). Only rendered when `p.date` is set; undated cards show nothing.
+
 ## Library sort (v1.4.0)
 
 The Library has a sort control (`#libSort`, same `.seg` look as the status filter) with four options:
