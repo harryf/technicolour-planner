@@ -30,7 +30,7 @@ export async function runUpgradeData() {
 
   // ---- the upgrade ----
   const after = migrate(fixture);
-  s.ok("migrates to schema 4", after.schemaVersion === 4, `schema=${after.schemaVersion}`);
+  s.ok("migrates to schema 5", after.schemaVersion === 5, `schema=${after.schemaVersion}`);
   s.ok("no pieces lost", after.projects.length === fixture.projects.length, `${after.projects.length}/${fixture.projects.length}`);
   s.ok("every piece gets timestamps", after.projects.every(p => typeof p.createdAt === "string" && typeof p.updatedAt === "string"), "created+updated on all");
   s.ok("piece order preserved", JSON.stringify(after.projects.map(p => p.title)) === JSON.stringify(beforeTitles), "titles identical, same order");
@@ -52,7 +52,7 @@ export async function runUpgradeData() {
 
   // ---- idempotent: re-running the migrator changes nothing (no re-stamp, no reorder) ----
   const again = migrate(after);
-  s.ok("re-migrate is a no-op", again.schemaVersion === 4 &&
+  s.ok("re-migrate is a no-op", again.schemaVersion === 5 &&
     JSON.stringify(again.projects.map(p => [p.title, p.createdAt, p.updatedAt])) ===
     JSON.stringify(after.projects.map(p => [p.title, p.createdAt, p.updatedAt])), "timestamps + order stable");
 
@@ -75,7 +75,7 @@ export async function runUpgradeData() {
   };
   let messyOut = null, threw = false;
   try { messyOut = migrate(messy); } catch (e) { threw = true; }
-  s.ok("messy schema-2 file migrates without throwing", !threw && messyOut && messyOut.schemaVersion === 4, threw ? "threw" : "schema 4");
+  s.ok("messy schema-2 file migrates without throwing", !threw && messyOut && messyOut.schemaVersion === 5, threw ? "threw" : "schema 5");
   s.ok("messy file: both pieces timestamped", !!messyOut && messyOut.projects.every(p => p.createdAt && p.updatedAt), "all stamped");
   s.ok("messy file: custom workdays + colours kept", !!messyOut &&
     JSON.stringify(messyOut.settings.workdays) === JSON.stringify(messy.settings.workdays) &&
@@ -97,7 +97,7 @@ export async function runUpgradeData() {
   await sleep(700); // let boot() load from storage + migrate
   s.ok("boot loads her file (no clean reseed)", win2.eval("state.projects.length") === fixture.projects.length,
     `${win2.eval("state.projects.length")} pieces loaded`);
-  s.ok("boot upgraded her file to schema 4", win2.eval("state.schemaVersion") === 4, `schema=${win2.eval("state.schemaVersion")}`);
+  s.ok("boot upgraded her file to schema 5", win2.eval("state.schemaVersion") === 5, `schema=${win2.eval("state.schemaVersion")}`);
   s.ok("boot stamped every piece", win2.eval("state.projects.every(p=>!!p.createdAt && !!p.updatedAt)"), "timestamps present after boot");
   s.ok("boot kept her piece order", win2.eval(`JSON.stringify(state.projects.map(p=>p.title))`) === JSON.stringify(beforeTitles), "same order");
   s.ok("boot had no jsdom errors", errs2.length === 0, errs2.slice(0, 2).join(" | ") || "clean");

@@ -303,6 +303,22 @@
   .hookchip .x{border:0;background:transparent;color:var(--muted);padding:0 4px;cursor:pointer;font-size:12px}
   .addhook{font-weight:700}
   .hook.sel{border-color:var(--ink);background:#fffdf8;box-shadow:0 0 0 2px rgba(0,0,0,.06) inset}
+  /* per-reel tool dimensions (in the detail drawer) */
+  .toolgroup{display:flex;flex-direction:column;gap:12px}
+  .tooldim-h{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px}
+  /* Turn-over: editable library widgets */
+  .iconbtn{border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:2px 7px;color:var(--muted);font-size:13px;cursor:pointer}
+  .iconbtn:hover{border-color:var(--ink);color:var(--ink)}
+  .ucard .uh .iconbtn{flex:none;margin-left:6px}
+  /* edit form is toggled via the [hidden] attribute; an explicit display would override it, so only
+     set display when NOT hidden (otherwise the UA's [hidden]{display:none} can win). */
+  .ucard-edit{padding:10px 12px;border-top:1px dashed var(--line);flex-direction:column;gap:8px}
+  .ucard-edit:not([hidden]){display:flex}
+  .additem{margin:8px 0 4px}
+  .tagtoggle .chip{padding:3px 10px}
+  .tooldim-block{border:1px solid var(--line);border-radius:var(--radius);padding:12px;margin-bottom:14px;background:var(--panel)}
+  .tooldim-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+  .tooldim-head b{font-size:15px}
   .drawer .foot{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px}
   .danger{color:#b91c1c;border-color:#f1c4c4}
 
@@ -470,6 +486,7 @@
         <button role="tab" data-sub="activities" aria-selected="false">🎨 Activities</button>
         <button role="tab" data-sub="story" aria-selected="false">📖 Story codes</button>
         <button role="tab" data-sub="hooks" aria-selected="false">🪝 Hooks</button>
+        <button role="tab" data-sub="tools" aria-selected="false">🧰 Tools</button>
       </div>
       <span class="grow"></span>
       <span class="muted" style="align-self:center">Sort:</span>
@@ -500,9 +517,18 @@
 
     <div class="subpanel panel" id="sub-hooks" hidden>
       <div class="row"><h2 class="grow">Your hooks</h2>
-        <span class="muted help">filter by what the hook taps into</span></div>
+        <span class="muted help">add your own, edit or delete, filter by what each taps into</span></div>
+      <div id="hookAdd"></div>
       <div class="row wrap" id="hookFilter" style="margin:10px 0"></div>
       <div class="hooklist" id="hookList"></div>
+    </div>
+
+    <div class="subpanel panel" id="sub-tools" hidden>
+      <div class="row"><h2 class="grow">Your tools / types of content</h2>
+        <span class="muted help">the building blocks of a reel, grouped, each tagged with the targets it serves</span></div>
+      <p class="muted">Tag a tool with the targets it serves; attaching it to a reel auto-colours that
+         target. Use the "Show me:" filter above to see which tools serve a given target.</p>
+      <div id="toolManager"></div>
     </div>
   </section>
 </main>
@@ -539,7 +565,7 @@
 <!-- HOOK PICKER MODAL -->
 <div class="modal" id="hookModal">
   <div class="box">
-    <div class="row"><h2 class="grow">Pick hooks</h2><button id="hookModalClose">✕</button></div>
+    <div class="row"><h2 class="grow" id="hookModalTitle">Pick hooks</h2><button id="hookModalClose">✕</button></div>
     <p class="muted">Tap as many as you like to attach them (tap again to remove). Filter by what each one taps. Close when you're done.</p>
     <div class="row wrap" id="hookModalFilter" style="margin:10px 0"></div>
     <div class="hooklist" id="hookModalList"></div>
@@ -648,7 +674,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "2.0.0";
+const VERSION = "2.1.0";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -722,10 +748,39 @@ const HOOKS = [
   ["Strong eye contact (first 3 s)",["pattern-interrupt"]],
 ];
 
+/* ---- Tool / "types of content" library (v2.1) ----
+   Reels are built from "tools" grouped into dimensions (Tool, Rule/advice, Theme, Subject, Structure).
+   Each tool can be tagged with the pillars it serves; attaching one to a reel auto-colours that pillar.
+   This SEED only fills the "Tool" dimension with the items Sarah named (pillars left blank for her to
+   set); the rest start empty. The whole thing is editable in the Turn-over tab, so this is just a start. */
+const TOOL_DIM_SEED = [
+  { name:"Tool", items:["Opinion","Being personal","Humour","Advice","Controversy","Meaning-oriented","Technical skill","Close-up"] },
+  { name:"Rule / advice", items:[] },
+  { name:"Theme", items:[] },
+  { name:"Subject", items:[] },
+  { name:"Structure", items:[] },
+];
+// The editable library: curated hooks become {id,label,taps}; tool dimensions hold {id,label,pillars}.
+function defaultLibrary(){
+  return {
+    hooks: HOOKS.map(([label,taps])=>({ id:uid(), label, taps:taps.slice() })),
+    toolDims: TOOL_DIM_SEED.map(d=>({ id:uid(), name:d.name, types:["reel"],
+      items:d.items.map(label=>({ id:uid(), label, pillars:[] })) })),
+  };
+}
+// Escape user-entered text before it touches innerHTML (hook/tool labels are now editable user data).
+function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g, c=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c])); }
+// ---- Library accessors (defensive: tolerate a half-built state) ----
+function libHooks(){ return (state.library && Array.isArray(state.library.hooks)) ? state.library.hooks : []; }
+function libToolDims(){ return (state.library && Array.isArray(state.library.toolDims)) ? state.library.toolDims : []; }
+function reelToolDims(){ return libToolDims().filter(d=>(d.types||["reel"]).includes("reel")); }
+function findToolItem(id){ for(const d of libToolDims()){ const it=(d.items||[]).find(x=>x.id===id); if(it) return {dim:d,item:it}; } return null; }
+function toolLabel(id){ const f=findToolItem(id); return f?f.item.label:null; }
+
 /* ---- Seed: HER real projects (so first open = recognition, not lorem ipsum) ---- */
 function seedProjects(){
   const P = (o)=>Object.assign({
-    id:uid(), type:"reel", targets:[], date:null, music:"", hooks:[], desc:"", notes:"", storyboard:"",
+    id:uid(), type:"reel", targets:[], date:null, music:"", hooks:[], tools:[], desc:"", notes:"", storyboard:"",
     storyCodes:[], image:null, imageName:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[]
   }, o);
   return stampOrder([
@@ -780,7 +835,7 @@ const LS_KEY="technicolour_planner_v1";
 const OLD_LS_KEY="sarah_planner_v1";       // prototype key, read once for continuity
 const JSON_NAME="Technicolour-Planner-Data.json";
 const MD_NAME="Technicolour-Planner-Data.md";
-const CURRENT_SCHEMA=4;
+const CURRENT_SCHEMA=5;
 const DEFAULT_WORKDAYS=[true,true,true,true,true,false,true]; // Mon..Sun; Sat off by default (her "NO POST")
 const MAX_BACKUPS=20; // timestamped checkpoints kept in the folder (oldest pruned)
 
@@ -801,6 +856,15 @@ const migrations = {
       if(typeof p.storyboard!=="string") p.storyboard = "";
       (p.tasks||[]).forEach(tk=>{ if(tk.activity==="priority") tk.activity="justdo"; }); // retired colour
     }); },
+  // From schema 4 → 5 (v2.1): introduce the editable tools/hooks library. Curated hooks seed
+  // library.hooks (still referenced from pieces by label); each reel gains a p.tools list of tool ids.
+  // Additive only: no existing content is touched.
+  4: (s)=>{
+      if(!s.library || typeof s.library!=="object") s.library = defaultLibrary();
+      if(!Array.isArray(s.library.hooks)) s.library.hooks = defaultLibrary().hooks;
+      if(!Array.isArray(s.library.toolDims)) s.library.toolDims = defaultLibrary().toolDims;
+      (s.projects||[]).forEach(p=>{ if(!Array.isArray(p.tools)) p.tools = []; });
+    },
 };
 // Ensure every piece has monotonic created/updated timestamps, preserving the current array order
 // (oldest first). Only fills what's missing, so it's safe to run on every load.
@@ -826,11 +890,14 @@ function migrateState(s){
   let v = s.schemaVersion || 0;
   while(v < CURRENT_SCHEMA){ const fn = migrations[v]; if(fn) fn(s); v++; }
   s.schemaVersion = CURRENT_SCHEMA;
+  // Defensive normalization AFTER migrations (so per-version migrations read the old shape first).
+  if(!s.library || !Array.isArray(s.library.hooks) || !Array.isArray(s.library.toolDims)) s.library = defaultLibrary();
+  s.projects.forEach(p=>{ if(!Array.isArray(p.tools)) p.tools=[]; if(!Array.isArray(p.hooks)) p.hooks=[]; });
   return s;
 }
 function defaultState(){
   return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice(),libSort:"recent",turnoverTab:"targets",turnoverSort:"recent",boardMode:"week"},
-           weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
+           library:defaultLibrary(), weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
 }
 function nowISO(){ return new Date().toISOString().replace(/[:.]/g,"-"); }
 
@@ -1027,6 +1094,7 @@ function toMarkdown(state){
     if(p.targets && p.targets.length) o.push("- Targets: "+p.targets.map(k=>TARGETS[k]?TARGETS[k].label:k).join(", "));
     if(p.date) o.push("- Date: "+p.date);
     if(p.hooks && p.hooks.length) o.push("- Hooks: "+p.hooks.join(", "));
+    if(p.tools && p.tools.length){ const names=p.tools.map(toolLabel).filter(Boolean); if(names.length) o.push("- Tools: "+names.join(", ")); }
     if(p.music) o.push("- Music: "+p.music);
     if(p.storyCodes && p.storyCodes.length) o.push("- Story codes: "+p.storyCodes.map(c=>c+" "+(STORY_CODES[c]?STORY_CODES[c].label:"")).join(", "));
     const st=STAGES.filter(s=>p.stages && p.stages[s]); if(st.length) o.push("- Done: "+st.join(", "));
@@ -1482,7 +1550,7 @@ function sw(bg,text){ const d=document.createElement("div"); d.className="sw"; i
 // Turn-over shares the Library's sort vocabulary minus "colour" (each card already IS a colour).
 // One sort + one active sub-tab, both remembered in settings (predictable on return).
 function turnoverSort(){ const k=state.settings&&state.settings.turnoverSort; return ["recent","date","title"].includes(k)?k:"recent"; }
-function turnoverTab(){ const k=state.settings&&state.settings.turnoverTab; return ["targets","activities","story","hooks"].includes(k)?k:"targets"; }
+function turnoverTab(){ const k=state.settings&&state.settings.turnoverTab; return ["targets","activities","story","hooks","tools"].includes(k)?k:"targets"; }
 function sortPiecesT(list){ return list.slice().sort(LIB_SORTS[turnoverSort()].cmp); }
 function sortTasksT(items){ // items: {piece,task}. Sort by parent piece (recent/date) or by task text (A→Z).
   const mode=turnoverSort(), arr=items.slice();
@@ -1493,7 +1561,7 @@ function sortTasksT(items){ // items: {piece,task}. Sort by parent piece (recent
 function syncTurnoverControls(){
   const tab=turnoverTab(), srt=turnoverSort();
   document.querySelectorAll('#turnoverTabs [data-sub]').forEach(b=>b.setAttribute("aria-selected", b.dataset.sub===tab));
-  ["targets","activities","story","hooks"].forEach(name=>{ const el=document.getElementById("sub-"+name); if(el) el.hidden=(name!==tab); });
+  ["targets","activities","story","hooks","tools"].forEach(name=>{ const el=document.getElementById("sub-"+name); if(el) el.hidden=(name!==tab); });
   document.querySelectorAll('#turnoverSort [data-sort]').forEach(b=>b.setAttribute("aria-pressed", b.dataset.sort===srt));
 }
 function renderTurnover(){
@@ -1511,6 +1579,7 @@ function renderTurnover(){
     applyCardFilter(card,pieces); sl.appendChild(card);
   });
   renderTurnoverHooks();
+  renderTurnoverTools();
   const al=document.getElementById("activityLegend"); al.innerHTML="";
   Object.entries(ACTIVITIES).forEach(([k,v])=>{
     const items=[]; state.projects.forEach(p=>(p.tasks||[]).forEach(t=>{ if(t.activity===k) items.push({piece:p,task:t}); }));
@@ -1525,36 +1594,140 @@ function hookChip(label,key){
   b.onclick=()=>{ hookFilterType=(key && hookFilterType===key)?null:key; renderTurnoverHooks(); };
   return b;
 }
+// ---- shared editable-library widgets (used by Hooks + Tools managers) ----
+function mkIconBtn(txt,title){ const b=document.createElement("button"); b.type="button"; b.className="iconbtn"; b.textContent=txt; b.title=title; b.setAttribute("aria-label",title); return b; }
+// A row of tag-toggle chips. `get()` reads the chosen tags. (No tag selected = "General".)
+function tagToggleChips(vocab, tagOrder, current){
+  const sel=new Set(current||[]);
+  const row=document.createElement("div"); row.className="row wrap tagtoggle";
+  (tagOrder||Object.keys(vocab)).forEach(k=>{ const b=document.createElement("button"); b.type="button"; b.className="chip"; b.style.boxShadow="none"; b.textContent=vocab[k]||k;
+    const sync=()=>b.setAttribute("aria-pressed",sel.has(k)); sync();
+    b.onclick=()=>{ if(sel.has(k))sel.delete(k); else sel.add(k); sync(); }; row.appendChild(b); });
+  return { el:row, get:()=>Array.from(sel) };
+}
+// "Add a <thing>" form: a name input + tag toggles + add button. Calls onAdd(label, tags).
+function addItemForm(o){
+  const wrap=document.createElement("div"); wrap.className="additem";
+  const row=document.createElement("div"); row.className="row wrap";
+  const inp=document.createElement("input"); inp.placeholder=o.placeholder; inp.style.maxWidth="240px";
+  const tags=tagToggleChips(o.vocab,o.tagOrder,[]);
+  const btn=document.createElement("button"); btn.textContent="＋ add"; btn.className="addhook";
+  const submit=()=>{ const v=inp.value.trim(); if(!v) return; o.onAdd(v, tags.get()); };
+  btn.onclick=submit; inp.onkeydown=e=>{ if(e.key==="Enter") submit(); };
+  row.append(inp,tags.el,btn); wrap.appendChild(row);
+  return wrap;
+}
+// An editable usage card: header (label + tags + count + ✎ edit + 🗑 delete), an inline edit form,
+// and the list of pieces using it. onSave(label,tags) / onDelete().
+function libCrudCard(o){
+  const n=o.usagePieces.length, zero=n===0;
+  const card=document.createElement("div"); card.className="ucard"+(zero?" zero":" open");
+  const uh=document.createElement("div"); uh.className="uh";
+  const lab=document.createElement("div"); lab.className="ulabel";
+  const tagsTxt=(o.tags&&o.tags.length)?o.tags.map(t=>o.vocab[t]||t).join(" · "):"General";
+  lab.innerHTML=`<b>${esc(o.label)}</b><br><span class="muted">${esc(tagsTxt)}</span>`;
+  const count=document.createElement("span"); count.className="ucount"+(zero?" zero":""); count.textContent=zero?"not used yet":(n+" "+(n===1?"piece":"pieces"));
+  const edit=mkIconBtn("✎","Edit"); const del=mkIconBtn("🗑","Delete");
+  uh.append(sw("#efeae1",o.swatchText||"•"),lab,count,edit,del);
+  const form=document.createElement("div"); form.className="ucard-edit"; form.hidden=true;
+  const inp=document.createElement("input"); inp.value=o.label; inp.style.maxWidth="260px";
+  const tg=tagToggleChips(o.vocab,o.tagOrder,o.tags);
+  const sv=document.createElement("button"); sv.textContent="Save"; sv.className="addhook";
+  const cn=document.createElement("button"); cn.textContent="Cancel";
+  const r1=document.createElement("div"); r1.className="row wrap"; r1.append(inp,sv,cn);
+  form.append(r1, tg.el);
+  const body=document.createElement("div"); body.className="ubody"; o.usagePieces.forEach(p=>body.appendChild(pieceUrow(p)));
+  edit.onclick=e=>{ e.stopPropagation(); form.hidden=!form.hidden; if(!form.hidden) inp.focus(); };
+  cn.onclick=e=>{ e.stopPropagation(); form.hidden=true; };
+  sv.onclick=e=>{ e.stopPropagation(); o.onSave(inp.value.trim(), tg.get()); };
+  del.onclick=e=>{ e.stopPropagation(); o.onDelete(); };
+  inp.onkeydown=e=>{ if(e.key==="Enter"){ e.preventDefault(); sv.click(); } };
+  uh.onclick=e=>{ if(e.target.closest('.iconbtn')) return; card.classList.toggle("open"); };
+  card.append(uh,form,body); return card;
+}
 function renderTurnoverHooks(){
   const f=document.getElementById("hookFilter"); f.innerHTML="";
   f.appendChild(hookChip("all",null));
   Object.entries(HOOK_TYPES).forEach(([k,lbl])=> f.appendChild(hookChip(lbl,k)) );
+  f.appendChild(hookChip("General","__general"));
+  const add=document.getElementById("hookAdd"); add.innerHTML="";
+  add.appendChild(addItemForm({ placeholder:"new hook…", vocab:HOOK_TYPES, tagOrder:Object.keys(HOOK_TYPES),
+    onAdd:(label,tags)=>{ libHooks().push({id:uid(),label,taps:tags}); save(); renderTurnover(); } }));
   const list=document.getElementById("hookList"); list.innerHTML="";
-  HOOKS.filter(([_,types])=>!hookFilterType||types.includes(hookFilterType)).forEach(([name,types])=>{
-    const pieces=sortPiecesT(state.projects.filter(p=>(p.hooks||[]).includes(name)));
-    const desc=types.map(t=>HOOK_TYPES[t]).join(" · ");
-    const card=usageCard(sw("#efeae1","🪝"), name, desc, pieces.map(pieceUrow), {open:true});
-    applyCardFilter(card,pieces); list.appendChild(card);
+  const matchTap=taps=>{ if(!hookFilterType) return true; if(hookFilterType==="__general") return !taps||!taps.length; return (taps||[]).includes(hookFilterType); };
+  libHooks().filter(h=>matchTap(h.taps)).forEach(h=>{
+    const pieces=sortPiecesT(state.projects.filter(p=>(p.hooks||[]).includes(h.label)));
+    list.appendChild(libCrudCard({
+      swatchText:"🪝", label:h.label, tags:h.taps, vocab:HOOK_TYPES, tagOrder:Object.keys(HOOK_TYPES), usagePieces:pieces,
+      onSave:(newLabel,newTags)=>{ const old=h.label;
+        if(newLabel && newLabel!==old){ state.projects.forEach(p=>{ if(Array.isArray(p.hooks)) p.hooks=p.hooks.map(x=>x===old?newLabel:x); }); h.label=newLabel; }
+        h.taps=newTags; save(); renderTurnover(); },
+      onDelete:()=>{ state.library.hooks=libHooks().filter(x=>x.id!==h.id);
+        state.projects.forEach(p=>{ if(Array.isArray(p.hooks)) p.hooks=p.hooks.filter(x=>x!==h.label); }); save(); renderTurnover(); }
+    }));
   });
 }
+// Tools manager: each dimension is a block (rename/delete + add-item form + editable item cards).
+function renderTurnoverTools(){
+  const root=document.getElementById("toolManager"); if(!root) return; root.innerHTML="";
+  libToolDims().forEach(dim=>{
+    const block=document.createElement("div"); block.className="tooldim-block";
+    const head=document.createElement("div"); head.className="tooldim-head";
+    const name=document.createElement("b"); name.textContent=dim.name; name.className="grow";
+    const ren=mkIconBtn("✎","Rename this group"); const del=mkIconBtn("🗑","Delete this whole group");
+    ren.onclick=()=>{ const inp=document.createElement("input"); inp.value=dim.name; inp.className="grow"; inp.style.maxWidth="220px";
+      const ok=document.createElement("button"); ok.textContent="Save"; ok.className="addhook";
+      ok.onclick=()=>{ const v=inp.value.trim(); if(v) dim.name=v; save(); renderTurnover(); };
+      inp.onkeydown=e=>{ if(e.key==="Enter") ok.click(); };
+      head.innerHTML=""; head.append(inp,ok); inp.focus(); };
+    del.onclick=()=>{ const ids=new Set((dim.items||[]).map(it=>it.id));
+      state.library.toolDims=libToolDims().filter(d=>d.id!==dim.id);
+      state.projects.forEach(p=>{ if(Array.isArray(p.tools)) p.tools=p.tools.filter(t=>!ids.has(t)); }); save(); renderTurnover(); };
+    head.append(name,ren,del); block.appendChild(head);
+    block.appendChild(addItemForm({ placeholder:"new "+dim.name.toLowerCase()+"…", vocab:PILLAR_VOCAB, tagOrder:TARGET_ORDER,
+      onAdd:(label,tags)=>{ dim.items.push({id:uid(),label,pillars:tags}); save(); renderTurnover(); } }));
+    const list=document.createElement("div"); list.className="toollist"; // full-width stacked cards (not the narrow grid)
+    (dim.items||[]).forEach(it=>{
+      const pieces=sortPiecesT(state.projects.filter(p=>(p.tools||[]).includes(it.id)));
+      const card=libCrudCard({ swatchText:"🧰", label:it.label, tags:it.pillars, vocab:PILLAR_VOCAB, tagOrder:TARGET_ORDER, usagePieces:pieces,
+        onSave:(newLabel,newTags)=>{ if(newLabel) it.label=newLabel; it.pillars=newTags; save(); renderTurnover(); },
+        onDelete:()=>{ dim.items=(dim.items||[]).filter(x=>x.id!==it.id);
+          state.projects.forEach(p=>{ if(Array.isArray(p.tools)) p.tools=p.tools.filter(t=>t!==it.id); }); save(); renderTurnover(); } });
+      if(activeFilters.size && !(it.pillars||[]).some(k=>activeFilters.has(k))){ if(filterHide) card.style.display="none"; else card.classList.add("dim"); }
+      list.appendChild(card);
+    });
+    block.appendChild(list); root.appendChild(block);
+  });
+  const addDim=document.createElement("div"); addDim.className="row"; addDim.style.marginTop="14px";
+  const di=document.createElement("input"); di.placeholder="new group (e.g. Format)…"; di.style.maxWidth="240px";
+  const db=document.createElement("button"); db.textContent="＋ add group"; db.className="addhook";
+  db.onclick=()=>{ const v=di.value.trim(); if(!v) return; libToolDims().push({id:uid(),name:v,types:["reel"],items:[]}); save(); renderTurnover(); };
+  di.onkeydown=e=>{ if(e.key==="Enter") db.click(); };
+  addDim.append(di,db); root.appendChild(addDim);
+}
 
-let hookFilterType=null;
-// The picker is multi-select: opts.selected (live array) drives the highlight, opts.onToggle flips one.
-function renderHookList(listId,filterId,opts){
-  opts=opts||{}; const selected=opts.selected||[];
+let hookFilterType=null;  // Turn-over hooks-browse tap filter
+let libFilterTag=null;    // picker-modal tag filter (independent of the browse one)
+// Generic multi-select picker, shared by the Hooks picker and each tool-dimension picker.
+// spec: { items:[{key,label,tags:[...]}], vocab:{tag:label}, tagOrder:[tag], general:bool,
+//         selected:[key] (live), onToggle(key) }
+function renderLibList(listId,filterId,spec){
+  spec=spec||{}; const vocab=spec.vocab||{}, order=spec.tagOrder||Object.keys(vocab), sel=spec.selected||[];
   const f=document.getElementById(filterId); f.innerHTML="";
-  const allBtn=document.createElement("button"); allBtn.className="chip"; allBtn.style.boxShadow="none";
-  allBtn.setAttribute("aria-pressed",hookFilterType===null); allBtn.textContent="all";
-  allBtn.onclick=()=>{hookFilterType=null;renderHookList(listId,filterId,opts);}; f.appendChild(allBtn);
-  Object.entries(HOOK_TYPES).forEach(([k,lbl])=>{ const b=document.createElement("button"); b.className="chip"; b.style.boxShadow="none";
-    b.setAttribute("aria-pressed",hookFilterType===k); b.textContent=lbl;
-    b.onclick=()=>{hookFilterType=(hookFilterType===k?null:k);renderHookList(listId,filterId,opts);}; f.appendChild(b); });
+  const mk=(label,key)=>{ const b=document.createElement("button"); b.className="chip"; b.style.boxShadow="none"; b.textContent=label;
+    b.setAttribute("aria-pressed",libFilterTag===key);
+    b.onclick=()=>{ libFilterTag=(key && libFilterTag===key)?null:key; renderLibList(listId,filterId,spec); }; return b; };
+  f.appendChild(mk("all",null));
+  order.forEach(k=> f.appendChild(mk(vocab[k]||k,k)) );
+  if(spec.general) f.appendChild(mk("General","__general"));
+  const matches=tags=>{ if(!libFilterTag) return true; if(libFilterTag==="__general") return !tags||!tags.length; return (tags||[]).includes(libFilterTag); };
   const list=document.getElementById(listId); list.innerHTML="";
-  HOOKS.filter(([_,types])=>!hookFilterType||types.includes(hookFilterType)).forEach(([name,types])=>{
-    const on=selected.includes(name);
+  (spec.items||[]).filter(it=>matches(it.tags)).forEach(it=>{
+    const on=sel.includes(it.key);
     const h=document.createElement("div"); h.className="hook"+(on?" sel":"");
-    h.innerHTML=`<b>${on?"✓ ":""}${name}</b><div class="types">${types.map(t=>`<span class="htype">${HOOK_TYPES[t]}</span>`).join("")}</div>`;
-    if(opts.onToggle){ h.style.cursor="pointer"; h.onclick=()=>opts.onToggle(name); }
+    const tagHtml=((it.tags&&it.tags.length)?it.tags.map(t=>`<span class="htype">${esc(vocab[t]||t)}</span>`).join(""):`<span class="htype">General</span>`);
+    h.innerHTML=`<b>${on?"✓ ":""}${esc(it.label)}</b><div class="types">${tagHtml}</div>`;
+    if(spec.onToggle){ h.style.cursor="pointer"; h.onclick=()=>spec.onToggle(it.key); }
     list.appendChild(h);
   });
 }
@@ -1586,7 +1759,7 @@ function renderAll(){
 /* ========================= DETAIL DRAWER ========================= */
 function newProject(type){
   const now=new Date().toISOString();
-  const p={ id:uid(), createdAt:now, updatedAt:now, title:"", type, targets:[], date:null, music:"", hooks:[], desc:"", notes:"", storyboard:"",
+  const p={ id:uid(), createdAt:now, updatedAt:now, title:"", type, targets:[], date:null, music:"", hooks:[], tools:[], desc:"", notes:"", storyboard:"",
     storyCodes:[], image:null, imageName:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[] };
   if(type==="reel"){ p.title="New reel"; p.music=""; p.hooks=[];
     p.tasks=[t("Brainstorm","brainstorm"),t("Shoot","shoot"),t("Edit","edit")]; }
@@ -1719,6 +1892,18 @@ function openDetail(id){
   mh.append(field("🎵 Music", inputEl(p.music,v=>{p.music=v;softSave();})), field("🪝 Hooks", hookWrap));
   s.appendChild(mh);
 
+  // Tools / types of content (reels only, v2.1): one chip-field per library dimension. Attaching a
+  // pillar-tagged tool auto-colours the piece for that pillar (handled in openToolPicker).
+  if(p.type==="reel"){
+    if(!Array.isArray(p.tools)) p.tools=[];
+    const dims=reelToolDims();
+    if(dims.length){
+      const grp=document.createElement("div"); grp.className="toolgroup";
+      dims.forEach(dim=> grp.appendChild(toolDimField(p,dim)) );
+      s.appendChild(field("🧰 Tools / types of content", grp));
+    }
+  }
+
   s.appendChild(expandableField("Description / caption", p.desc, v=>{p.desc=v;softSave();}));
 
   const sg=document.createElement("div"); sg.className="stagebtns";
@@ -1775,6 +1960,34 @@ function openDetail(id){
 
   openDrawer();
 }
+// One tool dimension as a chips-and-add control (mirrors the Hooks field). Selected items are the
+// piece's p.tools ids that belong to this dimension; "+ add" opens that dimension's picker.
+function toolDimField(p, dim){
+  const wrap=document.createElement("div"); wrap.className="tooldim";
+  const head=document.createElement("div"); head.className="tooldim-h"; head.textContent=dim.name;
+  const chips=document.createElement("div"); chips.className="hookchips";
+  const render=()=>{
+    chips.innerHTML="";
+    const ids=(p.tools||[]).filter(tid=>(dim.items||[]).some(it=>it.id===tid));
+    ids.forEach(tid=>{
+      const it=(dim.items||[]).find(x=>x.id===tid); if(!it) return;
+      const c=document.createElement("span"); c.className="hookchip";
+      const lbl=document.createElement("span"); lbl.textContent=it.label;
+      const x=document.createElement("button"); x.className="x"; x.type="button"; x.textContent="✕";
+      x.title="Remove"; x.setAttribute("aria-label","Remove "+it.label);
+      x.onclick=()=>{ p.tools=p.tools.filter(t=>t!==tid); softSave(); render(); };
+      c.append(lbl,x); chips.appendChild(c);
+    });
+    if(!ids.length){ const m=document.createElement("span"); m.className="muted help";
+      m.textContent=(dim.items&&dim.items.length)?"none yet":"add some in the Turn-over tab"; chips.appendChild(m); }
+  };
+  render();
+  const add=document.createElement("button"); add.type="button"; add.className="addhook"; add.textContent="＋ add";
+  add.disabled=!(dim.items&&dim.items.length);
+  add.onclick=()=>openToolPicker(p,dim);
+  wrap.append(head,chips,add);
+  return wrap;
+}
 function field(label,el){ const f=document.createElement("div"); f.className="field";
   const l=document.createElement("label"); l.textContent=label; f.append(l,el); return f; }
 function inputEl(val,on){ const i=document.createElement("input"); i.value=val||""; i.oninput=()=>on(i.value); return i; }
@@ -1806,16 +2019,39 @@ function softSave(){ touch(state.projects.find(x=>x.id===openId)); clearTimeout(
 function openDrawer(){ document.getElementById("scrim").classList.add("open"); document.getElementById("drawer").classList.add("open"); }
 function closeDrawer(){ document.getElementById("scrim").classList.remove("open"); document.getElementById("drawer").classList.remove("open"); openId=null; save(); renderAll(); }
 
-/* ========================= HOOK PICKER (multi-select) ========================= */
-// Toggling a hook attaches/removes it on the piece and keeps the modal open so she can pick several;
-// onChange refreshes the chips behind it. She closes with Done / ✕ / Esc when finished.
+/* ========================= LIBRARY PICKERS (multi-select) ========================= */
+// One modal (#hookModal) serves both pickers; its title changes per use.
+function setPickerTitle(t){ const el=document.getElementById("hookModalTitle"); if(el) el.textContent=t; }
+const PILLAR_VOCAB = (()=>{ const o={}; TARGET_ORDER.forEach(k=>o[k]=TARGETS[k].label); return o; })();
+// Hooks: tagged by what they tap into; referenced on the piece by label.
 function openHookPicker(p, onChange){
-  hookFilterType=null;
+  libFilterTag=null;
   if(!Array.isArray(p.hooks)) p.hooks = p.hook ? [p.hook] : [];
-  const rerender=()=>renderHookList("hookModalList","hookModalFilter",{
+  setPickerTitle("Pick hooks");
+  const rerender=()=>renderLibList("hookModalList","hookModalFilter",{
+    vocab:HOOK_TYPES, tagOrder:Object.keys(HOOK_TYPES), general:true,
+    items: libHooks().map(h=>({ key:h.label, label:h.label, tags:h.taps })),
     selected:p.hooks,
     onToggle:(name)=>{ const i=p.hooks.indexOf(name); if(i<0)p.hooks.push(name); else p.hooks.splice(i,1);
       softSave(); if(onChange)onChange(); rerender(); }
+  });
+  rerender();
+  document.getElementById("hookModal").classList.add("open");
+}
+// Attaching a tool unions its pillars into the piece's targets (auto-colour); never auto-removes.
+function attachToolPillars(p, itemId){ const f=findToolItem(itemId); if(!f) return;
+  (f.item.pillars||[]).forEach(k=>{ if(!p.targets.includes(k)) p.targets.push(k); }); }
+// Tools: one picker per dimension; tagged by pillar; referenced on the piece by item id.
+function openToolPicker(p, dim){
+  libFilterTag=null;
+  if(!Array.isArray(p.tools)) p.tools = [];
+  setPickerTitle("Pick: "+dim.name);
+  const rerender=()=>renderLibList("hookModalList","hookModalFilter",{
+    vocab:PILLAR_VOCAB, tagOrder:TARGET_ORDER, general:true,
+    items: (dim.items||[]).map(it=>({ key:it.id, label:it.label, tags:it.pillars })),
+    selected:p.tools,
+    onToggle:(id)=>{ const i=p.tools.indexOf(id); if(i<0){ p.tools.push(id); attachToolPillars(p,id); } else p.tools.splice(i,1);
+      softSave(); renderAll(); if(openId) openDetail(openId); rerender(); }
   });
   rerender();
   document.getElementById("hookModal").classList.add("open");

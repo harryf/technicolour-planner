@@ -63,7 +63,7 @@ state = {
   projects: [ {
     id, createdAt:<ISO>, updatedAt:<ISO>,                   // per-piece timestamps (v1.4.0) — drive Library sort
     title, type:"reel"|"post"|"story", targets:[...],        // targets ⊆ discovery|authority|conversion|retention
-    date:"YYYY-MM-DD"|null, music, hooks:[...], desc, notes, storyboard,   // hooks is an ARRAY (v2.0); storyboard text (v2.0)
+    date:"YYYY-MM-DD"|null, music, hooks:[...], tools:[...], desc, notes, storyboard,  // hooks/tools are ARRAYs; tools = library item ids (v2.1)
     storyCodes:[1..5], image:<dataURL>|null, imageName:<filename>|null,   // see Images below
     stages:{prep,shot,edited,posted}, tasks:[{id,text,activity,done}]   // activity ∈ brainstorm|shoot|edit|justdo (priority removed v2.0)
   } ],
@@ -72,27 +72,64 @@ state = {
               libSort:"recent"|"date"|"colour"|"title",       // remembered Library sort (v1.4.0)
               turnoverTab, turnoverSort,                       // remembered Turn-over sub-tab + sort (v1.5.0)
               boardMode:"week"|"calendar" },                   // remembered Board view (v1.6.0)
-  weekStart, schemaVersion, updatedAt   // schemaVersion is 4 since v2.0
+  library: { hooks:[{id,label,taps:[...]}],                  // editable hook library (v2.1); pieces ref hooks by LABEL
+             toolDims:[{id,name,types:["reel"],items:[{id,label,pillars:[...]}]}] },  // tool dims; pieces ref tools by item ID
+  weekStart, schemaVersion, updatedAt   // schemaVersion is 5 since v2.1
 }
 ```
 
 `settings.lang` may still exist in old saved data (the FR toggle was removed in v1.2.0); it's ignored,
-the board is always English. **Schema is at 4**: migration `1→2` adds `settings.workdays` (default
+the board is always English. **Schema is at 5**: migration `1→2` adds `settings.workdays` (default
 `[T,T,T,T,T,F,T]`, Sat off); migration `2→3` adds per-piece `createdAt`/`updatedAt` (backfilled from the
 existing array order, oldest→newest, via `stampOrder()`, so no piece's relative order is lost);
 migration `3→4` (v2.0) converts the single `hook` string to a `hooks` array, adds the `storyboard`
-field (default `""`), and folds any retired `priority` task colour into `justdo` — all lossless
-(old value read before replacing). Migrations auto-back-up the file before running. A piece is
-"done/out the door" when `stages.posted` is true.
+field, and folds any retired `priority` task colour into `justdo`; migration `4→5` (v2.1) builds
+`state.library` (curated `HOOKS` seed the hook library, `TOOL_DIM_SEED` the tool dimensions) and adds
+`p.tools=[]`. **Migration order matters**: per-version migrations run first (they read the old shape),
+then `migrateState` does defensive normalization (fill `library`/`tools`/`hooks` if still missing) —
+never the other way round, or e.g. the `hook→hooks` carry would be pre-empted. All lossless; migrations
+auto-back-up the file before running. A piece is "done/out the door" when `stages.posted` is true.
 
 **Two independent colour languages, keep them separate, never let them collide:**
 - **type colour** (reel/post/story) + **target colour** (the 4-funnel stripes), describe the piece.
 - **activity colour** (brainstorm/shoot/edit/justdo), describes a *task inside* a piece. Look it up via
   `actColor()`/`actLabel()`, which fall back to `justdo` for any retired key (e.g. old `priority` data).
 
-The colour/label constants (`TARGETS`, `TYPES`, `ACTIVITIES`, `STORY_CODES`, `HOOKS`) are defined
-near the top of `index.html`. If you change a colour or label, mirror it in `src/export.js`
-(it re-declares the same model so the Office exports match the app).
+The colour/label constants (`TARGETS`, `TYPES`, `ACTIVITIES`, `STORY_CODES`, `HOOKS`, `HOOK_TYPES`,
+`TOOL_DIM_SEED`) are defined near the top of `index.html`. As of v2.1 `HOOKS`/`TOOL_DIM_SEED` are only
+**seeds** for `state.library` (built by `defaultLibrary()`); the live, editable copy is `state.library`.
+If you change a colour or label, mirror it in `src/export.js` (it re-declares the same model so the
+Office exports match the app).
+
+## Tools & hooks library (v2.1)
+
+`state.library` is the editable home of hooks + "tools / types of content". Accessors: `libHooks()`,
+`libToolDims()`, `reelToolDims()` (dims whose `types` include the piece type — reels only for now),
+`findToolItem(id)`, `toolLabel(id)`. Two tag vocabularies: **hooks** carry `taps` (from `HOOK_TYPES`:
+curiosity/pattern-interrupt/identity/visual/controversy; none = **General**); **tools** carry `pillars`
+(the 4 `TARGETS`; none = General). Pieces reference **hooks by label** (so rename cascades update
+`p.hooks`) and **tools by item id** (rename-safe).
+
+- **Generic picker** `renderLibList(listId,filterId,spec)` powers both the hook picker and each tool
+  picker (one shared `#hookModal`, title set by `setPickerTitle`). `spec = {items:[{key,label,tags}],
+  vocab, tagOrder, general, selected (live), onToggle}`. `openHookPicker(p,onChange)` and
+  `openToolPicker(p,dim)` build the spec. `libFilterTag` is the picker's tag filter (distinct from the
+  Turn-over browse filter `hookFilterType`).
+- **Auto-colour**: `attachToolPillars(p,itemId)` unions a tool's pillars into `p.targets` on attach;
+  detaching never removes a target (predictable, no surprise un-colouring).
+- **Per-reel UI**: `openDetail` renders a 🧰 Tools group for reels — one `toolDimField(p,dim)` per
+  dimension (chips + "+ add", disabled when the dim has no items yet).
+- **Turn-over manager**: the **Hooks** sub-tab and new **Tools** sub-tab (`#sub-hooks`/`#sub-tools`,
+  `data-sub="hooks"/"tools"`) are full CRUD. Shared widgets: `libCrudCard()` (editable usage card with
+  ✎/🗑 + inline edit form), `addItemForm()`, `tagToggleChips()`, `mkIconBtn()`. Browse-by-pillar: the
+  "Show me:" target filter dims tool cards whose pillars don't intersect `activeFilters`.
+- **Gotcha**: `libCrudCard`'s inline edit form toggles via the `[hidden]` attribute, so its CSS must be
+  `.ucard-edit:not([hidden]){display:flex}` (NOT a bare `display:flex`, which would override `[hidden]`
+  and leave every form open). Tool item lists use a plain `.toollist` (block stack), not the `.hooklist`
+  grid, because only `#hookList` (not nested grids) gets the `display:block` override.
+- Deleting a hook strips its label from every `p.hooks`; deleting a tool item (or a whole dimension)
+  strips the affected ids from every `p.tools`. Exports resolve tool ids via `toolLabel()` (index.html
+  markdown) / `toolNamesOf(state,p)` (`src/export.js`).
 
 ## Storage model (the careful part)
 

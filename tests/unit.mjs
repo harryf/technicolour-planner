@@ -58,7 +58,7 @@ export async function runUnit() {
   s.ok("import guard present", /doesn't look like a planner export/.test(html), "validates shape");
 
   // ---- Library sort (v? — created/updated timestamps + 4 sort options) ----
-  s.ok("schema bumped to 4", ev("CURRENT_SCHEMA===4"), `CURRENT_SCHEMA=${ev("CURRENT_SCHEMA")}`);
+  s.ok("schema bumped to 5", ev("CURRENT_SCHEMA===5"), `CURRENT_SCHEMA=${ev("CURRENT_SCHEMA")}`);
   s.ok("seed pieces carry timestamps", ev("state.projects.every(p=>typeof p.createdAt==='string' && typeof p.updatedAt==='string')"), "createdAt/updatedAt on all");
   s.ok("migrate 2→4 backfills order", ev(`(()=>{const x=migrateState({schemaVersion:2,settings:{},projects:[{id:'a'},{id:'b'},{id:'c'}]});
     return x.schemaVersion===CURRENT_SCHEMA && x.projects.every(p=>p.createdAt) && x.projects[0].createdAt < x.projects[2].createdAt;})()`), "oldest→newest preserved");
@@ -280,8 +280,8 @@ export async function runUnit() {
 
   // ---- NEW (v1.5.0): Turn-over sub-tabs, sort, default-open, activity row format ----
   ev("setView('turnover')");
-  s.ok("Turn-over has 4 sub-tabs", $$("#turnoverTabs [data-sub]").length===4, $$("#turnoverTabs [data-sub]").map(b=>b.dataset.sub).join(","));
-  s.ok("sub-tab order: targets,activities,story,hooks", JSON.stringify($$("#turnoverTabs [data-sub]").map(b=>b.dataset.sub))===JSON.stringify(["targets","activities","story","hooks"]), "priority order");
+  s.ok("Turn-over has 5 sub-tabs", $$("#turnoverTabs [data-sub]").length===5, $$("#turnoverTabs [data-sub]").map(b=>b.dataset.sub).join(","));
+  s.ok("sub-tab order: targets,activities,story,hooks,tools", JSON.stringify($$("#turnoverTabs [data-sub]").map(b=>b.dataset.sub))===JSON.stringify(["targets","activities","story","hooks","tools"]), "priority order");
   s.ok("default sub-tab is Targets (only one visible)", !$("#sub-targets").hidden && $("#sub-activities").hidden && $("#sub-story").hidden && $("#sub-hooks").hidden, "targets shown, rest hidden");
   s.ok("Turn-over sort has 3 options, no colour", JSON.stringify($$("#turnoverSort [data-sort]").map(b=>b.dataset.sort))===JSON.stringify(["recent","date","title"]), "recent/date/title");
   s.ok("Turn-over default sort is 'recent'", ev("turnoverSort()==='recent' && state.settings.turnoverSort==='recent'"), ev("state.settings.turnoverSort"));
@@ -439,10 +439,10 @@ export async function runUnit() {
 
   // ---- NEW (v2.0): quick wins ----
   // 1) multiple hooks per piece (single hook → array, lossless)
-  s.ok("v2: schema 3→4 migrates single hook to a hooks array (lossless)", ev(`(()=>{
+  s.ok("v2: single hook migrates to a hooks array (lossless)", ev(`(()=>{
     const x=migrateState({schemaVersion:3,settings:{},projects:[{id:'h',hook:'Fast cuts',tasks:[]}]});
     const p=x.projects[0];
-    return x.schemaVersion===4 && Array.isArray(p.hooks) && p.hooks.length===1 && p.hooks[0]==='Fast cuts' && !('hook' in p) && p.storyboard==='';
+    return x.schemaVersion===CURRENT_SCHEMA && Array.isArray(p.hooks) && p.hooks.length===1 && p.hooks[0]==='Fast cuts' && !('hook' in p) && p.storyboard==='';
   })()`), "hooks=['Fast cuts'], old key gone");
   s.ok("v2: hooks show as removable chips + an 'add hooks' button", ev(`(()=>{
     const p={id:'mh',title:'MH',type:'reel',targets:['discovery'],hooks:['Fast cuts'],storyboard:'',storyCodes:[],stages:{prep:false,shot:false,edited:false,posted:false},tasks:[]};
@@ -524,6 +524,99 @@ export async function runUnit() {
     clearFilters();
     return a && !b && !c;
   })()`), "authority AND reel only");
+
+  // ---- NEW (v2.1): editable tools & hooks library ----
+  s.ok("v2.1: library seeded (hooks + 5 tool dimensions)", ev(`Array.isArray(state.library.hooks) && state.library.hooks.length>0
+    && Array.isArray(state.library.toolDims) && state.library.toolDims.length===5
+    && state.library.toolDims[0].name==='Tool' && state.library.toolDims[0].items.length>0`), "hooks + Tool/Rule/Theme/Subject/Structure");
+  s.ok("v2.1: schema 4→5 builds library + adds p.tools (lossless)", ev(`(()=>{
+    const x=migrateState({schemaVersion:4,settings:{},projects:[{id:'a',hooks:['X'],tasks:[]}]});
+    return x.schemaVersion===5 && x.library && Array.isArray(x.library.hooks) && Array.isArray(x.library.toolDims)
+      && Array.isArray(x.projects[0].tools) && x.projects[0].hooks[0]==='X';
+  })()`), "library built, tools=[], hooks kept");
+  s.ok("v2.1: hook picker reads from the (editable) library", ev(`(()=>{
+    const id='lh'+Math.random().toString(36).slice(2,7);
+    state.library.hooks.push({id,label:'ZZ Test Hook',taps:['curiosity']});
+    const p={id:'pk',title:'PK',type:'reel',targets:[],hooks:[],tools:[],storyboard:'',storyCodes:[],stages:{},tasks:[]};
+    state.projects.push(p); openHookPicker(p,()=>{});
+    const found=[...document.querySelectorAll('#hookModalList .hook')].some(h=>/ZZ Test Hook/.test(h.textContent));
+    document.getElementById('hookModal').classList.remove('open');
+    state.library.hooks=state.library.hooks.filter(h=>h.id!==id); state.projects=state.projects.filter(x=>x.id!=='pk');
+    return found;
+  })()`), "new library hook appears in picker");
+  s.ok("v2.1: tool dimensions show for reels, not posts", ev(`(()=>{
+    const reel={id:'tr',title:'TR',type:'reel',targets:[],hooks:[],tools:[],storyboard:'',storyCodes:[],stages:{},tasks:[]};
+    const post={id:'tp',title:'TP',type:'post',targets:[],hooks:[],tools:[],storyboard:'',storyCodes:[],stages:{},tasks:[]};
+    state.projects.push(reel,post);
+    openDetail('tr'); const reelHas=!!document.querySelector('#d-scroll .toolgroup') && [...document.querySelectorAll('#d-scroll .tooldim-h')].some(e=>/Tool/.test(e.textContent));
+    openDetail('tp'); const postNo=!document.querySelector('#d-scroll .toolgroup');
+    closeDrawer(); state.projects=state.projects.filter(x=>!['tr','tp'].includes(x.id));
+    return reelHas && postNo;
+  })()`), "reel yes, post no");
+  s.ok("v2.1: attaching a tool auto-adds its pillar (never auto-removes)", ev(`(()=>{
+    const dim=state.library.toolDims[0];
+    const it={id:'ti'+Math.random().toString(36).slice(2,7),label:'ZZ Auth Tool',pillars:['authority']}; dim.items.push(it);
+    const p={id:'at',title:'AT',type:'reel',targets:[],hooks:[],tools:[],storyboard:'',storyCodes:[],stages:{},tasks:[]};
+    state.projects.push(p); openDetail('at'); openToolPicker(p,dim);
+    [...document.querySelectorAll('#hookModalList .hook')].find(h=>/ZZ Auth Tool/.test(h.textContent)).click();
+    const attached = p.tools.includes(it.id) && p.targets.includes('authority');
+    openToolPicker(p,dim);
+    [...document.querySelectorAll('#hookModalList .hook')].find(h=>/ZZ Auth Tool/.test(h.textContent)).click();
+    const stayed = !p.tools.includes(it.id) && p.targets.includes('authority');
+    document.getElementById('hookModal').classList.remove('open'); closeDrawer();
+    dim.items=dim.items.filter(x=>x.id!==it.id); state.projects=state.projects.filter(x=>x.id!=='at');
+    return attached && stayed;
+  })()`), "attach colours pillar; detach keeps it");
+  s.ok("v2.1: Tools manager renders 5 dimension blocks + can add an item", ev(`(()=>{
+    setView('turnover'); state.settings.turnoverTab='tools'; renderTurnover();
+    const blocks=document.querySelectorAll('#toolManager .tooldim-block').length;
+    const before=state.library.toolDims[0].items.length;
+    const form=document.querySelector('#toolManager .tooldim-block .additem');
+    form.querySelector('input').value='ZZ New Item';
+    [...form.querySelectorAll('button')].find(b=>/add/.test(b.textContent)).click();
+    const after=state.library.toolDims[0].items.length;
+    state.library.toolDims[0].items=state.library.toolDims[0].items.filter(it=>it.label!=='ZZ New Item');
+    state.settings.turnoverTab='targets'; setView('board');
+    return blocks===5 && after===before+1;
+  })()`), "5 blocks, add works");
+  s.ok("v2.1: item edit forms start hidden (not the [hidden]+display gotcha)", ev(`(()=>{
+    setView('turnover'); state.settings.turnoverTab='tools'; renderTurnover();
+    const forms=[...document.querySelectorAll('#toolManager .ucard-edit')];
+    const allHidden = forms.length>0 && forms.every(f=>f.hidden===true);
+    state.settings.turnoverTab='targets'; setView('board');
+    return allHidden;
+  })()`) && /\.ucard-edit:not\(\[hidden\]\)\{display:flex\}/.test(html) && !/\.ucard-edit\{[^}]*display:flex/.test(html),
+    "forms hidden + CSS guards with :not([hidden])");
+  s.ok("v2.1: renaming a hook cascades to pieces; deleting strips it", ev(`(()=>{
+    const hid='h'+Math.random().toString(36).slice(2,7);
+    state.library.hooks.push({id:hid,label:'ZZ Ren',taps:[]});
+    const p={id:'rc',title:'RC',type:'reel',targets:[],hooks:['ZZ Ren'],tools:[],storyboard:'',storyCodes:[],stages:{},tasks:[]};
+    state.projects.push(p);
+    setView('turnover'); state.settings.turnoverTab='hooks'; renderTurnover();
+    let card=[...document.querySelectorAll('#hookList .ucard')].find(c=>/ZZ Ren/.test(c.textContent));
+    card.querySelector('.iconbtn[aria-label="Edit"]').click();
+    card.querySelector('.ucard-edit input').value='ZZ Ren2';
+    [...card.querySelectorAll('.ucard-edit button')].find(b=>b.textContent==='Save').click();
+    const renamed = p.hooks.includes('ZZ Ren2') && state.library.hooks.find(h=>h.id===hid).label==='ZZ Ren2';
+    card=[...document.querySelectorAll('#hookList .ucard')].find(c=>/ZZ Ren2/.test(c.textContent));
+    card.querySelector('.iconbtn[aria-label="Delete"]').click();
+    const deleted = !state.library.hooks.some(h=>h.id===hid) && !p.hooks.includes('ZZ Ren2');
+    state.projects=state.projects.filter(x=>x.id!=='rc'); state.settings.turnoverTab='targets'; setView('board');
+    return renamed && deleted;
+  })()`), "rename cascades, delete strips");
+  s.ok("v2.1: browse-by-pillar dims tools that don't serve the filtered target", ev(`(()=>{
+    const dim=state.library.toolDims[0];
+    const a={id:'ba'+Math.random().toString(36).slice(2,6),label:'ZZ AuthOnly',pillars:['authority']};
+    const d={id:'bd'+Math.random().toString(36).slice(2,6),label:'ZZ DiscOnly',pillars:['discovery']};
+    dim.items.push(a,d);
+    setView('turnover'); state.settings.turnoverTab='tools'; clearFilters(); toggleFilter('authority'); renderTurnover();
+    const cA=[...document.querySelectorAll('#toolManager .ucard')].find(c=>/ZZ AuthOnly/.test(c.textContent));
+    const cD=[...document.querySelectorAll('#toolManager .ucard')].find(c=>/ZZ DiscOnly/.test(c.textContent));
+    const ok = cA && !cA.classList.contains('dim') && cD && cD.classList.contains('dim');
+    clearFilters(); dim.items=dim.items.filter(x=>x.id!==a.id && x.id!==d.id);
+    state.settings.turnoverTab='targets'; setView('board');
+    return ok;
+  })()`), "authority tool lit, discovery tool dimmed");
 
   ev("clearFilters(); setBoardMode('week'); setView('board')");
 

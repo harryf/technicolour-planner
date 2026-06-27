@@ -2,6 +2,22 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [2.1.0], 2026-06-27
+The editable tools & hooks library, the second big piece from Sarah's review.
+- **Your hook library is now yours to edit.** In the Turn-over tab's **Hooks** section you can add your
+  own hooks, rename them (it updates everywhere they're used), retag what each one taps into, or delete
+  them. Hooks with no tag show under **General**.
+- **A new "Tools / types of content" library.** A **🧰 Tools** tab groups the building blocks of a reel
+  into **Tool · Rule/advice · Theme · Subject · Structure** (the "Tool" group comes pre-filled with your
+  list). Add/edit/delete tools and whole groups, and **tag each tool with the targets it serves**.
+- **Tools attach to reels and auto-colour them.** Open a reel and you'll find a Tools section under
+  Hooks: pick as many tools as you like per group. Attaching a tool that serves, say, **Authority**
+  automatically adds the Authority colour to that reel (removing the tool leaves the colour, so you stay
+  in control).
+- **See which tools serve a target.** Use the **Show me:** filter while on the Tools tab to light up
+  just the tools that serve Discovery, Authority, Conversion or Retention, your weekly "what should I
+  make next" view.
+
 ## [2.0.0], 2026-06-27
 First batch of changes from Sarah's review: the quick wins. (The bigger pieces, an editable
 tools/hooks library and a lighter Stories area, come next in 2.1 and 2.2.)

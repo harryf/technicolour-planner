@@ -61,6 +61,12 @@ function addDays(s,n){ const d=parseYMD(s); d.setDate(d.getDate()+n); return ymd
 function isoWeekStart(d){ const x=new Date(d); const day=(x.getDay()+6)%7; x.setDate(x.getDate()-day); x.setHours(0,0,0,0); return ymd(x); }
 function weekStartOf(state){ return state && state.weekStart ? state.weekStart : isoWeekStart(new Date()); }
 function projectsOf(state){ return (state && Array.isArray(state.projects)) ? state.projects : []; }
+// Resolve a piece's tool ids (v2.1) to their labels via the library.
+function toolNamesOf(state, p){
+  const dims = (state && state.library && Array.isArray(state.library.toolDims)) ? state.library.toolDims : [];
+  const byId = {}; dims.forEach(d=>(d.items||[]).forEach(it=>byId[it.id]=it.label));
+  return (p.tools||[]).map(id=>byId[id]).filter(Boolean);
+}
 
 /* ========================================================================
    XLSX, Projects + Calendar + Hooks + Turn-over, colour-coded.
@@ -105,7 +111,8 @@ export async function exportXlsx(state){
       if(p.stages && p.stages[s]){ cell.value="✓"; cell.fill=fill(ARGB.post); cell.font=white; cell.alignment={horizontal:"center"}; } });
     const story = (p.storyCodes&&p.storyCodes.length) ? " · story "+p.storyCodes.join("/") : "";
     const sb = (p.storyboard||"").trim() ? " · storyboard: "+p.storyboard.replace(/\n/g," ") : "";
-    r.getCell(15).value = (p.notes || "") + story + sb;
+    const tn = toolNamesOf(state,p); const tools = tn.length ? " · tools: "+tn.join(", ") : "";
+    r.getCell(15).value = (p.notes || "") + story + sb + tools;
   });
   // conditional formatting so NEW rows auto-colour by type letter / target x
   ws.addConditionalFormatting({ ref:"B2:B500", rules:[
@@ -194,6 +201,7 @@ export async function exportDocx(state){
     if(p.storyCodes&&p.storyCodes.length) kids.push(label("Story structure"), line(p.storyCodes.map(c=>c+" "+(STORY_CODES[c]||"")).join(" · ")));
     kids.push(label("🎵 Music"), line(p.music));
     kids.push(label("🪝 Hooks"), line((p.hooks||[]).join(", ")));
+    { const tn=toolNamesOf(state,p); if(tn.length) kids.push(label("🧰 Tools"), line(tn.join(", "))); }
     kids.push(label("Description / caption"), line(p.desc));
     kids.push(label("Tasks"),
       new Paragraph({ children:[
