@@ -342,6 +342,60 @@ export async function runUnit() {
   s.ok("calm mode is described in settings (the 'define' ask)", /Stops all movement, softens the colours/.test(html), "what-it-does help line");
   s.ok("calm toggle adds the lowstim body class", ev(`(()=>{ document.body.classList.remove('lowstim'); const cb=document.getElementById('lowstim'); cb.checked=true; cb.onchange({target:cb}); const on=document.body.classList.contains('lowstim'); cb.checked=false; cb.onchange({target:cb}); return on && !document.body.classList.contains('lowstim'); })()`), "toggle on/off");
 
+  // ---- NEW (v1.6.0): Board calendar view ----
+  s.ok("calendar: boardMode is additive (still schema 3)",
+    ev("CURRENT_SCHEMA===3 && defaultState().settings.boardMode==='week' && migrateState({projects:[]}).settings.boardMode==='week'"),
+    "boardMode defaulted, no schema bump");
+  s.ok("calendar: Week/Calendar toggle switches view + persists", ev(`(()=>{ setView('board'); setBoardMode('calendar');
+    const onCal = boardMode()==='calendar' && document.getElementById('calendar').hidden===false && document.getElementById('board').style.display==='none';
+    setBoardMode('week');
+    const onWeek = boardMode()==='week' && document.getElementById('calendar').hidden===true && document.getElementById('board').style.display!=='none';
+    return onCal && onWeek; })()`), "calendar<->week + display toggling");
+  s.ok("calendar: month helpers (monthOf/sameMonth)",
+    ev("monthOf('2026-06-30').m===5 && monthOf('2026-07-01').m===6 && sameMonth(monthOf('2026-06-01'),monthOf('2026-06-30')) && !sameMonth(monthOf('2026-06-30'),monthOf('2026-07-01'))"),
+    "June=5, July=6, same vs different");
+  s.ok("calendar: range = earliest dated week .. one blank week past the latest", ev(`(()=>{
+    const save0=state.projects; const cur=curWeekStart();
+    const past=addDays(cur,-21), future=addDays(cur,14);
+    state.projects=[{id:'a',date:past},{id:'b',date:future}];
+    const w=calendarWeeks(); state.projects=save0;
+    return w[0]===isoWeekStart(parseYMD(past)) && w[w.length-1]===addDays(isoWeekStart(parseYMD(future)),7); })()`),
+    "starts at earliest, ends one week past latest");
+  s.ok("calendar: a split week is shown once per month (duplicated), others once", ev(`(()=>{
+    const save0=state.projects;
+    state.projects=[{id:'x',date:addDays(curWeekStart(),42),title:'X',type:'reel',targets:['discovery'],stages:{},tasks:[],storyCodes:[]}]; // a 6-week span always crosses a month boundary
+    setView('board'); setBoardMode('calendar');
+    const rows=[...document.querySelectorAll('#calInner .cal-week')].map(r=>[...r.querySelectorAll('.cal-day')].map(c=>c.dataset.date).join(','));
+    const counts={}; rows.forEach(sig=>counts[sig]=(counts[sig]||0)+1);
+    const isBoundary=sig=>{ const ds=sig.split(','); return monthOf(ds[0]).m!==monthOf(ds[6]).m; };
+    let ok=true, sawDup=false;
+    for(const sig in counts){ if(isBoundary(sig)){ sawDup=true; if(counts[sig]!==2) ok=false; } else if(counts[sig]!==1) ok=false; }
+    setBoardMode('week'); state.projects=save0; renderAll();
+    return ok && sawDup; })()`), "boundary week x2, others x1");
+  s.ok("calendar: wrong-month day is a greyed, inert ghost (visible, no add, not draggable)", ev(`(()=>{
+    const save0=state.projects;
+    state.projects=[{id:'g',date:'2026-07-01',title:'G',type:'reel',targets:['discovery'],stages:{},tasks:[],storyCodes:[]}];
+    const tmp=document.createElement('div');
+    calWeekRow(tmp,'2026-06-29',{y:2026,m:5}); // week Mon 29 Jun..Sun 5 Jul rendered under JUNE
+    const jul1=[...tmp.querySelectorAll('.cal-day')].find(c=>c.dataset.date==='2026-07-01');
+    const ghost=jul1.querySelector('.card.ghost');
+    const r = jul1.classList.contains('offmonth') && !!ghost && !jul1.querySelector('.cal-add') && ghost.draggable===false;
+    state.projects=save0; return r; })()`), "1 Jul under June = ghost + inert");
+  s.ok("calendar: in-month day is active (add button + accepts a drop)", ev(`(()=>{
+    const save0=state.projects; const cur=curWeekStart();
+    state.projects=[{id:'d',date:addDays(cur,1),title:'D',type:'reel',targets:['discovery'],stages:{},tasks:[],storyCodes:[]}];
+    setView('board'); setBoardMode('calendar');
+    const card=document.querySelector('#calInner .card.mini');
+    const target=[...document.querySelectorAll('#calInner .cal-day:not(.offmonth)')].find(c=>c.dataset.date!==state.projects[0].date && !c.querySelector('.card'));
+    const tDate=target.dataset.date, hasAdd=!!target.querySelector('.cal-add');
+    const evt=new window.Event('drop',{bubbles:true,cancelable:true});
+    Object.defineProperty(evt,'dataTransfer',{value:{getData:()=>card.dataset.id}});
+    target.dispatchEvent(evt);
+    const moved=state.projects[0].date===tDate;
+    setBoardMode('week'); state.projects=save0; renderAll();
+    return hasAdd && moved; })()`), "add present + drop reschedules");
+  ev("setBoardMode('week'); setView('board')");
+
   return s;
 }
 

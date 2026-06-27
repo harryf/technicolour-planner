@@ -69,7 +69,9 @@ state = {
   } ],
   settings: { lowstim:bool, colors:{<target>:<hex>},        // per-user colour remap
               workdays:[bool x7],                            // Mon..Sun working/posting days (v1.2.0)
-              libSort:"recent"|"date"|"colour"|"title" },    // remembered Library sort (v1.4.0)
+              libSort:"recent"|"date"|"colour"|"title",       // remembered Library sort (v1.4.0)
+              turnoverTab, turnoverSort,                       // remembered Turn-over sub-tab + sort (v1.5.0)
+              boardMode:"week"|"calendar" },                   // remembered Board view (v1.6.0)
   weekStart, schemaVersion, updatedAt   // schemaVersion is 3 since v1.4.0
 }
 ```
@@ -151,6 +153,39 @@ never lose data). The unit that rolls is a **piece** (it owns the `date`), not a
 - **History:** nothing is deleted. Library has a status filter ordered **Still to do · Posted · All**
   (`libStatus`, default `"todo"`, `#libFilter`) so she lands on what's left; posted past pieces live
   there, not in the tray.
+
+## Board calendar view (v1.6.0)
+
+The Board has two modes, chosen by a **View: Week · Calendar** `.seg` (`#boardMode`) in the board
+toolbar. The choice persists in `settings.boardMode` (default `"week"`; additive, defaulted in
+`migrateState`/`defaultState`, **no schema bump**, still schema 3). `boardMode()` reads it,
+`setBoardMode()` writes+saves, `syncBoardMode()` reflects the toggle and shows/hides the right
+container. **Gotcha:** `.board` (`display:grid`) and `#weekNav` (`.row`, `display:flex`) set an
+explicit `display`, which overrides the `[hidden]` attribute, so `syncBoardMode()` hides them with
+`style.display='none'` (not `.hidden`); `#calendar` (plain block) uses `.hidden`. `renderAll()`'s
+board branch calls `syncBoardMode()` then renders `renderCalendar()` or `renderBoard()` (catch-up
+tray renders in both modes, so overdue pieces are handled either way).
+
+- **Layout:** `#calendar` (`.cal-wrap`, the vertical scroller) wraps `#calInner`. A sticky Mon..Sun
+  header (`.cal-dows`, carrying the board's day-hue bars) sits on top; then per-week rows (`.cal-week`,
+  a 7-col grid) under month separators (`.cal-month`, e.g. *July 2026*). `.cal-inner{min-width:760px}`
+  so it scrolls horizontally on a narrow window rather than squishing.
+- **Range (`calendarWeeks()`):** week-start Mondays from the earlier of (this week / earliest dated
+  piece) through **one blank week past the latest dated piece** (never earlier than next week), so
+  there's always a row to plan into and we never render the whole year. (YYYY-MM-DD strings compare
+  lexicographically, so the date maths is plain string compares.)
+- **Split weeks shown twice (Sarah's ask):** a week that straddles a month boundary is rendered once
+  under **each** month. `renderCalendar()` opens the Monday-side month section and renders the week
+  (`calWeekRow(inner, ws, section)`); if the Sunday-side month differs it emits that month's separator
+  and renders the **same week again** under it. In each copy, `calWeekRow` greys the days that belong
+  to the *other* month as **`.offmonth` "ghost" cells**: the planned pieces still show (so she can see
+  what's there) but the cell is **inert** (no `.cal-add`, no drop target) and the ghost cards are
+  `draggable=false` + `.ghost` (`pointer-events:none`). `monthOf()`/`sameMonth()` are the helpers.
+- **Cards + interaction:** calendar cells use a `mini` `projectCard` variant (`{compact:true,mini:true}`
+  → colour stripe + type badge + title only; the `mini` flag skips thumb/meta/stages/rollbtn). Active
+  (in-month) cells get a hover-revealed **`＋`** add button and a drop target (`calDropHandlers`,
+  identical to the week board's drop: set `p.date`, `touch`, `save`, `renderAll`). Today is outlined,
+  non-workdays hatch (`.dayoff`) only on in-month days.
 
 ## Library card date (v1.5.2)
 

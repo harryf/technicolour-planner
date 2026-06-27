@@ -2,6 +2,20 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.6.0], 2026-06-27
+- **A calendar view for the Board.** Up top there's now a **View: Week · Calendar** switch. **Week**
+  is exactly as before. **Calendar** shows your weeks stacked top to bottom, Monday to Sunday, with a
+  **month heading** (e.g. *June 2026*) wherever a new month starts, so you can scroll through your
+  plan and see the shape of it. It opens on **Week** and remembers whichever you pick.
+- **Weeks that cross a month are shown in both months.** A week that runs across the end of one month
+  into the next appears once under each month. The days that belong to the *other* month are **greyed
+  out** in each copy, so e.g. 29–30 June sit live under *June* and greyed under *July*, and 1–5 July
+  sit greyed under *June* and live under *July*. You can still **see** anything planned on a greyed
+  day, you just can't drop or add onto it there (use the month it belongs to).
+- **It only shows the span you need** — from your earliest planned piece to one blank week past your
+  last one, never the whole year. You can **drag a piece onto any day** to reschedule, just like the
+  week board, and there's a quiet **＋** to add a piece on a day.
+
 ## [1.5.3], 2026-06-27
 - **Shorter, clearer button labels.** In the Library the filter row now has a **Filter:** label (like
   **Sort:**), **Still to do** is just **To do**, and the sort buttons are shorter: **Recent**,

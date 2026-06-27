@@ -147,6 +147,36 @@
         padding:8px;font-weight:600;text-align:center}
   .add-card:hover{background:#faf8f4;color:var(--ink)}
 
+  /* ---- Board: calendar (multi-week) view ---- */
+  .cal-wrap{overflow:auto;max-height:calc(100vh - 240px);border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}
+  .cal-inner{min-width:760px}
+  .cal-dows{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:3;background:var(--panel);border-bottom:1px solid var(--line)}
+  .cal-dows .cd{padding:7px 9px}
+  .cal-dows .cd>div:first-child{font-weight:800;font-size:12px}
+  .cal-dows .cd .cbar{height:5px;border-radius:4px;margin-top:5px}
+  .cal-dows .cd.off>div:first-child{color:var(--muted)}
+  .cal-month{position:sticky;top:35px;z-index:2;background:#faf8f4;border-top:1px solid var(--line);
+             border-bottom:1px solid var(--line);padding:5px 11px;font-weight:800;color:var(--muted);font-size:13px}
+  .cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+  .cal-day{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:92px;
+           padding:5px 6px;display:flex;flex-direction:column;gap:5px}
+  .cal-day:nth-child(7n){border-right:none}
+  .cal-day.dayoff{background:repeating-linear-gradient(135deg,#f3f1ec,#f3f1ec 8px,#ecebe4 8px,#ecebe4 16px)}
+  .cal-day.offmonth{background:#f5f3ee;color:var(--muted)}
+  .cal-day.offmonth .cal-dnum{opacity:.55}
+  .cal-day.today{outline:2px solid #5b8def;outline-offset:-2px;border-radius:6px}
+  .cal-day.dragover{background:#eef4ff;outline:1px solid #5b8def;outline-offset:-1px}
+  .cal-dnum{font-size:11px;font-weight:700;color:var(--muted)}
+  .cal-add{margin-top:auto;border:1px dashed var(--line);border-radius:8px;background:transparent;
+           color:var(--muted);font-size:13px;line-height:1;padding:3px;opacity:0;transition:opacity var(--t)}
+  .cal-day:hover .cal-add{opacity:1}
+  .card.mini{box-shadow:none}
+  .card.mini .body{padding:4px 7px}
+  .card.mini .stripes{width:6px}
+  .card.mini .ttl{font-size:12px}
+  .card.mini .badge{width:16px;height:16px;font-size:10px;border-radius:5px}
+  .card.ghost{opacity:.45;pointer-events:none} /* a piece shown in the wrong-month copy of a split week: visible, not usable */
+
   /* ---- Library grid ---- */
   .libgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
   .lib-card{min-height:120px}
@@ -366,13 +396,21 @@
   <!-- BOARD -->
   <section id="view-board">
     <div class="row wrap" style="margin-bottom:12px">
-      <button id="prevWeek">← Previous week</button>
-      <button id="thisWeek">This week</button>
-      <button id="nextWeek">Next week →</button>
+      <span class="muted" style="align-self:center">View:</span>
+      <div class="seg" id="boardMode">
+        <button data-mode="week" aria-pressed="true">Week</button>
+        <button data-mode="calendar" aria-pressed="false">Calendar</button>
+      </div>
+      <span id="weekNav" class="row" style="gap:8px;align-items:center">
+        <button id="prevWeek">← Previous week</button>
+        <button id="thisWeek">This week</button>
+        <button id="nextWeek">Next week →</button>
+      </span>
       <h3 id="weekLabel" class="grow" style="text-align:right;color:var(--muted)"></h3>
     </div>
     <div id="catchup" class="catchup"></div>
     <div class="board" id="board"></div>
+    <div class="cal-wrap" id="calendar" hidden><div class="cal-inner" id="calInner"></div></div>
   </section>
 
   <!-- LIBRARY -->
@@ -582,7 +620,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.5.3";
+const VERSION = "1.6.0";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -742,6 +780,7 @@ function migrateState(s){
   s.settings.libSort = s.settings.libSort || "recent"; // remembered Library sort (autism-safe: it sticks)
   s.settings.turnoverTab = s.settings.turnoverTab || "targets"; // remembered Turn-over sub-tab + sort
   s.settings.turnoverSort = s.settings.turnoverSort || "recent";
+  s.settings.boardMode = s.settings.boardMode || "week"; // remembered Board view: "week" or "calendar"
   stampOrder(s.projects); // defensive: every piece carries created/updated timestamps
   s.updatedAt = s.updatedAt || ""; // content timestamp for reconnect conflict-avoidance
   let v = s.schemaVersion || 0;
@@ -750,7 +789,7 @@ function migrateState(s){
   return s;
 }
 function defaultState(){
-  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice(),libSort:"recent",turnoverTab:"targets",turnoverSort:"recent"},
+  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice(),libSort:"recent",turnoverTab:"targets",turnoverSort:"recent",boardMode:"week"},
            weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
 }
 function nowISO(){ return new Date().toISOString().replace(/[:.]/g,"-"); }
@@ -1014,6 +1053,7 @@ function weekPrefix(weekStart){
 // Human-friendly date: weekday + day + month + a relative-week hint (most people don't think in raw dates).
 const WEEKDAYS_FULL=["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"];
 const MONTHS_SHORT=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS_FULL=["January","February","March","April","May","June","July","August","September","October","November","December"];
 function dateLabel(ymdStr){
   const d=parseYMD(ymdStr);
   const base=`${WEEKDAYS_FULL[(d.getDay()+6)%7]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}`;
@@ -1043,9 +1083,10 @@ function applyColors(){
 }
 function targetColor(k){ return state.settings.colors[k]||TARGETS[k].color; }
 
-function projectCard(p,{compact=false}={}){
+function projectCard(p,{compact=false,mini=false}={}){
   const card=document.createElement("div");
   card.className="card"; card.dataset.id=p.id; card.tabIndex=0;
+  if(mini) card.classList.add("mini"); // calendar cells: colour stripe + badge + title only
   if(!compact) card.classList.add("lib-card");
   if(activeFilters.size){
     const match=p.targets.some(t=>activeFilters.has(t));
@@ -1063,6 +1104,7 @@ function projectCard(p,{compact=false}={}){
   badge.title=TYPES[p.type].label;
   const ttl=document.createElement("span"); ttl.className="ttl"; ttl.textContent=p.title;
   tl.append(badge,ttl); body.appendChild(tl);
+  if(!mini){
   { const tsrc=imageSrcFor(p); if(tsrc){ const im=document.createElement("img"); im.className="thumb"; im.src=tsrc; im.alt=""; body.appendChild(im); } }
   const meta=document.createElement("div"); meta.className="meta";
   for(const k of (p.targets.length?p.targets:["discovery"])){
@@ -1085,6 +1127,7 @@ function projectCard(p,{compact=false}={}){
     q.title="Move this to next week"; q.onclick=(e)=>{ e.stopPropagation(); rollToWeek(p, nextWeekStart()); };
     body.appendChild(q);
   }
+  } // end !mini
   card.appendChild(body);
   card.addEventListener("click",()=>openDetail(p.id));
   card.addEventListener("keydown",e=>{ if(e.key==="Enter") openDetail(p.id); });
@@ -1125,6 +1168,100 @@ function renderBoard(){
   const ws=parseYMD(state.weekStart), we=parseYMD(addDays(state.weekStart,6));
   document.getElementById("weekLabel").textContent=
     `${weekPrefix(state.weekStart)} · ${ws.getDate()}.${ws.getMonth()+1} to ${we.getDate()}.${we.getMonth()+1}.${we.getFullYear()}`;
+}
+
+/* ---- Board: calendar (multi-week) view ---- */
+function monthOf(ymdStr){ const d=parseYMD(ymdStr); return {y:d.getFullYear(),m:d.getMonth()}; }
+function sameMonth(a,b){ return a.y===b.y && a.m===b.m; }
+// The span the calendar covers: from the earliest of (this week, earliest dated piece) through one
+// blank week past the latest dated piece (never earlier than next week), so there's always a row to
+// plan ahead into and we never render the whole year. Returns an array of week-start dates (Mondays).
+function calendarWeeks(){
+  const cur=curWeekStart();
+  let earliest=cur, latest=cur;
+  for(const p of state.projects){ if(!p.date) continue; const w=isoWeekStart(parseYMD(p.date));
+    if(w<earliest) earliest=w; if(w>latest) latest=w; }
+  const end=addDays(latest,7); // one blank week beyond the last planned week
+  const weeks=[]; for(let w=earliest; w<=end; w=addDays(w,7)) weeks.push(w);
+  return weeks;
+}
+function boardMode(){ return (state.settings && state.settings.boardMode)==="calendar" ? "calendar" : "week"; }
+function setBoardMode(m){ state.settings.boardMode=(m==="calendar")?"calendar":"week"; save(); syncBoardMode(); renderAll(); }
+// Reflect the current board mode in the toggle + which container is shown (week board vs calendar).
+function syncBoardMode(){
+  const cal=boardMode()==="calendar";
+  document.querySelectorAll('#boardMode [data-mode]').forEach(b=>b.setAttribute("aria-pressed", b.dataset.mode===boardMode()));
+  // Toggle display directly: .board (grid) and .row (flex) set an explicit display, which overrides
+  // the [hidden] attribute, so hiding them needs style.display, not the hidden property.
+  const wn=document.getElementById("weekNav"); if(wn) wn.style.display=cal?"none":"";
+  const bd=document.getElementById("board"); if(bd) bd.style.display=cal?"none":"";
+  const cw=document.getElementById("calendar"); if(cw) cw.hidden=!cal;
+}
+function calDropHandlers(cell,date){
+  cell.addEventListener("dragover",e=>{ e.preventDefault(); cell.classList.add("dragover"); });
+  cell.addEventListener("dragleave",()=>cell.classList.remove("dragover"));
+  cell.addEventListener("drop",e=>{ e.preventDefault(); cell.classList.remove("dragover");
+    const id=e.dataTransfer.getData("text/plain"); const p=state.projects.find(x=>x.id===id);
+    if(p){ p.date=date; touch(p); save(); renderAll(); } });
+}
+function calMonthSep(inner, mo){
+  const sep=document.createElement("div"); sep.className="cal-month";
+  sep.textContent=`${MONTHS_FULL[mo.m]} ${mo.y}`; inner.appendChild(sep);
+}
+// Render one Mon..Sun week row inside a given month "section". Days that belong to the section month
+// are active (drop target + add button + draggable cards); days in the other month are greyed "ghost"
+// cells, you can still see what's planned there but you can't drop, add, or drag from them.
+function calWeekRow(inner, ws, section){
+  const row=document.createElement("div"); row.className="cal-week";
+  for(let i=0;i<7;i++){
+    const date=addDays(ws,i); const d=parseYMD(date);
+    const off=!(d.getMonth()===section.m && d.getFullYear()===section.y); // belongs to the other month
+    const cell=document.createElement("div");
+    cell.className="cal-day"+(date===TODAY?" today":"")+((!off&&!workdays()[i])?" dayoff":"")+(off?" offmonth":"");
+    cell.dataset.date=date;
+    const num=document.createElement("div"); num.className="cal-dnum";
+    num.textContent = d.getDate()===1 ? (d.getDate()+" "+MONTHS_SHORT[d.getMonth()]) : String(d.getDate());
+    cell.appendChild(num);
+    for(const p of state.projects.filter(p=>p.date===date)){
+      const c=projectCard(p,{compact:true,mini:true});
+      if(off){ c.draggable=false; c.classList.add("ghost"); } // visible but not usable from the wrong month
+      cell.appendChild(c);
+    }
+    if(!off){ // active cell only: can add here + accept drops
+      const add=document.createElement("button"); add.className="cal-add"; add.textContent="＋";
+      add.title="Add a piece on "+dateLabel(date);
+      add.addEventListener("click",()=>{ const np=newProject("reel"); np.date=date; state.projects.push(np); save(); renderAll(); openDetail(np.id); });
+      cell.appendChild(add);
+      calDropHandlers(cell,date);
+    }
+    row.appendChild(cell);
+  }
+  inner.appendChild(row);
+}
+function renderCalendar(){
+  const inner=document.getElementById("calInner"); if(!inner) return; inner.innerHTML="";
+  const hues=["#f9c6c6","#f7d9b0","#f6efb0","#c8e6c0","#bfe0e6","#c9c6ee","#e6c6e0"];
+  // Sticky weekday header (Mon..Sun) carrying the board's day hues, so columns stay recognisable.
+  const dows=document.createElement("div"); dows.className="cal-dows";
+  for(let i=0;i<7;i++){ const c=document.createElement("div"); c.className="cd"+(workdays()[i]?"":" off");
+    const lab=document.createElement("div"); lab.textContent=DOW_EN[i]; c.appendChild(lab);
+    const bar=document.createElement("div"); bar.className="cbar"; bar.style.background=hues[i]; c.appendChild(bar);
+    dows.appendChild(c); }
+  inner.appendChild(dows);
+  const weeks=calendarWeeks();
+  let cur=null; // the month section currently open
+  for(const ws of weeks){
+    const monMonth=monthOf(ws), sunMonth=monthOf(addDays(ws,6));
+    // Open the Monday-side month section, then render the week under it.
+    if(!cur || !sameMonth(cur,monMonth)){ calMonthSep(inner,monMonth); cur=monMonth; }
+    calWeekRow(inner, ws, monMonth);
+    // A week that straddles two months is shown AGAIN under the next month, with the other
+    // month's days greyed, so the same week appears once in each month (Sarah's ask).
+    if(!sameMonth(monMonth,sunMonth)){ calMonthSep(inner,sunMonth); cur=sunMonth; calWeekRow(inner, ws, sunMonth); }
+  }
+  const f=parseYMD(weeks[0]), l=parseYMD(addDays(weeks[weeks.length-1],6));
+  document.getElementById("weekLabel").textContent=
+    `Calendar · ${f.getDate()}.${f.getMonth()+1} to ${l.getDate()}.${l.getMonth()+1}.${l.getFullYear()}`;
 }
 
 // "Still to do": pieces from past weeks that were never posted. Pinned, always in the same place.
@@ -1352,7 +1489,7 @@ function renderHookList(listId,filterId,onPick){
 
 function renderAll(){
   applyColors();
-  if(currentView==="board"){ renderBoard(); renderCatchup(); }
+  if(currentView==="board"){ syncBoardMode(); if(boardMode()==="calendar") renderCalendar(); else renderBoard(); renderCatchup(); }
   if(currentView==="library") renderLibrary();
   if(currentView==="turnover") renderTurnover();
   renderBalance();
@@ -1619,6 +1756,7 @@ document.querySelectorAll(".chip[data-target]").forEach(c=>c.onclick=()=>toggleF
 document.getElementById("clearFilter").onclick=clearFilters;
 document.getElementById("filterMode").onchange=e=>{filterHide=e.target.checked;renderAll();};
 
+document.querySelectorAll('#boardMode [data-mode]').forEach(b=>b.onclick=()=>setBoardMode(b.dataset.mode));
 document.getElementById("prevWeek").onclick=()=>{state.weekStart=addDays(state.weekStart,-7);save();renderBoard();};
 document.getElementById("nextWeek").onclick=()=>{state.weekStart=addDays(state.weekStart,7);save();renderBoard();};
 document.getElementById("thisWeek").onclick=()=>{state.weekStart=isoWeekStart(parseYMD(TODAY));save();renderBoard();};
