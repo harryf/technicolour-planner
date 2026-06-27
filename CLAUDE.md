@@ -161,8 +161,10 @@ compact cards are unaffected): a `.carddate` span (`📅 ` + friendly `dateLabel
 
 ## Library sort (v1.4.0)
 
-The Library has a sort control (`#libSort`, same `.seg` look as the status filter) with four options:
-**Recently worked on** (default), **By date**, **By colour**, **A → Z**. The choice persists in
+The Library toolbar has a **Filter:**-labelled status seg (`#libFilter`: **To do** · **Posted** · **All**)
+and a **Sort:**-labelled sort control (`#libSort`, same `.seg` look) with four options:
+**Recent** (default), **Planned**, **Colour**, **A → Z** (button text only — `data-sort` keys are still
+`recent/date/colour/title`, so logic + tests are unaffected by the labels). The choice persists in
 `settings.libSort` (autism-safe: it sticks across opens), is reflected by `aria-pressed` via
 `syncLibSortButtons()`, and is applied by `sortProjects()` reading the `LIB_SORTS` comparator map in
 `renderLibrary()`. Every comparator is **fully deterministic** (explicit tiebreaks down to `id`) so the
@@ -188,8 +190,9 @@ badge** ("3 pieces" / "not used yet"); each row is a `.urow` that opens the edit
   ones get `hidden`). The active sub-tab persists in `settings.turnoverTab` (default `"targets"`).
   `renderTurnover()` always renders **all** legends into the DOM (cheap; keeps querySelectors + tests
   simple) and `syncTurnoverControls()` toggles which `.subpanel` is visible + reflects the controls.
-- **Sort (v1.5.0):** a shared `.seg` control (`#turnoverSort`) with **Recently worked on** (default),
-  **By date**, **A → Z** — *no "By colour"* (each card already is a colour). Persisted in
+- **Sort (v1.5.0):** a shared `.seg` control (`#turnoverSort`) with **Recent** (default),
+  **Planned**, **A → Z** (button text only; `data-sort` keys still `recent/date/title`) — *no "Colour"*
+  (each card already is a colour). Persisted in
   `settings.turnoverSort`. `sortPiecesT()` reuses the Library `LIB_SORTS` `recent/date/title` comparators
   for piece rows; `sortTasksT()` sorts activity task rows by parent-piece (recent/date) or task text (A→Z).
   **Cards keep their canonical order** (funnel order, code order, etc.) — only the rows inside them sort,

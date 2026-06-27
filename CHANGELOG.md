@@ -2,6 +2,12 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.5.3], 2026-06-27
+- **Shorter, clearer button labels.** In the Library the filter row now has a **Filter:** label (like
+  **Sort:**), **Still to do** is just **To do**, and the sort buttons are shorter: **Recent**,
+  **Planned**, **Colour**, **A → Z**. The Turn-over sort buttons match (**Recent**, **Planned**, **A → Z**).
+  Same behaviour, just tidier wording.
+
 ## [1.5.2], 2026-06-27
 - **Library cards now show their planned date.** Each card that has a date shows it at the bottom
   (on its own line under the progress squares) in plain words — *📅 Monday 8 Jun (this week)* — so you

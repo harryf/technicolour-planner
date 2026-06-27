@@ -379,16 +379,17 @@
   <section id="view-library" hidden>
     <div class="row wrap" style="margin-bottom:12px">
       <input id="libSearch" placeholder="Search projects…" style="max-width:280px" />
+      <span class="muted" style="align-self:center">Filter:</span>
       <div class="seg" id="libFilter">
-        <button data-status="todo" aria-pressed="true">Still to do</button>
+        <button data-status="todo" aria-pressed="true">To do</button>
         <button data-status="posted" aria-pressed="false">Posted</button>
         <button data-status="all" aria-pressed="false">All</button>
       </div>
       <span class="muted" style="align-self:center">Sort:</span>
       <div class="seg" id="libSort">
-        <button data-sort="recent" aria-pressed="true">Recently worked on</button>
-        <button data-sort="date" aria-pressed="false">By date</button>
-        <button data-sort="colour" aria-pressed="false">By colour</button>
+        <button data-sort="recent" aria-pressed="true">Recent</button>
+        <button data-sort="date" aria-pressed="false">Planned</button>
+        <button data-sort="colour" aria-pressed="false">Colour</button>
         <button data-sort="title" aria-pressed="false">A → Z</button>
       </div>
       <span class="muted help">Everything you have, dated and ideas for later. Click any card to open it.</span>
@@ -408,8 +409,8 @@
       <span class="grow"></span>
       <span class="muted" style="align-self:center">Sort:</span>
       <div class="seg" id="turnoverSort">
-        <button data-sort="recent" aria-pressed="true">Recently worked on</button>
-        <button data-sort="date" aria-pressed="false">By date</button>
+        <button data-sort="recent" aria-pressed="true">Recent</button>
+        <button data-sort="date" aria-pressed="false">Planned</button>
         <button data-sort="title" aria-pressed="false">A → Z</button>
       </div>
     </div>
@@ -581,7 +582,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.5.2";
+const VERSION = "1.5.3";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -1171,13 +1172,13 @@ function _targetRank(p){ const tg=(p.targets&&p.targets.length)?p.targets:["disc
   for(let i=0;i<TARGET_ORDER.length;i++){ if(tg.includes(TARGET_ORDER[i])) return i; } return TARGET_ORDER.length; }
 const LIB_SORTS = {
   // Most recently worked on (or created) first, i.e. newest top-left. The default.
-  recent: { label:"Recently worked on", cmp:(a,b)=> _ts(b).localeCompare(_ts(a)) || _cts(b).localeCompare(_cts(a)) || a.id.localeCompare(b.id) },
+  recent: { label:"Recent", cmp:(a,b)=> _ts(b).localeCompare(_ts(a)) || _cts(b).localeCompare(_cts(a)) || a.id.localeCompare(b.id) },
   // Scheduled date, soonest first; pieces with no date sink to the bottom.
-  date:   { label:"By date", cmp:(a,b)=>{ const ad=a.date||"", bd=b.date||"";
+  date:   { label:"Planned", cmp:(a,b)=>{ const ad=a.date||"", bd=b.date||"";
               if(ad&&bd){ const c=ad.localeCompare(bd); if(c) return c; } else if(ad!==bd) return ad?-1:1;
               return _ts(b).localeCompare(_ts(a)) || a.id.localeCompare(b.id); } },
   // Grouped into colour bands by funnel target (discovery→authority→conversion→retention), then by date.
-  colour: { label:"By colour", cmp:(a,b)=> (_targetRank(a)-_targetRank(b)) ||
+  colour: { label:"Colour", cmp:(a,b)=> (_targetRank(a)-_targetRank(b)) ||
               (a.date||"9999-99-99").localeCompare(b.date||"9999-99-99") || a.id.localeCompare(b.id) },
   // Plain A→Z by title.
   title:  { label:"A → Z", cmp:(a,b)=> (a.title||"").localeCompare(b.title||"", undefined, {sensitivity:"base"}) || a.id.localeCompare(b.id) },
