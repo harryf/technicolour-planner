@@ -306,7 +306,12 @@ need the exact approach). If you change the brand mark, regenerate all three.
   not Bun (Bun's jsdom hits a Proxy error); `bun run` just launches the npm scripts, which call `node`.
   - **jsdom unit tests** (`tests/unit.mjs`): render, seed, Store, schema migration, markdown mirror,
     onboarding, the `.gbox` gate collision regression, the existing-folder load (mocked picker),
-    install detection, and the "Open the App" relabel.
+    install detection, the "Open the App" relabel, Library sort, Turn-over, and the Board calendar view.
+  - **Frozen test clock** (`tests/lib/clock.mjs`): the app reads "today" once at load and the board opens
+    on the current week, but the seed data is dated to a fixed week (8–14 Jun 2026). So the
+    "board shows her seeded world" tests freeze "today" to a day inside that week *before any app script
+    runs* (jsdom via `beforeParse`+`window.eval`; real Chrome via `Page.addScriptToEvaluateOnNewDocument`)
+    instead of mutating the seed dates. If you re-seed with a different week, update `DATE_MOCK_SOURCE`.
   - **Real-Chrome integration** (`tests/browser.mjs`, DevTools Protocol): serves the repo's parent so
     the app runs at the real `/technicolour-planner/` subpath, then checks the service-worker cache,
     true offline reload, the three Office exports (valid OOXML zips), no first-load flash, and the

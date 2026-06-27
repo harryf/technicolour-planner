@@ -3,6 +3,7 @@ import { JSDOM, VirtualConsole } from "jsdom";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Suite, sleep } from "./lib/assert.mjs";
+import { DATE_MOCK_SOURCE } from "./lib/clock.mjs";
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 
@@ -14,7 +15,8 @@ export async function runUnit() {
   const errs = [];
   const vc = new VirtualConsole();
   vc.on("jsdomError", e => errs.push(e.message));
-  const dom = new JSDOM(html, { runScripts: "dangerously", virtualConsole: vc, url: "http://localhost/", pretendToBeVisual: true });
+  const dom = new JSDOM(html, { runScripts: "dangerously", virtualConsole: vc, url: "http://localhost/", pretendToBeVisual: true,
+    beforeParse(window) { window.eval(DATE_MOCK_SOURCE); } }); // freeze "today" inside the seed week (deterministic board)
   const { document: doc, window: win } = dom.window;
   await sleep(600); // let async boot() settle
 

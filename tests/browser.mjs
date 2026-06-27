@@ -6,6 +6,7 @@ import { join } from "node:path";
 import { Suite, sleep } from "./lib/assert.mjs";
 import { serve } from "./lib/server.mjs";
 import { launchChrome, newPage } from "./lib/chrome.mjs";
+import { DATE_MOCK_SOURCE } from "./lib/clock.mjs";
 
 const REPO = fileURLToPath(new URL("..", import.meta.url)).replace(/\/$/, "");
 const PARENT = fileURLToPath(new URL("../..", import.meta.url)).replace(/\/$/, "");
@@ -21,6 +22,9 @@ export async function runBrowser() {
   let page;
   try {
     page = await newPage(chrome.port);
+    // Freeze "today" inside the seed week before any app script runs, so the board opens on her seeded
+    // week (deterministic) regardless of the real date. Applies to every document this page loads.
+    await page.cmd("Page.addScriptToEvaluateOnNewDocument", { source: DATE_MOCK_SOURCE });
     await page.goto(APP);
     await sleep(3500); // load + service worker install/activate + cache
 
