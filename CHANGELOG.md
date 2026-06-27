@@ -2,6 +2,14 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.6.2], 2026-06-27
+- **Dragging a "Still to do" item shows just the piece.** When you drag an item from the *Still to do*
+  strip onto the board or calendar, the drag now shows only the little project (colour + title), not the
+  row's buttons trailing along.
+- **The calendar scrolls as one long page now.** It's no longer a box-within-a-box with its own
+  scrollbar, the whole page scrolls. The Mon–Sun day header stays pinned at the top as you scroll, so
+  you never lose track of which column is which day.
+
 ## [1.6.1], 2026-06-27
 - **The week buttons sit in the middle now.** On the Board's **Week** view, *Previous week · This week ·
   Next week* are centred in the toolbar (no longer crowded next to the Week/Calendar switch) and are

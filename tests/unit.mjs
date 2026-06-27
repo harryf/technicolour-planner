@@ -422,6 +422,20 @@ export async function runUnit() {
     const moved = od.date===tDate;
     state.projects=save0; state.weekStart=wk0; renderAll();
     return draggable && moved; })()`), "row draggable + drop reschedules");
+  s.ok("catch-up: drag image is the project only (no action buttons)", ev(`(()=>{
+    const save0=state.projects;
+    const od={id:'di1',title:'DI piece',type:'reel',targets:['authority'],date:'2026-01-01',storyCodes:[],stages:{prep:false,shot:false,edited:false,posted:false},tasks:[]};
+    state.projects=[od]; setView('board'); renderCatchup();
+    const row=document.querySelector('#catchup .catchup-row');
+    let img=null; const dt={ setData(){}, setDragImage(el){ img=el; } };
+    const e=new window.Event('dragstart',{bubbles:true}); Object.defineProperty(e,'dataTransfer',{value:dt});
+    row.dispatchEvent(e);
+    const ok = img && img.classList.contains('cu-main') && img.querySelectorAll('button.pill').length===0 && !!img.querySelector('.stripes') && /DI piece/.test(img.textContent);
+    row.dispatchEvent(new window.Event('dragend',{bubbles:true}));
+    state.projects=save0; renderAll(); return ok; })()`), "drag image = .cu-main, no .pill buttons");
+  s.ok("calendar scrolls with the page (no inner scroll box)",
+    !/\.cal-wrap\{[^}]*overflow/.test(html) && !/\.cal-wrap\{[^}]*max-height/.test(html),
+    "no overflow/max-height on .cal-wrap");
   ev("setBoardMode('week'); setView('board')");
 
   return s;

@@ -172,10 +172,12 @@ tray renders in both modes, so overdue pieces are handled either way). The week-
 `.weeknav`) is **absolute-centred** in the toolbar row (`inset:0;margin:auto;width:fit-content`) and
 bold (`font-weight:700`) to match the `.seg` toggle, so it sits in the middle rather than beside it.
 
-- **Layout:** `#calendar` (`.cal-wrap`, the vertical scroller) wraps `#calInner`. A sticky Mon..Sun
-  header (`.cal-dows`, carrying the board's day-hue bars) sits on top; then per-week rows (`.cal-week`,
-  a 7-col grid) under month separators (`.cal-month`, e.g. *July 2026*). `.cal-inner{min-width:760px}`
-  so it scrolls horizontally on a narrow window rather than squishing.
+- **Layout:** `#calendar` (`.cal-wrap`) wraps `#calInner`. It **scrolls with the page** (a long vertical
+  scroll), **not** an inner scroll box, so don't put `overflow`/`max-height` on `.cal-wrap` (and no
+  `overflow` on any ancestor, or the sticky header breaks). A sticky Mon..Sun header (`.cal-dows`,
+  carrying the board's day-hue bars, `position:sticky;top:0` against the viewport) sits on top; then
+  per-week rows (`.cal-week`, a 7-col `minmax(0,1fr)` grid, same as the week board so no horizontal
+  scroll) under sticky month separators (`.cal-month`, e.g. *July 2026*).
 - **Range (`calendarWeeks()`):** week-start Mondays from the earlier of (this week / earliest dated
   piece) through **one blank week past the latest dated piece** (never earlier than next week), so
   there's always a row to plan into and we never render the whole year. (YYYY-MM-DD strings compare

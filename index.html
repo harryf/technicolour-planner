@@ -116,6 +116,7 @@
            padding:10px 12px;margin-bottom:12px}
   .catchup-row[draggable="true"]{cursor:grab}
   .catchup-row.dragging{opacity:.4}
+  .cu-main{display:flex;align-items:center;gap:10px;min-width:0} /* project identity = the drag image */
   .catchup.empty{color:var(--muted);font-weight:600;text-align:center;background:var(--panel);border-style:dashed}
   .catchup-h{font-weight:800;margin-bottom:8px}
   .catchup-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #f0e3cf;flex-wrap:wrap}
@@ -154,14 +155,15 @@
   .add-card:hover{background:#faf8f4;color:var(--ink)}
 
   /* ---- Board: calendar (multi-week) view ---- */
-  .cal-wrap{overflow:auto;max-height:calc(100vh - 240px);border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);box-shadow:var(--shadow)}
-  .cal-inner{min-width:760px}
-  .cal-dows{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:sticky;top:0;z-index:3;background:var(--panel);border-bottom:1px solid var(--line)}
+  /* The calendar scrolls with the PAGE (no inner scroll box / "iframe"); it can be a long vertical
+     scroll. The Mon..Sun header stays sticky to the top of the viewport as you scroll through it. */
+  .cal-wrap{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+  .cal-dows{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));position:sticky;top:var(--hdr-h,180px);z-index:2;background:var(--panel);border-bottom:1px solid var(--line)}
   .cal-dows .cd{padding:7px 9px}
   .cal-dows .cd>div:first-child{font-weight:800;font-size:12px}
   .cal-dows .cd .cbar{height:5px;border-radius:4px;margin-top:5px}
   .cal-dows .cd.off>div:first-child{color:var(--muted)}
-  .cal-month{position:sticky;top:35px;z-index:2;background:#faf8f4;border-top:1px solid var(--line);
+  .cal-month{background:#faf8f4;border-top:1px solid var(--line);
              border-bottom:1px solid var(--line);padding:5px 11px;font-weight:800;color:var(--muted);font-size:13px}
   .cal-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
   .cal-day{border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-height:92px;
@@ -626,7 +628,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.6.1";
+const VERSION = "1.6.2";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -1247,7 +1249,11 @@ function calWeekRow(inner, ws, section){
   }
   inner.appendChild(row);
 }
+// The app header is sticky; publish its height so the calendar's day-of-week header can stick directly
+// below it (instead of being hidden behind it) as the page scrolls.
+function syncHeaderHeight(){ const h=document.querySelector("header"); if(h) document.documentElement.style.setProperty("--hdr-h", Math.round(h.getBoundingClientRect().height)+"px"); }
 function renderCalendar(){
+  syncHeaderHeight();
   const inner=document.getElementById("calInner"); if(!inner) return; inner.innerHTML="";
   const hues=["#f9c6c6","#f7d9b0","#f6efb0","#c8e6c0","#bfe0e6","#c9c6ee","#e6c6e0"];
   // Sticky weekday header (Mon..Sun) carrying the board's day hues, so columns stay recognisable.
@@ -1285,10 +1291,6 @@ function renderCatchup(){
   box.appendChild(head);
   for(const p of items){
     const row=document.createElement("div"); row.className="catchup-row";
-    // Draggable onto the board / calendar (drop sets its date), same payload as a card.
-    row.draggable=true;
-    row.addEventListener("dragstart",e=>{ e.dataTransfer.setData("text/plain",p.id); row.classList.add("dragging"); });
-    row.addEventListener("dragend",()=>row.classList.remove("dragging"));
     const stripes=document.createElement("div"); stripes.className="stripes";
     const tg=p.targets.length?p.targets:["discovery"];
     for(const k of TARGET_ORDER){ if(tg.includes(k)){ const i=document.createElement("i"); i.style.background=targetColor(k); stripes.appendChild(i);} }
@@ -1310,7 +1312,17 @@ function renderCatchup(){
     bDone.title="Mark as posted (moves it out of here, into your history)";
     bDone.onclick=()=>{ p.stages.posted=true; save(); renderAll(); };
     acts.append(bThis,bNext,bMonth,bDone);
-    row.append(stripes,badge,ttl,when,acts);
+    // Group the project identity (swatch + badge + title) so it can be the drag image on its own.
+    const main=document.createElement("div"); main.className="cu-main";
+    main.append(stripes,badge,ttl);
+    row.append(main,when,acts);
+    // Draggable onto the board / calendar (drop sets its date), same payload as a card. The drag image
+    // is just `main` (the project), so the action buttons don't get dragged along.
+    row.draggable=true;
+    row.addEventListener("dragstart",e=>{ e.dataTransfer.setData("text/plain",p.id);
+      try{ e.dataTransfer.setDragImage(main, 10, 10); }catch(_){}
+      requestAnimationFrame(()=>row.classList.add("dragging")); });
+    row.addEventListener("dragend",()=>row.classList.remove("dragging"));
     box.appendChild(row);
   }
 }
@@ -1773,6 +1785,7 @@ document.getElementById("clearFilter").onclick=clearFilters;
 document.getElementById("filterMode").onchange=e=>{filterHide=e.target.checked;renderAll();};
 
 document.querySelectorAll('#boardMode [data-mode]').forEach(b=>b.onclick=()=>setBoardMode(b.dataset.mode));
+window.addEventListener("resize", syncHeaderHeight);
 document.getElementById("prevWeek").onclick=()=>{state.weekStart=addDays(state.weekStart,-7);save();renderBoard();};
 document.getElementById("nextWeek").onclick=()=>{state.weekStart=addDays(state.weekStart,7);save();renderBoard();};
 document.getElementById("thisWeek").onclick=()=>{state.weekStart=isoWeekStart(parseYMD(TODAY));save();renderBoard();};
