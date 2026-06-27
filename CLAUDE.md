@@ -145,8 +145,12 @@ never lose data). The unit that rolls is a **piece** (it owns the `date`), not a
   hard-coded Saturday rule. **All 7 days always render** (stable grid), days off are never hidden.
 - **Catch-up tray (`#catchup`, `renderCatchup()`):** a pinned strip above the board. `isOverdue(p)` =
   `p.date < curWeekStart() && !stages.posted`; `overduePieces()` lists them oldest-first. Each row has
-  one tap: **→ this week** / **→ next week** (`rollToWeek`) / **✓ posted** / open. Empty → "All caught
-  up ✓". **Nothing moves automatically**, this is the autism-safe contract (no surprises on open).
+  one tap: **→ this week** / **→ next week** (`rollToWeek`) / **→ next month** / **✓ posted** / open.
+  **→ next month** (v1.6.1) sets the date to `firstWorkdayFrom(firstOfNextMonth())`, the first working
+  day on/after the 1st of next month. Rows are also **draggable onto the board / calendar** (v1.6.1):
+  the row carries the same `text/plain` = `p.id` payload as a card, so the existing day-cell drop
+  handlers reschedule it (works in both Week and Calendar views). Empty → "All caught up ✓".
+  **Nothing moves automatically**, this is the autism-safe contract (no surprises on open).
 - **Quick reschedule:** `rollToWeek(p, weekStart)` sets the date to `firstWorkday(weekStart, notBefore)`,
   the first **working** day of that week (skips days off), never before today. Wired to the per-card
   `.rollbtn` ("→ next wk"), the drawer's **today** / **→ next week** buttons, and the tray. Drag-drop stays.
@@ -164,7 +168,9 @@ container. **Gotcha:** `.board` (`display:grid`) and `#weekNav` (`.row`, `displa
 explicit `display`, which overrides the `[hidden]` attribute, so `syncBoardMode()` hides them with
 `style.display='none'` (not `.hidden`); `#calendar` (plain block) uses `.hidden`. `renderAll()`'s
 board branch calls `syncBoardMode()` then renders `renderCalendar()` or `renderBoard()` (catch-up
-tray renders in both modes, so overdue pieces are handled either way).
+tray renders in both modes, so overdue pieces are handled either way). The week-nav group (`#weekNav`,
+`.weeknav`) is **absolute-centred** in the toolbar row (`inset:0;margin:auto;width:fit-content`) and
+bold (`font-weight:700`) to match the `.seg` toggle, so it sits in the middle rather than beside it.
 
 - **Layout:** `#calendar` (`.cal-wrap`, the vertical scroller) wraps `#calInner`. A sticky Mon..Sun
   header (`.cal-dows`, carrying the board's day-hue bars) sits on top; then per-week rows (`.cal-week`,

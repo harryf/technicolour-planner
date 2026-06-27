@@ -2,6 +2,15 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.6.1], 2026-06-27
+- **The week buttons sit in the middle now.** On the Board's **Week** view, *Previous week · This week ·
+  Next week* are centred in the toolbar (no longer crowded next to the Week/Calendar switch) and are
+  bold to match it.
+- **"Still to do" gets a "→ next month".** Alongside *→ this week* and *→ next week*, each item now has
+  a **→ next month** button that drops it on the **first working day of next month** for planning further out.
+- **Drag "Still to do" straight onto the board.** You can now drag an item from the *Still to do* strip
+  onto any day, in **either Week or Calendar view**, to reschedule it, the same as dragging a card.
+
 ## [1.6.0], 2026-06-27
 - **A calendar view for the Board.** Up top there's now a **View: Week · Calendar** switch. **Week**
   is exactly as before. **Calendar** shows your weeks stacked top to bottom, Monday to Sunday, with a

@@ -396,6 +396,32 @@ export async function runUnit() {
     const moved=state.projects[0].date===tDate;
     setBoardMode('week'); state.projects=save0; renderAll();
     return hasAdd && moved; })()`), "add present + drop reschedules");
+  s.ok("week nav is centred + bold like the Week/Calendar toggle",
+    /\.weeknav\{[^}]*position:absolute/.test(html) && /\.weeknav button\{font-weight:700\}/.test(html) && !!$("#weekNav.weeknav"),
+    "centred (absolute) + weight 700");
+  s.ok("catch-up: 'next month' rolls to the first working day of next month", ev(`(()=>{
+    const save0=state.projects;
+    const od={id:'nm1',title:'NM',type:'reel',targets:['authority'],date:'2026-01-01',storyCodes:[],stages:{prep:false,shot:false,edited:false,posted:false},tasks:[]};
+    state.projects=[od]; setView('board'); renderCatchup();
+    const row=document.querySelector('#catchup .catchup-row');
+    const btn=[...row.querySelectorAll('button')].find(b=>/next month/.test(b.textContent));
+    btn.click();
+    const exp=firstWorkdayFrom(firstOfNextMonth());
+    const r = od.date===exp && monthOf(od.date).m===monthOf(firstOfNextMonth()).m && isWorkday(od.date);
+    state.projects=save0; renderAll(); return r; })()`), "first working day, next month");
+  s.ok("catch-up: a 'still to do' row drags onto the board to reschedule", ev(`(()=>{
+    const save0=state.projects, wk0=state.weekStart;
+    const od={id:'dg1',title:'DG',type:'reel',targets:['authority'],date:'2026-01-01',storyCodes:[],stages:{prep:false,shot:false,edited:false,posted:false},tasks:[]};
+    state.projects=[od]; setBoardMode('week'); setView('board'); state.weekStart=curWeekStart(); renderAll();
+    const row=document.querySelector('#catchup .catchup-row');
+    const draggable = row.draggable===true;
+    const targetDay=document.querySelector('#board .day'); const tDate=targetDay.dataset.date;
+    const evt=new window.Event('drop',{bubbles:true,cancelable:true});
+    Object.defineProperty(evt,'dataTransfer',{value:{getData:()=>od.id}});
+    targetDay.dispatchEvent(evt);
+    const moved = od.date===tDate;
+    state.projects=save0; state.weekStart=wk0; renderAll();
+    return draggable && moved; })()`), "row draggable + drop reschedules");
   ev("setBoardMode('week'); setView('board')");
 
   return s;

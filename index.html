@@ -108,8 +108,14 @@
   .day-body{padding:9px;display:flex;flex-direction:column;gap:9px;flex:1}
   .nopost{margin:auto;color:var(--muted);font-weight:700;letter-spacing:.12em;
           transform:rotate(-8deg);font-size:18px;opacity:.55}
+  /* week nav (prev/this/next) centred in the board toolbar, same weight as the Week/Calendar toggle */
+  .weeknav{position:absolute;inset:0;margin:auto;width:fit-content;height:fit-content;
+           display:flex;gap:8px;align-items:center;justify-content:center}
+  .weeknav button{font-weight:700}
   .catchup{background:#fff7ed;border:1px solid #f0d9b8;border-radius:var(--radius);
            padding:10px 12px;margin-bottom:12px}
+  .catchup-row[draggable="true"]{cursor:grab}
+  .catchup-row.dragging{opacity:.4}
   .catchup.empty{color:var(--muted);font-weight:600;text-align:center;background:var(--panel);border-style:dashed}
   .catchup-h{font-weight:800;margin-bottom:8px}
   .catchup-row{display:flex;align-items:center;gap:10px;padding:6px 0;border-top:1px solid #f0e3cf;flex-wrap:wrap}
@@ -395,13 +401,13 @@
 <main>
   <!-- BOARD -->
   <section id="view-board">
-    <div class="row wrap" style="margin-bottom:12px">
+    <div class="row wrap" style="margin-bottom:12px;position:relative">
       <span class="muted" style="align-self:center">View:</span>
       <div class="seg" id="boardMode">
         <button data-mode="week" aria-pressed="true">Week</button>
         <button data-mode="calendar" aria-pressed="false">Calendar</button>
       </div>
-      <span id="weekNav" class="row" style="gap:8px;align-items:center">
+      <span id="weekNav" class="weeknav">
         <button id="prevWeek">← Previous week</button>
         <button id="thisWeek">This week</button>
         <button id="nextWeek">Next week →</button>
@@ -620,7 +626,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.6.0";
+const VERSION = "1.6.1";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -1042,6 +1048,9 @@ function firstWorkday(weekStart, notBefore){
 }
 function curWeekStart(){ return isoWeekStart(parseYMD(TODAY)); }
 function nextWeekStart(){ return addDays(curWeekStart(),7); }
+function firstOfNextMonth(){ const d=parseYMD(TODAY); return ymd(new Date(d.getFullYear(), d.getMonth()+1, 1)); }
+// First working day on or after a date (scans forward; used for the "first slot next month" roll).
+function firstWorkdayFrom(date){ for(let i=0;i<31;i++){ const x=addDays(date,i); if(isWorkday(x)) return x; } return date; }
 // Plain-language label for the week currently shown, relative to the real current week.
 function weekPrefix(weekStart){
   const n=Math.round((parseYMD(weekStart)-parseYMD(curWeekStart()))/(7*86400000));
@@ -1276,6 +1285,10 @@ function renderCatchup(){
   box.appendChild(head);
   for(const p of items){
     const row=document.createElement("div"); row.className="catchup-row";
+    // Draggable onto the board / calendar (drop sets its date), same payload as a card.
+    row.draggable=true;
+    row.addEventListener("dragstart",e=>{ e.dataTransfer.setData("text/plain",p.id); row.classList.add("dragging"); });
+    row.addEventListener("dragend",()=>row.classList.remove("dragging"));
     const stripes=document.createElement("div"); stripes.className="stripes";
     const tg=p.targets.length?p.targets:["discovery"];
     for(const k of TARGET_ORDER){ if(tg.includes(k)){ const i=document.createElement("i"); i.style.background=targetColor(k); stripes.appendChild(i);} }
@@ -1290,10 +1303,13 @@ function renderCatchup(){
     bThis.onclick=()=>rollToWeek(p, curWeekStart());
     const bNext=document.createElement("button"); bNext.className="pill"; bNext.textContent="→ next week";
     bNext.onclick=()=>rollToWeek(p, nextWeekStart());
+    const bMonth=document.createElement("button"); bMonth.className="pill"; bMonth.textContent="→ next month";
+    bMonth.title="Move to the first working day of next month";
+    bMonth.onclick=()=>{ p.date=firstWorkdayFrom(firstOfNextMonth()); touch(p); save(); renderAll(); };
     const bDone=document.createElement("button"); bDone.className="pill"; bDone.textContent="✓ posted";
     bDone.title="Mark as posted (moves it out of here, into your history)";
     bDone.onclick=()=>{ p.stages.posted=true; save(); renderAll(); };
-    acts.append(bThis,bNext,bDone);
+    acts.append(bThis,bNext,bMonth,bDone);
     row.append(stripes,badge,ttl,when,acts);
     box.appendChild(row);
   }
