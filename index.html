@@ -66,6 +66,11 @@
   .tabs{display:flex;gap:4px;background:#ece7df;border-radius:12px;padding:4px}
   .tabs button{border:0;background:transparent;border-radius:9px;padding:7px 14px;font-weight:600;color:var(--muted)}
   .tabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+  /* sub-tabs inside Turn-over (one category at a time, kills the long scroll) */
+  .subtabs{display:flex;gap:4px;background:#ece7df;border-radius:10px;padding:4px;flex-wrap:wrap}
+  .subtabs button{border:0;background:transparent;border-radius:8px;padding:6px 13px;font-weight:600;color:var(--muted)}
+  .subtabs button[aria-selected="true"]{background:var(--panel);color:var(--ink);box-shadow:var(--shadow)}
+  .subpanel[hidden]{display:none}
 
   /* ---- Target filter chips ---- */
   .filters{gap:8px}
@@ -209,6 +214,11 @@
   .urow .stripes i{flex:1;display:block}
   .urow .ttl{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .urow .when{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap;flex:0 0 auto}
+  /* activity task rows read "Project → Task": project is muted context, the task is the bold focus */
+  .urow.taskrow .ttl{display:flex;align-items:baseline;gap:5px;min-width:0}
+  .urow .ttl .tproj{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:400;color:var(--muted)}
+  .urow .ttl .tarrow{flex:0 0 auto;color:var(--muted)}
+  .urow .ttl .tdesc{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700;color:var(--ink)}
   .urow .ac{width:13px;height:13px;border-radius:50%;flex:0 0 auto}
   .urow.posted .ttl{color:var(--muted)}
   .hooksw{display:grid;place-items:center;color:#6b6459;font-weight:800}
@@ -382,28 +392,47 @@
     <div class="libgrid" id="libgrid"></div>
   </section>
 
-  <!-- TURN-OVER -->
+  <!-- TURN-OVER (sub-tabbed: one category at a time, shared sort) -->
   <section id="view-turnover" hidden>
-    <div class="panel">
+    <div class="row wrap" style="margin-bottom:12px;align-items:center">
+      <div class="subtabs" id="turnoverTabs" role="tablist" aria-label="Turn-over categories">
+        <button role="tab" data-sub="targets" aria-selected="true">🎯 Targets</button>
+        <button role="tab" data-sub="activities" aria-selected="false">🎨 Activities</button>
+        <button role="tab" data-sub="story" aria-selected="false">📖 Story codes</button>
+        <button role="tab" data-sub="hooks" aria-selected="false">🪝 Hooks</button>
+      </div>
+      <span class="grow"></span>
+      <span class="muted" style="align-self:center">Sort:</span>
+      <div class="seg" id="turnoverSort">
+        <button data-sort="recent" aria-pressed="true">Recently worked on</button>
+        <button data-sort="date" aria-pressed="false">By date</button>
+        <button data-sort="title" aria-pressed="false">A → Z</button>
+      </div>
+    </div>
+
+    <div class="subpanel panel" id="sub-targets">
       <h2>The four targets</h2>
       <p class="muted">Every piece of content is meant to move someone one step. This is the spine.</p>
       <div class="legend" id="targetLegend"></div>
     </div>
-    <div class="panel">
-      <h2>Story structure codes</h2>
-      <div class="legend" id="storyLegend"></div>
-    </div>
-    <div class="panel">
-      <div class="row"><h2 class="grow">Your hooks</h2>
-        <span class="muted help">filter by what the hook taps into</span></div>
-      <div class="row wrap" id="hookFilter" style="margin:10px 0"></div>
-      <div class="hooklist" id="hookList"></div>
-    </div>
-    <div class="panel">
+
+    <div class="subpanel panel" id="sub-activities" hidden>
       <h2>Activity colours <span class="muted" style="font-weight:400">(for tasks inside a project)</span></h2>
       <p class="muted">The second colour language: what kind of work a task is, so a "brainstorm day"
          or "shoot day" lights up the right tasks across every project.</p>
       <div class="legend" id="activityLegend"></div>
+    </div>
+
+    <div class="subpanel panel" id="sub-story" hidden>
+      <h2>Story structure codes</h2>
+      <div class="legend" id="storyLegend"></div>
+    </div>
+
+    <div class="subpanel panel" id="sub-hooks" hidden>
+      <div class="row"><h2 class="grow">Your hooks</h2>
+        <span class="muted help">filter by what the hook taps into</span></div>
+      <div class="row wrap" id="hookFilter" style="margin:10px 0"></div>
+      <div class="hooklist" id="hookList"></div>
     </div>
   </section>
 </main>
@@ -548,7 +577,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.4.0";
+const VERSION = "1.5.0";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -706,6 +735,8 @@ function migrateState(s){
   s.weekStart = s.weekStart || isoWeekStart(new Date());
   s.projects = Array.isArray(s.projects) ? s.projects : [];
   s.settings.libSort = s.settings.libSort || "recent"; // remembered Library sort (autism-safe: it sticks)
+  s.settings.turnoverTab = s.settings.turnoverTab || "targets"; // remembered Turn-over sub-tab + sort
+  s.settings.turnoverSort = s.settings.turnoverSort || "recent";
   stampOrder(s.projects); // defensive: every piece carries created/updated timestamps
   s.updatedAt = s.updatedAt || ""; // content timestamp for reconnect conflict-avoidance
   let v = s.schemaVersion || 0;
@@ -714,7 +745,7 @@ function migrateState(s){
   return s;
 }
 function defaultState(){
-  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice(),libSort:"recent"},
+  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice(),libSort:"recent",turnoverTab:"targets",turnoverSort:"recent"},
            weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
 }
 function nowISO(){ return new Date().toISOString().replace(/[:.]/g,"-"); }
@@ -1192,18 +1223,28 @@ function pieceUrow(p){
   return row;
 }
 function taskUrow(piece,task){
-  const row=document.createElement("div"); row.className="urow";
+  const row=document.createElement("div"); row.className="urow taskrow"+(task.done?" posted":"");
   const dot=document.createElement("span"); dot.className="ac"; dot.style.background=ACTIVITIES[task.activity].color;
-  const txt=document.createElement("span"); txt.className="ttl"; txt.textContent=task.text||"(task)"; if(task.done) txt.style.textDecoration="line-through";
-  const where=document.createElement("span"); where.className="when"; where.textContent=(task.done?"✓ done · ":"")+(piece.title||"Untitled");
-  row.append(dot,txt,where);
+  // Main label: "Project → Task". Project is context (muted), the task itself is the focus (bold).
+  const ttl=document.createElement("span"); ttl.className="ttl";
+  const proj=document.createElement("span"); proj.className="tproj"; proj.textContent=piece.title||"Untitled";
+  const arr=document.createElement("span"); arr.className="tarrow"; arr.textContent="→";
+  const desc=document.createElement("span"); desc.className="tdesc"; desc.textContent=(task.done?"✓ ":"")+(task.text||"(task)");
+  if(task.done) desc.style.textDecoration="line-through";
+  ttl.append(proj,arr,desc);
+  // Right: the date, long-form, exactly like the Targets sub-tab ("Sunday 28 Jun (this week)").
+  const when=document.createElement("span"); when.className="when";
+  when.textContent=piece.date?dateLabel(piece.date):"no date";
+  row.append(dot,ttl,when);
   row.onclick=()=>openDetail(piece.id);
   return row;
 }
 function usageCard(swatch,labelHTML,descHTML,rows,opts){
-  const noun=(opts&&opts.noun)||"piece", empty=(opts&&opts.empty)||"not used yet";
+  opts=opts||{};
+  const noun=opts.noun||"piece", empty=opts.empty||"not used yet";
   const n=rows.length, zero=n===0;
-  const card=document.createElement("div"); card.className="ucard"+(zero?" zero":"");
+  // Default-open in Turn-over: used cards show their contents straight away; unused (zero) stay closed.
+  const card=document.createElement("div"); card.className="ucard"+(zero?" zero":(opts.open?" open":""));
   const uh=document.createElement("div"); uh.className="uh";
   const lab=document.createElement("div"); lab.className="ulabel";
   lab.innerHTML=`<b>${labelHTML}</b>`+(descHTML?`<br><span class="muted">${descHTML}</span>`:"");
@@ -1217,22 +1258,41 @@ function usageCard(swatch,labelHTML,descHTML,rows,opts){
 }
 function sw(bg,text){ const d=document.createElement("div"); d.className="sw"; if(bg)d.style.background=bg; if(text){d.classList.add("hooksw");d.textContent=text;} return d; }
 
+// Turn-over shares the Library's sort vocabulary minus "colour" (each card already IS a colour).
+// One sort + one active sub-tab, both remembered in settings (predictable on return).
+function turnoverSort(){ const k=state.settings&&state.settings.turnoverSort; return ["recent","date","title"].includes(k)?k:"recent"; }
+function turnoverTab(){ const k=state.settings&&state.settings.turnoverTab; return ["targets","activities","story","hooks"].includes(k)?k:"targets"; }
+function sortPiecesT(list){ return list.slice().sort(LIB_SORTS[turnoverSort()].cmp); }
+function sortTasksT(items){ // items: {piece,task}. Sort by parent piece (recent/date) or by task text (A→Z).
+  const mode=turnoverSort(), arr=items.slice();
+  if(mode==="title") arr.sort((a,b)=> (a.task.text||"").localeCompare(b.task.text||"", undefined,{sensitivity:"base"}) || a.piece.id.localeCompare(b.piece.id));
+  else arr.sort((a,b)=> LIB_SORTS[mode].cmp(a.piece,b.piece) || (a.task.text||"").localeCompare(b.task.text||""));
+  return arr;
+}
+function syncTurnoverControls(){
+  const tab=turnoverTab(), srt=turnoverSort();
+  document.querySelectorAll('#turnoverTabs [data-sub]').forEach(b=>b.setAttribute("aria-selected", b.dataset.sub===tab));
+  ["targets","activities","story","hooks"].forEach(name=>{ const el=document.getElementById("sub-"+name); if(el) el.hidden=(name!==tab); });
+  document.querySelectorAll('#turnoverSort [data-sort]').forEach(b=>b.setAttribute("aria-pressed", b.dataset.sort===srt));
+}
 function renderTurnover(){
+  syncTurnoverControls(); // show the active sub-tab + reflect the sort choice
   const tl=document.getElementById("targetLegend"); tl.innerHTML="";
   TARGET_ORDER.forEach(k=>{
-    const pieces=state.projects.filter(p=>(p.targets.length?p.targets:["discovery"]).includes(k));
-    tl.appendChild(usageCard(sw(targetColor(k)), `${TARGETS[k].label} <span class="muted">(${TARGETS[k].short})</span>`, TARGETS[k].desc, pieces.map(pieceUrow)));
+    const pieces=sortPiecesT(state.projects.filter(p=>(p.targets.length?p.targets:["discovery"]).includes(k)));
+    tl.appendChild(usageCard(sw(targetColor(k)), `${TARGETS[k].label} <span class="muted">(${TARGETS[k].short})</span>`, TARGETS[k].desc, pieces.map(pieceUrow), {open:true}));
   });
   const sl=document.getElementById("storyLegend"); sl.innerHTML="";
   Object.entries(STORY_CODES).forEach(([n,v])=>{
-    const pieces=state.projects.filter(p=>(p.storyCodes||[]).includes(Number(n)));
-    sl.appendChild(usageCard(sw("#efeae1",n), v.label, v.desc, pieces.map(pieceUrow)));
+    const pieces=sortPiecesT(state.projects.filter(p=>(p.storyCodes||[]).includes(Number(n))));
+    sl.appendChild(usageCard(sw("#efeae1",n), v.label, v.desc, pieces.map(pieceUrow), {open:true}));
   });
   renderTurnoverHooks();
   const al=document.getElementById("activityLegend"); al.innerHTML="";
   Object.entries(ACTIVITIES).forEach(([k,v])=>{
-    const rows=[]; state.projects.forEach(p=>(p.tasks||[]).forEach(t=>{ if(t.activity===k) rows.push(taskUrow(p,t)); }));
-    al.appendChild(usageCard(sw(v.color), v.label, "", rows, {noun:"task", empty:"none yet"}));
+    const items=[]; state.projects.forEach(p=>(p.tasks||[]).forEach(t=>{ if(t.activity===k) items.push({piece:p,task:t}); }));
+    const rows=sortTasksT(items).map(it=>taskUrow(it.piece,it.task));
+    al.appendChild(usageCard(sw(v.color), v.label, "", rows, {noun:"task", empty:"none yet", open:true}));
   });
 }
 function hookChip(label,key){
@@ -1247,9 +1307,9 @@ function renderTurnoverHooks(){
   Object.entries(HOOK_TYPES).forEach(([k,lbl])=> f.appendChild(hookChip(lbl,k)) );
   const list=document.getElementById("hookList"); list.innerHTML="";
   HOOKS.filter(([_,types])=>!hookFilterType||types.includes(hookFilterType)).forEach(([name,types])=>{
-    const pieces=state.projects.filter(p=>p.hook===name);
+    const pieces=sortPiecesT(state.projects.filter(p=>p.hook===name));
     const desc=types.map(t=>HOOK_TYPES[t]).join(" · ");
-    list.appendChild(usageCard(sw("#efeae1","🪝"), name, desc, pieces.map(pieceUrow)));
+    list.appendChild(usageCard(sw("#efeae1","🪝"), name, desc, pieces.map(pieceUrow), {open:true}));
   });
 }
 
@@ -1552,6 +1612,12 @@ document.querySelectorAll('#libFilter [data-status]').forEach(b=>b.onclick=()=>{
 });
 document.querySelectorAll('#libSort [data-sort]').forEach(b=>b.onclick=()=>{
   state.settings.libSort=b.dataset.sort; save(); renderLibrary();   // remembered across opens
+});
+document.querySelectorAll('#turnoverTabs [data-sub]').forEach(b=>b.onclick=()=>{
+  state.settings.turnoverTab=b.dataset.sub; save(); renderTurnover();   // remembered across opens
+});
+document.querySelectorAll('#turnoverSort [data-sort]').forEach(b=>b.onclick=()=>{
+  state.settings.turnoverSort=b.dataset.sort; save(); renderTurnover();
 });
 
 document.getElementById("d-close").onclick=closeDrawer;

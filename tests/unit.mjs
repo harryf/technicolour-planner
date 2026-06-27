@@ -262,9 +262,40 @@ export async function runUnit() {
   s.ok("every hook shows a usage card", $$("#hookList .ucard").length===ev("HOOKS.length"), `${$$("#hookList .ucard").length}/${ev("HOOKS.length")}`);
   s.ok("unused hooks are clearly marked", $$("#hookList .ucard.zero").length>0, `${$$("#hookList .ucard.zero").length} unused`);
   s.ok("usage cards show a count badge", $$("#targetLegend .ucard .ucount").length===4, "ucount present");
-  s.ok("a used target expands to its pieces", ev(`(()=>{ const c=[...document.querySelectorAll('#targetLegend .ucard')].find(x=>!x.classList.contains('zero')); c.querySelector('.uh').click(); return c.classList.contains('open') && c.querySelectorAll('.ubody .urow').length>0; })()`), "expand → pieces");
+  s.ok("used cards default to OPEN (no click needed)", ev(`(()=>{ const c=[...document.querySelectorAll('#targetLegend .ucard')].find(x=>!x.classList.contains('zero')); return c.classList.contains('open') && c.querySelectorAll('.ubody .urow').length>0; })()`), "open by default");
   s.ok("clicking a piece row opens its editor", ev(`(()=>{ const r=document.querySelector('#targetLegend .ucard.open .urow'); r.click(); return openId!=null && document.getElementById('drawer').classList.contains('open'); })()`), "opens drawer");
-  ev("closeDrawer(); setView('board')");
+  ev("closeDrawer();");
+
+  // ---- NEW (v1.5.0): Turn-over sub-tabs, sort, default-open, activity row format ----
+  ev("setView('turnover')");
+  s.ok("Turn-over has 4 sub-tabs", $$("#turnoverTabs [data-sub]").length===4, $$("#turnoverTabs [data-sub]").map(b=>b.dataset.sub).join(","));
+  s.ok("sub-tab order: targets,activities,story,hooks", JSON.stringify($$("#turnoverTabs [data-sub]").map(b=>b.dataset.sub))===JSON.stringify(["targets","activities","story","hooks"]), "priority order");
+  s.ok("default sub-tab is Targets (only one visible)", !$("#sub-targets").hidden && $("#sub-activities").hidden && $("#sub-story").hidden && $("#sub-hooks").hidden, "targets shown, rest hidden");
+  s.ok("Turn-over sort has 3 options, no colour", JSON.stringify($$("#turnoverSort [data-sort]").map(b=>b.dataset.sort))===JSON.stringify(["recent","date","title"]), "recent/date/title");
+  s.ok("Turn-over default sort is 'recent'", ev("turnoverSort()==='recent' && state.settings.turnoverSort==='recent'"), ev("state.settings.turnoverSort"));
+  // switching sub-tab shows the right panel + persists
+  ev(`document.querySelector('#turnoverTabs [data-sub=\\"activities\\"]').click()`);
+  s.ok("clicking Activities shows only that panel", $("#sub-activities").hidden===false && $("#sub-targets").hidden===true, "activities visible");
+  s.ok("sub-tab choice persists", ev("state.settings.turnoverTab==='activities'"), ev("state.settings.turnoverTab"));
+  s.ok("activity rows read 'Project → Task' with long date on right", ev(`(()=>{
+    const r=document.querySelector('#activityLegend .ucard.open .urow.taskrow'); if(!r) return false;
+    const proj=r.querySelector('.tproj'), arr=r.querySelector('.tarrow'), desc=r.querySelector('.tdesc');
+    const when=r.querySelector('.when').textContent;
+    const longDate = when==='no date' || /\\((today|this week|next week|last week|in \\d+ weeks|\\d+ weeks ago)\\)/.test(when);
+    return !!proj && !!arr && !!desc && proj.textContent.length>0 && desc.textContent.length>0 && /→/.test(arr.textContent) && longDate; })()`), "project → task(focus) + dateLabel");
+  s.ok("the task text is the visually-strong part (bold)", /\.tdesc\{[^}]*font-weight:700/.test(html.replace(/\s+/g,"")), "tdesc font-weight:700");
+  // A→Z sort actually reorders pieces inside a card
+  ev(`document.querySelector('#turnoverTabs [data-sub=\\"targets\\"]').click(); document.querySelector('#turnoverSort [data-sort=\\"title\\"]').click()`);
+  s.ok("A→Z sort orders pieces inside a card", ev(`(()=>{
+    const k=TARGET_ORDER.find(k=>state.projects.some(p=>(p.targets.length?p.targets:['discovery']).includes(k)));
+    const pieces=state.projects.filter(p=>(p.targets.length?p.targets:['discovery']).includes(k));
+    const exp=JSON.stringify(sortPiecesT(pieces).map(p=>p.title));
+    const c=[...document.querySelectorAll('#targetLegend .ucard.open')][0];
+    const got=JSON.stringify([...c.querySelectorAll('.ubody .urow .ttl')].map(e=>e.textContent));
+    return exp===got; })()`), "DOM order matches sortPiecesT(title)");
+  s.ok("sort choice persists", ev("state.settings.turnoverSort==='title'"), ev("state.settings.turnoverSort"));
+  s.ok("new turnover settings are additive (still schema 3)", ev("CURRENT_SCHEMA===3 && migrateState({schemaVersion:2,settings:{},projects:[]}).settings.turnoverTab==='targets'"), "defaulted, no bump");
+  ev("state.settings.turnoverTab='targets'; state.settings.turnoverSort='recent'; setView('board')");
 
   // ---- NEW (v1.3.1): calmer grouped Settings ----
   s.ok("settings grouped into 4 calm sections", $$("#settingsModal .set-group").length===4, `${$$("#settingsModal .set-group").length} groups`);

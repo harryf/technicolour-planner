@@ -2,6 +2,18 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.5.0], 2026-06-27
+- **The Turn-over tab is tidier — no more endless scrolling.** It's now split into four little tabs:
+  **Targets**, **Activities**, **Story codes**, and **Hooks**. You see one at a time, and it remembers
+  which one you were on. It opens on **Targets**.
+- **Each tab opens with everything already shown** (you don't have to click every card open), and the
+  pieces inside are ordered **most recently worked on** first. You can switch to **By date** or **A → Z**
+  with the **Sort** buttons, and that choice sticks too.
+- **Activity tasks read more clearly.** Each row now shows **its project and then the task itself**
+  (e.g. *Portfolio → Select 9 tattoos*) — the task is in **bold** as the focus, the project sits in
+  front as quiet context, the date is on the right in plain words (*Sunday 28 Jun (this week)*), and a
+  ✓ shows when it's done.
+
 ## [1.4.0], 2026-06-27
 - **Your Library can be sorted now, and it remembers how you like it.** Open the Library and you'll
   see a **Sort** row next to the filters: **Recently worked on**, **By date**, **By colour**, and

@@ -166,18 +166,39 @@ same data always lays out identically — stable layout matters here. Sort drive
 edits, keyed on `openId`), `rollToWeek()`, and the board drag-drop `drop` handler. New/seed pieces get
 timestamps at creation (`newProject()` stamps now; `seedProjects()` returns `stampOrder(...)`).
 
-## Turn-over tab (usage index, v1.3.0)
+## Turn-over tab (usage index, v1.3.0; sub-tabbed + sortable since v1.5.0)
 
 The Turn-over tab is the **colour-first usage index** for her reference vocabulary (`renderTurnover()`).
-Each of the four categories renders as stacked `.ucard`s (built by `usageCard()`): a colour swatch +
-label/desc + a **count badge** ("3 pieces" / "not used yet"), expandable on click to the actual items,
-each a `.urow` that opens the editor (`openDetail`) when clicked:
+Each category renders as `.ucard`s (built by `usageCard()`): a colour swatch + label/desc + a **count
+badge** ("3 pieces" / "not used yet"); each row is a `.urow` that opens the editor (`openDetail`).
 - **Targets** → pieces having that target. **Story codes** → pieces with that code. **Hooks** → pieces
   whose `p.hook` matches (so unused hooks show "not used yet" + `.zero` dimming, answering "which hooks
   haven't I used"); the hook-type filter chips still narrow the list. **Activities** → *tasks* with that
   activity across all pieces (noun "task"), showing done state.
-- Zero-use cards get `.zero` (dimmed, no expand). `pieceUrow()`/`taskUrow()` build the rows; posted
-  pieces show "✓ posted". `renderHookList()` is untouched (still powers the hook-picker modal).
+- **Sub-tabs (v1.5.0):** to kill the long vertical scroll, the four categories are now **sub-tabs**
+  (`#turnoverTabs`, `.subtabs` styled like the main `.tabs`) shown one at a time — order **Targets ·
+  Activities · Story codes · Hooks** (`#sub-targets/-activities/-story/-hooks` `.subpanel`s; non-active
+  ones get `hidden`). The active sub-tab persists in `settings.turnoverTab` (default `"targets"`).
+  `renderTurnover()` always renders **all** legends into the DOM (cheap; keeps querySelectors + tests
+  simple) and `syncTurnoverControls()` toggles which `.subpanel` is visible + reflects the controls.
+- **Sort (v1.5.0):** a shared `.seg` control (`#turnoverSort`) with **Recently worked on** (default),
+  **By date**, **A → Z** — *no "By colour"* (each card already is a colour). Persisted in
+  `settings.turnoverSort`. `sortPiecesT()` reuses the Library `LIB_SORTS` `recent/date/title` comparators
+  for piece rows; `sortTasksT()` sorts activity task rows by parent-piece (recent/date) or task text (A→Z).
+  **Cards keep their canonical order** (funnel order, code order, etc.) — only the rows inside them sort,
+  so the layout stays stable/learnable; only the *contents* reorder.
+- **Default-open (v1.5.0):** `usageCard(...,{open:true})` opens every **used** card on render (she sees
+  contents without clicking); **zero-use cards stay closed** (so Hooks doesn't explode into ~29 open
+  cards — only the ones she's used). Clicking a card header still toggles it within the session.
+- **Activity rows (v1.5.0):** `taskUrow()` main label reads **"Project → Task"** — `.tproj` (project,
+  muted context, shrinks/ellipsis first) + `.tarrow` ("→", muted) + `.tdesc` (**the task text — the bold
+  focus**, `font-weight:700`); `.urow.taskrow .ttl` is a flexbox so a long project name truncates before
+  the task does. **Date on the right** long-form via `dateLabel()` (same as the Targets sub-tab, e.g.
+  "Sunday 28 Jun (this week)" / "no date"). `✓` prefix + line-through when done; built with DOM nodes
+  (no innerHTML — titles/tasks are user data). Replaces the old task-text-only label + "✓ done · project".
+- Zero-use cards get `.zero` (dimmed, no expand). `renderHookList()` is untouched (still powers the
+  hook-picker modal). Both new settings (`turnoverTab`, `turnoverSort`) are **additive** — defaulted in
+  `migrateState`/`defaultState`, **no schema bump** (still schema 3).
 - **"+ New" is disabled on this tab** (`setView` sets `#newBtn.disabled` when `v==="turnover"`) — you
   can't create a piece here; add from Board/Library. `button:disabled{opacity:.45}`.
 
