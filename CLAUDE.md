@@ -196,6 +196,12 @@ badge** ("3 pieces" / "not used yet"); each row is a `.urow` that opens the edit
   the task does. **Date on the right** long-form via `dateLabel()` (same as the Targets sub-tab, e.g.
   "Sunday 28 Jun (this week)" / "no date"). `✓` prefix + line-through when done; built with DOM nodes
   (no innerHTML — titles/tasks are user data). Replaces the old task-text-only label + "✓ done · project".
+- **Target filter (v1.5.1):** the global "Show me:" chips / balance bar (`activeFilters` + `filterHide`)
+  now apply to Turn-over too, the same way as Board/Library. `matchesFilter(p)` mirrors `projectCard`'s
+  raw `p.targets.some(...)`; `applyRowFilter(row,piece)` dims (`.urow.dim`) or hides non-matching rows,
+  and `applyCardFilter(card,pieces)` dims/hides (`.ucard.dim`) a card whose pieces none match. Wired in
+  `pieceUrow`/`taskUrow` (rows) and `renderTurnover`/`renderTurnoverHooks` (cards). `renderAll()` already
+  re-renders Turn-over on filter change, so the chips, balance bar, `1`–`4` keys and Esc all work there.
 - Zero-use cards get `.zero` (dimmed, no expand). `renderHookList()` is untouched (still powers the
   hook-picker modal). Both new settings (`turnoverTab`, `turnoverSort`) are **additive** — defaulted in
   `migrateState`/`defaultState`, **no schema bump** (still schema 3).

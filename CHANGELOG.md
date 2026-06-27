@@ -2,6 +2,12 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.5.1], 2026-06-27
+- **The colour buttons at the top now work on the Turn-over tab too.** Tapping **Discovery**,
+  **Authority**, **Conversion**, or **Retention** now greys out everything that isn't about that
+  target on Turn-over — exactly like it already does on the Board and the Library. "Hide non-matching"
+  works there as well. Before, those buttons did nothing on Turn-over.
+
 ## [1.5.0], 2026-06-27
 - **The Turn-over tab is tidier — no more endless scrolling.** It's now split into four little tabs:
   **Targets**, **Activities**, **Story codes**, and **Hooks**. You see one at a time, and it remembers

@@ -295,7 +295,27 @@ export async function runUnit() {
     return exp===got; })()`), "DOM order matches sortPiecesT(title)");
   s.ok("sort choice persists", ev("state.settings.turnoverSort==='title'"), ev("state.settings.turnoverSort"));
   s.ok("new turnover settings are additive (still schema 3)", ev("CURRENT_SCHEMA===3 && migrateState({schemaVersion:2,settings:{},projects:[]}).settings.turnoverTab==='targets'"), "defaulted, no bump");
-  ev("state.settings.turnoverTab='targets'; state.settings.turnoverSort='recent'; setView('board')");
+
+  // ---- NEW: the "Show me:" target chips now filter the Turn-over tab too, same as Board/Library ----
+  s.ok("matchesFilter respects activeFilters", ev(`(()=>{ activeFilters.clear(); activeFilters.add('retention');
+    const a=matchesFilter({targets:['retention']}), b=matchesFilter({targets:['discovery']}); activeFilters.clear(); return a===true && b===false; })()`), "match vs non-match");
+  s.ok("applyRowFilter dims non-matching rows (dim mode)", ev(`(()=>{ activeFilters.clear(); activeFilters.add('retention'); filterHide=false;
+    const r=document.createElement('div'); r.className='urow'; applyRowFilter(r,{targets:['discovery']});
+    const d=r.classList.contains('dim'); activeFilters.clear(); return d; })()`), "row .dim");
+  s.ok("applyRowFilter hides non-matching rows (hide mode)", ev(`(()=>{ activeFilters.clear(); activeFilters.add('retention'); filterHide=true;
+    const r=document.createElement('div'); r.className='urow'; applyRowFilter(r,{targets:['discovery']});
+    const h=r.style.display==='none'; activeFilters.clear(); filterHide=false; return h; })()`), "row hidden");
+  s.ok("applyCardFilter dims a card with no matching pieces", ev(`(()=>{ activeFilters.clear(); activeFilters.add('retention'); filterHide=false;
+    const c=document.createElement('div'); c.className='ucard'; applyCardFilter(c,[{targets:['discovery']},{targets:['authority']}]);
+    const d=c.classList.contains('dim'); activeFilters.clear(); return d; })()`), "card .dim");
+  s.ok("a target chip actually dims Turn-over rows (integration)", ev(`(()=>{ setView('turnover'); state.settings.turnoverTab='targets'; activeFilters.clear(); filterHide=false; renderAll();
+    const before=document.querySelectorAll('#view-turnover .urow.dim').length;
+    activeFilters.add('retention'); renderAll();
+    const after=document.querySelectorAll('#view-turnover .urow.dim').length;
+    activeFilters.clear(); renderAll(); setView('board');
+    return before===0 && after>0; })()`), "0 dimmed → some dimmed when 'retention' selected");
+
+  ev("state.settings.turnoverTab='targets'; state.settings.turnoverSort='recent'; activeFilters.clear(); filterHide=false; setView('board')");
 
   // ---- NEW (v1.3.1): calmer grouped Settings ----
   s.ok("settings grouped into 4 calm sections", $$("#settingsModal .set-group").length===4, `${$$("#settingsModal .set-group").length} groups`);

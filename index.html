@@ -196,6 +196,7 @@
   #targetLegend,#storyLegend,#activityLegend,#hookList{display:block}
   .ucard{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:9px;overflow:hidden}
   .ucard.zero{opacity:.6}
+  .ucard.dim{opacity:.28;filter:grayscale(.4)}   /* a card with nothing matching the active target filter */
   .ucard .uh{display:flex;align-items:center;gap:12px;padding:11px 13px}
   .ucard:not(.zero) .uh{cursor:pointer}
   .ucard .uh:hover{background:#faf8f4}
@@ -210,6 +211,7 @@
   .ucard.open .ubody{display:flex}
   .urow{display:flex;align-items:center;gap:9px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;cursor:pointer;background:var(--bg)}
   .urow:hover{background:#fffdf8}
+  .urow.dim{opacity:.28;filter:grayscale(.4)}   /* a row not matching the active target filter */
   .urow .stripes{display:flex;gap:2px;width:16px;height:16px;border-radius:5px;overflow:hidden;flex:0 0 auto}
   .urow .stripes i{flex:1;display:block}
   .urow .ttl{font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -577,7 +579,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.5.0";
+const VERSION = "1.5.1";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -1219,9 +1221,15 @@ function pieceUrow(p){
   const when=document.createElement("span"); when.className="when";
   when.textContent=(p.stages&&p.stages.posted)?"✓ posted":(p.date?dateLabel(p.date):"no date");
   row.append(stripes,badge,ttl,when);
+  applyRowFilter(row,p);
   row.onclick=()=>openDetail(p.id);
   return row;
 }
+// The "Show me:" target chips / balance bar drive the same activeFilters used on Board + Library.
+// Mirror projectCard's behaviour here: dim non-matching rows, or hide them when "hide non-matching" is on.
+function matchesFilter(p){ return !activeFilters.size || (p.targets||[]).some(t=>activeFilters.has(t)); }
+function applyRowFilter(row,p){ if(activeFilters.size && !matchesFilter(p)){ if(filterHide) row.style.display="none"; else row.classList.add("dim"); } }
+function applyCardFilter(card,pieces){ if(activeFilters.size && !pieces.some(matchesFilter)){ if(filterHide) card.style.display="none"; else card.classList.add("dim"); } }
 function taskUrow(piece,task){
   const row=document.createElement("div"); row.className="urow taskrow"+(task.done?" posted":"");
   const dot=document.createElement("span"); dot.className="ac"; dot.style.background=ACTIVITIES[task.activity].color;
@@ -1236,6 +1244,7 @@ function taskUrow(piece,task){
   const when=document.createElement("span"); when.className="when";
   when.textContent=piece.date?dateLabel(piece.date):"no date";
   row.append(dot,ttl,when);
+  applyRowFilter(row,piece);
   row.onclick=()=>openDetail(piece.id);
   return row;
 }
@@ -1280,19 +1289,22 @@ function renderTurnover(){
   const tl=document.getElementById("targetLegend"); tl.innerHTML="";
   TARGET_ORDER.forEach(k=>{
     const pieces=sortPiecesT(state.projects.filter(p=>(p.targets.length?p.targets:["discovery"]).includes(k)));
-    tl.appendChild(usageCard(sw(targetColor(k)), `${TARGETS[k].label} <span class="muted">(${TARGETS[k].short})</span>`, TARGETS[k].desc, pieces.map(pieceUrow), {open:true}));
+    const card=usageCard(sw(targetColor(k)), `${TARGETS[k].label} <span class="muted">(${TARGETS[k].short})</span>`, TARGETS[k].desc, pieces.map(pieceUrow), {open:true});
+    applyCardFilter(card,pieces); tl.appendChild(card);
   });
   const sl=document.getElementById("storyLegend"); sl.innerHTML="";
   Object.entries(STORY_CODES).forEach(([n,v])=>{
     const pieces=sortPiecesT(state.projects.filter(p=>(p.storyCodes||[]).includes(Number(n))));
-    sl.appendChild(usageCard(sw("#efeae1",n), v.label, v.desc, pieces.map(pieceUrow), {open:true}));
+    const card=usageCard(sw("#efeae1",n), v.label, v.desc, pieces.map(pieceUrow), {open:true});
+    applyCardFilter(card,pieces); sl.appendChild(card);
   });
   renderTurnoverHooks();
   const al=document.getElementById("activityLegend"); al.innerHTML="";
   Object.entries(ACTIVITIES).forEach(([k,v])=>{
     const items=[]; state.projects.forEach(p=>(p.tasks||[]).forEach(t=>{ if(t.activity===k) items.push({piece:p,task:t}); }));
     const rows=sortTasksT(items).map(it=>taskUrow(it.piece,it.task));
-    al.appendChild(usageCard(sw(v.color), v.label, "", rows, {noun:"task", empty:"none yet", open:true}));
+    const card=usageCard(sw(v.color), v.label, "", rows, {noun:"task", empty:"none yet", open:true});
+    applyCardFilter(card,items.map(it=>it.piece)); al.appendChild(card);
   });
 }
 function hookChip(label,key){
@@ -1309,7 +1321,8 @@ function renderTurnoverHooks(){
   HOOKS.filter(([_,types])=>!hookFilterType||types.includes(hookFilterType)).forEach(([name,types])=>{
     const pieces=sortPiecesT(state.projects.filter(p=>p.hook===name));
     const desc=types.map(t=>HOOK_TYPES[t]).join(" · ");
-    list.appendChild(usageCard(sw("#efeae1","🪝"), name, desc, pieces.map(pieceUrow), {open:true}));
+    const card=usageCard(sw("#efeae1","🪝"), name, desc, pieces.map(pieceUrow), {open:true});
+    applyCardFilter(card,pieces); list.appendChild(card);
   });
 }
 
