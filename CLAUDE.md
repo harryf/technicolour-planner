@@ -44,7 +44,9 @@ README.md               # Sarah-facing + dev notes
 CHANGELOG.md            # per-release "what's new" (feeds the in-app version-badge text)
 FEATURES.md             # feature/bug backlog, the Sarah → Harry → us → ship loop
 robots.txt              # non-authoritative on a Pages subpath; the noindex META is the real control
-tests/                  # committed test suite: unit.mjs (jsdom) + browser.mjs (Chrome) + run.mjs + lib/
+tests/                  # committed suite: unit.mjs (jsdom) + browser.mjs (Chrome) + upgrade.mjs (SW rollover)
+                        #   + upgrade-data.mjs (real v1.3.3 file → current migrateState) + run.mjs + lib/
+                        #   + fixtures/v1.3.3-state.json (frozen real v1.3.3 saved state, the migration input)
 package.json            # dev-only: the `test` scripts + jsdom devDependency (the app stays buildless)
 ```
 
@@ -59,21 +61,24 @@ package.json            # dev-only: the `test` scripts + jsdom devDependency (th
 ```js
 state = {
   projects: [ {
-    id, title, type:"reel"|"post"|"story", targets:[...],   // targets ⊆ discovery|authority|conversion|retention
+    id, createdAt:<ISO>, updatedAt:<ISO>,                   // per-piece timestamps (v1.4.0) — drive Library sort
+    title, type:"reel"|"post"|"story", targets:[...],        // targets ⊆ discovery|authority|conversion|retention
     date:"YYYY-MM-DD"|null, music, hook, desc, notes,
     storyCodes:[1..5], image:<dataURL>|null, imageName:<filename>|null,   // see Images below
     stages:{prep,shot,edited,posted}, tasks:[{id,text,activity,done}]   // activity ∈ brainstorm|shoot|edit|priority|justdo
   } ],
   settings: { lowstim:bool, colors:{<target>:<hex>},        // per-user colour remap
-              workdays:[bool x7] },                          // Mon..Sun working/posting days (v1.2.0)
-  weekStart, schemaVersion, updatedAt   // schemaVersion is 2 since v1.2.0
+              workdays:[bool x7],                            // Mon..Sun working/posting days (v1.2.0)
+              libSort:"recent"|"date"|"colour"|"title" },    // remembered Library sort (v1.4.0)
+  weekStart, schemaVersion, updatedAt   // schemaVersion is 3 since v1.4.0
 }
 ```
 
 `settings.lang` may still exist in old saved data (the FR toggle was removed in v1.2.0); it's ignored,
-the board is always English. **Schema is at 2**: migration `1→2` adds `settings.workdays` (default
-`[T,T,T,T,T,F,T]`, Sat off) and auto-backs-up the file before migrating. A piece is "done/out the door"
-when `stages.posted` is true.
+the board is always English. **Schema is at 3**: migration `1→2` adds `settings.workdays` (default
+`[T,T,T,T,T,F,T]`, Sat off); migration `2→3` adds per-piece `createdAt`/`updatedAt` (backfilled from the
+existing array order, oldest→newest, via `stampOrder()`, so no piece's relative order is lost). Both
+auto-back-up the file before migrating. A piece is "done/out the door" when `stages.posted` is true.
 
 **Two independent colour languages, keep them separate, never let them collide:**
 - **type colour** (reel/post/story) + **target colour** (the 4-funnel stripes), describe the piece.
@@ -146,6 +151,20 @@ never lose data). The unit that rolls is a **piece** (it owns the `date`), not a
 - **History:** nothing is deleted. Library has a status filter ordered **Still to do · Posted · All**
   (`libStatus`, default `"todo"`, `#libFilter`) so she lands on what's left; posted past pieces live
   there, not in the tray.
+
+## Library sort (v1.4.0)
+
+The Library has a sort control (`#libSort`, same `.seg` look as the status filter) with four options:
+**Recently worked on** (default), **By date**, **By colour**, **A → Z**. The choice persists in
+`settings.libSort` (autism-safe: it sticks across opens), is reflected by `aria-pressed` via
+`syncLibSortButtons()`, and is applied by `sortProjects()` reading the `LIB_SORTS` comparator map in
+`renderLibrary()`. Every comparator is **fully deterministic** (explicit tiebreaks down to `id`) so the
+same data always lays out identically — stable layout matters here. Sort drivers: `_ts(p)` =
+`updatedAt||createdAt` ("recently worked on", newest first), `date` (scheduled date asc, undated last),
+`colour` (grouped into funnel bands by primary target via `_targetRank()` in `TARGET_ORDER`, then date),
+`title` (locale A→Z). `touch(p)` stamps `updatedAt` on every edit — wired into `softSave()` (all drawer
+edits, keyed on `openId`), `rollToWeek()`, and the board drag-drop `drop` handler. New/seed pieces get
+timestamps at creation (`newProject()` stamps now; `seedProjects()` returns `stampOrder(...)`).
 
 ## Turn-over tab (usage index, v1.3.0)
 
@@ -221,6 +240,13 @@ need the exact approach). If you change the brand mark, regenerate all three.
     true offline reload, the three Office exports (valid OOXML zips), no first-load flash, and the
     install relabel. Skips cleanly if no Chrome (set `CHROME_PATH`). CI runs it on push and PR
     (`.github/workflows/tests.yml`). **When you add a behaviour, add a test.**
+  - **Upgrade — SW rollover** (`tests/upgrade.mjs`, real Chrome): a "deployed" new version must fully
+    replace the cached old page (guards the two historic "stuck on old version" bugs).
+  - **Upgrade — data migration** (`tests/upgrade-data.mjs`, jsdom): runs the **real saved state of the
+    previous release** (`tests/fixtures/v1.3.3-state.json`, captured from the `v1.3.3` tag) through the
+    current `migrateState`, plus a live boot from pre-seeded `localStorage`. Asserts no data loss, order
+    preserved, settings kept, idempotency. **On every schema bump, recapture a fixture from the prior
+    tag and add a `<prev>→<new>` case** so each release proves it upgrades the version users actually run.
 - **Deploy:** GitHub Pages via `.github/workflows/deploy.yml` (fires on push to `main` and on `v*`
   tags). `release.yml` cuts a GitHub Release on a `v*` tag. All asset paths are **relative** so the
   app works on the Pages subpath, keep them relative.

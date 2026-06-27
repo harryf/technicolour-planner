@@ -55,6 +55,29 @@ export async function runUnit() {
   s.ok("markdown mirror produced", /Technicolour Planner/.test(ev("toMarkdown(state).slice(0,60)")) && /MD_NAME/.test(html), "toMarkdown + MD write");
   s.ok("import guard present", /doesn't look like a planner export/.test(html), "validates shape");
 
+  // ---- Library sort (v? — created/updated timestamps + 4 sort options) ----
+  s.ok("schema bumped to 3", ev("CURRENT_SCHEMA===3"), `CURRENT_SCHEMA=${ev("CURRENT_SCHEMA")}`);
+  s.ok("seed pieces carry timestamps", ev("state.projects.every(p=>typeof p.createdAt==='string' && typeof p.updatedAt==='string')"), "createdAt/updatedAt on all");
+  s.ok("migrate 2→3 backfills order", ev(`(()=>{const x=migrateState({schemaVersion:2,settings:{},projects:[{id:'a'},{id:'b'},{id:'c'}]});
+    return x.schemaVersion===3 && x.projects.every(p=>p.createdAt) && x.projects[0].createdAt < x.projects[2].createdAt;})()`), "oldest→newest preserved");
+  s.ok("default sort is 'recent'", ev("libSort()==='recent' && state.settings.libSort==='recent'"), ev("state.settings.libSort"));
+  s.ok("touch() bumps updatedAt", ev(`(()=>{const p={id:'z',createdAt:'2000-01-01T00:00:00.000Z',updatedAt:'2000-01-01T00:00:00.000Z'};touch(p);return p.updatedAt>p.createdAt;})()`), "updatedAt moved forward");
+  // sort comparators are deterministic on a synthetic set
+  s.ok("sort 'recent' = newest first", ev(`(()=>{const L=[{id:'1',updatedAt:'2026-01-01T00:00:00Z',createdAt:'2026-01-01T00:00:00Z'},{id:'2',updatedAt:'2026-03-01T00:00:00Z',createdAt:'2026-03-01T00:00:00Z'}];
+    return LIB_SORTS.recent.cmp(L[0],L[1])>0;})()`), "later updatedAt sorts first");
+  s.ok("sort 'date' = undated last", ev(`(()=>{const dated={id:'d',date:'2026-05-01',updatedAt:'',createdAt:''},none={id:'n',date:null,updatedAt:'',createdAt:''};
+    return LIB_SORTS.date.cmp(dated,none)<0 && LIB_SORTS.date.cmp(none,dated)>0;})()`), "dated before undated");
+  s.ok("sort 'colour' = funnel order", ev(`(()=>{const disc={id:'a',targets:['discovery'],date:null},ret={id:'b',targets:['retention'],date:null};
+    return LIB_SORTS.colour.cmp(disc,ret)<0;})()`), "discovery before retention");
+  s.ok("sort 'title' = A→Z", ev(`(()=>{return LIB_SORTS.title.cmp({id:'a',title:'Apple'},{id:'b',title:'Zebra'})<0;})()`), "Apple before Zebra");
+  // end-to-end: switching sort reorders the live grid and persists the choice
+  ev("setView('library'); libStatus='all'; state.settings.libSort='title'; renderLibrary();");
+  const sortedTitles = JSON.parse(ev("JSON.stringify([...document.querySelectorAll('#libgrid .card .ttl')].map(e=>e.textContent))"));
+  const expectedAZ = JSON.parse(ev("JSON.stringify(sortProjects(state.projects).map(p=>p.title))"));
+  s.ok("A→Z grid matches locale sort", JSON.stringify(sortedTitles)===JSON.stringify(expectedAZ), sortedTitles.slice(0,3).join(" | "));
+  s.ok("sort buttons reflect choice", ev(`document.querySelector('#libSort [data-sort=\\"title\\"]').getAttribute('aria-pressed')==='true'`), "title pressed");
+  ev("state.settings.libSort='recent'; libStatus='todo'; setView('board');");
+
   // ---- onboarding + install gate ----
   s.ok("onboarding shown on first run", $("#onbModal").classList.contains("open"), "onb open");
   s.ok("decide-later escape hatch", !!$("#onbLater"), "present");
@@ -184,7 +207,7 @@ export async function runUnit() {
 
   // ---- NEW (v1.2.0): French removed, workdays, catch-up tray, library filter, quick roll ----
   s.ok("French option removed", !/data-lang/.test(html) && !/DOW_FR/.test(html) && !/Français/.test(html), "no lang toggle");
-  s.ok("migration v1->v2 adds workdays (Sat off)", ev("(()=>{ const x=migrateState({projects:[],schemaVersion:1,settings:{lang:'en',colors:{}}}); return x.schemaVersion===2 && Array.isArray(x.settings.workdays) && x.settings.workdays.length===7 && x.settings.workdays[5]===false; })()"), "workdays[5]=false");
+  s.ok("migration v1->v2 adds workdays (Sat off)", ev("(()=>{ const x=migrateState({projects:[],schemaVersion:1,settings:{lang:'en',colors:{}}}); return x.schemaVersion===CURRENT_SCHEMA && Array.isArray(x.settings.workdays) && x.settings.workdays.length===7 && x.settings.workdays[5]===false; })()"), "workdays[5]=false");
   ev("state.settings.workdays=[true,true,true,true,true,false,true]; renderBoard();");
   s.ok("day-off greyed + NO POST when empty", $$("#board .day.dayoff").length>=1 && $$("#board .nopost").length>=1, `${$$("#board .day.dayoff").length} dayoff, ${$$("#board .nopost").length} nopost`);
   s.ok("settings renders 7 workday toggles", (()=>{ ev("buildSettings()"); return $$("#workdays button").length===7; })(), `${$$("#workdays button").length} toggles`);

@@ -1,0 +1,490 @@
+{
+  "projects": [
+    {
+      "id": "ptjdx3ym",
+      "type": "reel",
+      "targets": [
+        "authority"
+      ],
+      "date": "2026-06-09",
+      "music": "This is Halloween",
+      "hook": "Bold text / statement",
+      "desc": "\"When you're a tattoo artist and you get this DM\" → text bubble \"Can we do Tim Burton dogs bracelet?\" → the tattoo. We already did Frankenweenie 6 months ago (you see it healed at the end). My client had the best idea!",
+      "notes": "",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": true,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "pr9kef4a",
+          "text": "Shoot: halloween-girly on phone, receives DM, happy",
+          "activity": "shoot",
+          "done": false
+        },
+        {
+          "id": "pou8gywd",
+          "text": "Edit: create the 'DM' bubble",
+          "activity": "edit",
+          "done": false
+        }
+      ],
+      "title": "Burton dogs"
+    },
+    {
+      "id": "ph4occ13",
+      "type": "post",
+      "targets": [
+        "conversion"
+      ],
+      "date": "2026-06-08",
+      "music": "",
+      "hook": "",
+      "desc": "Colour flash at reduced price — to push myself on colour and promote it. \"Since I started tattooing my goal has been colour…\"",
+      "notes": "Turn-over code: 1234 · Theme: colour · Structure: short reel",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": true,
+        "shot": true,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "p6zv8tso",
+          "text": "Resize tattoos",
+          "activity": "edit",
+          "done": false
+        },
+        {
+          "id": "ptnuhqny",
+          "text": "Caption + censored note",
+          "activity": "justdo",
+          "done": false
+        }
+      ],
+      "title": "ttt design colour (flash promo)"
+    },
+    {
+      "id": "pksfm2gp",
+      "type": "reel",
+      "targets": [
+        "conversion",
+        "discovery"
+      ],
+      "date": "2026-06-10",
+      "music": "",
+      "hook": "",
+      "desc": "",
+      "notes": "",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": false,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "pd9at9wq",
+          "text": "Brainstorm",
+          "activity": "brainstorm",
+          "done": false
+        },
+        {
+          "id": "pqgb0qfs",
+          "text": "Prep + edit old footage",
+          "activity": "edit",
+          "done": false
+        },
+        {
+          "id": "pdnp3mp5",
+          "text": "Shoot",
+          "activity": "shoot",
+          "done": false
+        }
+      ],
+      "title": "Carla smiley ttt"
+    },
+    {
+      "id": "pbuihbcx",
+      "type": "reel",
+      "targets": [
+        "retention",
+        "conversion"
+      ],
+      "date": "2026-06-12",
+      "music": "",
+      "hook": "Fast cuts",
+      "desc": "",
+      "notes": "Find photos of me 20→26, choose tattoos per year",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": false,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "pyumixc5",
+          "text": "Choose photos per year",
+          "activity": "brainstorm",
+          "done": false
+        },
+        {
+          "id": "pzfibrtk",
+          "text": "Edit",
+          "activity": "edit",
+          "done": false
+        }
+      ],
+      "title": "1 TTT / year"
+    },
+    {
+      "id": "prf5lksl",
+      "type": "reel",
+      "targets": [
+        "discovery"
+      ],
+      "date": "2026-06-14",
+      "music": "",
+      "hook": "",
+      "desc": "draw butts — trend",
+      "notes": "",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": false,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "p831cqhe",
+          "text": "Draw",
+          "activity": "justdo",
+          "done": false
+        },
+        {
+          "id": "pbutvr5f",
+          "text": "Shoot",
+          "activity": "shoot",
+          "done": false
+        },
+        {
+          "id": "pjcmcnda",
+          "text": "Edit",
+          "activity": "edit",
+          "done": false
+        }
+      ],
+      "title": "Eat my ass trend"
+    },
+    {
+      "id": "p30y7gtg",
+      "type": "reel",
+      "targets": [
+        "discovery"
+      ],
+      "date": null,
+      "music": "Best Friend (feat. Doja Cat) — Saweetie",
+      "hook": "Bold text / statement",
+      "desc": "Two best friends had a GENIUS tattoo idea — \"same same but different\" unicorn + narwhal. What would you and your best friend get?",
+      "notes": "",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": false,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "p92jr4uq",
+          "text": "Brainstorm after client validation",
+          "activity": "brainstorm",
+          "done": false
+        },
+        {
+          "id": "pf8n1jra",
+          "text": "Ask Alysson which photos are OK",
+          "activity": "justdo",
+          "done": false
+        },
+        {
+          "id": "pgqsi6tr",
+          "text": "Edit old footage",
+          "activity": "edit",
+          "done": false
+        }
+      ],
+      "title": "Alysson + Marie bf ttt"
+    },
+    {
+      "id": "pwx4bj5a",
+      "type": "reel",
+      "targets": [
+        "discovery"
+      ],
+      "date": null,
+      "music": "",
+      "hook": "",
+      "desc": "",
+      "notes": "",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": false,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "pyggdxdd",
+          "text": "Shoot + plan",
+          "activity": "shoot",
+          "done": false
+        }
+      ],
+      "title": "Pêcheur trend"
+    },
+    {
+      "id": "pvkjcpit",
+      "type": "post",
+      "targets": [
+        "discovery"
+      ],
+      "date": null,
+      "music": "",
+      "hook": "",
+      "desc": "",
+      "notes": "",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": true,
+        "shot": true,
+        "edited": true,
+        "posted": false
+      },
+      "tasks": [],
+      "title": "Dino (finished sheet)"
+    },
+    {
+      "id": "pa088409",
+      "type": "post",
+      "targets": [
+        "discovery"
+      ],
+      "date": null,
+      "music": "",
+      "hook": "",
+      "desc": "\"I drew a bird on a broomstick so he could fly\"",
+      "notes": "",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": false,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "pmd08f1d",
+          "text": "Shoot",
+          "activity": "shoot",
+          "done": false
+        },
+        {
+          "id": "p4b8hdz6",
+          "text": "Caption",
+          "activity": "justdo",
+          "done": false
+        }
+      ],
+      "title": "Bird on broomstick"
+    },
+    {
+      "id": "pzgut592",
+      "type": "story",
+      "targets": [
+        "retention"
+      ],
+      "date": "2026-06-11",
+      "music": "",
+      "hook": "",
+      "desc": "",
+      "notes": "5.0",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": true,
+        "shot": true,
+        "edited": true,
+        "posted": false
+      },
+      "tasks": [],
+      "title": "Healed — Nim"
+    },
+    {
+      "id": "p0b5brcn",
+      "type": "story",
+      "targets": [
+        "retention"
+      ],
+      "date": null,
+      "music": "",
+      "hook": "",
+      "desc": "",
+      "notes": "5.0",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": true,
+        "shot": true,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [],
+      "title": "Healed — Bryan"
+    },
+    {
+      "id": "p6s5afpp",
+      "type": "post",
+      "targets": [
+        "authority"
+      ],
+      "date": null,
+      "music": "",
+      "hook": "",
+      "desc": "Re-introduction post",
+      "notes": "",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": true,
+        "shot": true,
+        "edited": true,
+        "posted": false
+      },
+      "tasks": [],
+      "title": "I'm back"
+    },
+    {
+      "id": "pwraesfn",
+      "type": "reel",
+      "targets": [
+        "discovery"
+      ],
+      "date": null,
+      "music": "",
+      "hook": "",
+      "desc": "",
+      "notes": "Dinos · Palestine · Erminea 1+2 · birds · witch gun · wands · medieval cats…",
+      "storyCodes": [],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": false,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "p3aft5l1",
+          "text": "Finish flash sheets",
+          "activity": "justdo",
+          "done": false
+        },
+        {
+          "id": "pldhebac",
+          "text": "Photograph + edit",
+          "activity": "edit",
+          "done": false
+        },
+        {
+          "id": "pjvz6z4i",
+          "text": "Pick hooks",
+          "activity": "brainstorm",
+          "done": false
+        }
+      ],
+      "title": "FS never posted"
+    },
+    {
+      "id": "p6t0app5",
+      "type": "story",
+      "targets": [
+        "authority",
+        "discovery"
+      ],
+      "date": null,
+      "music": "",
+      "hook": "",
+      "desc": "Question, then 9 images numbered 1–9 — \"help me define my style\"",
+      "notes": "",
+      "storyCodes": [
+        3
+      ],
+      "image": null,
+      "imageName": null,
+      "stages": {
+        "prep": false,
+        "shot": false,
+        "edited": false,
+        "posted": false
+      },
+      "tasks": [
+        {
+          "id": "p8j4debl",
+          "text": "Select 9 tattoos",
+          "activity": "brainstorm",
+          "done": false
+        }
+      ],
+      "title": "Portfolio — define my style?"
+    }
+  ],
+  "settings": {
+    "lang": "en",
+    "lowstim": false,
+    "colors": {},
+    "workdays": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true
+    ]
+  },
+  "weekStart": "2026-06-22",
+  "schemaVersion": 2,
+  "updatedAt": "2026-06-27T08:29:08.454Z"
+}

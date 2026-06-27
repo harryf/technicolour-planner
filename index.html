@@ -370,6 +370,13 @@
         <button data-status="posted" aria-pressed="false">Posted</button>
         <button data-status="all" aria-pressed="false">All</button>
       </div>
+      <span class="muted" style="align-self:center">Sort:</span>
+      <div class="seg" id="libSort">
+        <button data-sort="recent" aria-pressed="true">Recently worked on</button>
+        <button data-sort="date" aria-pressed="false">By date</button>
+        <button data-sort="colour" aria-pressed="false">By colour</button>
+        <button data-sort="title" aria-pressed="false">A → Z</button>
+      </div>
       <span class="muted help">Everything you have, dated and ideas for later. Click any card to open it.</span>
     </div>
     <div class="libgrid" id="libgrid"></div>
@@ -541,7 +548,7 @@
    localStorage fallback. Export/import keeps it portable forever.
    ========================================================================= */
 
-const VERSION = "1.3.3";
+const VERSION = "1.4.0";
 const CHANGELOG_LATEST = "The week heading now tells you which week you're looking at in plain words " +
   "(This week, Next week, Last week, 2 weeks from now, and so on), and the dates read in dots like " +
   "8.6 to 14.6.2026 instead of slashes and a dash.";
@@ -618,7 +625,7 @@ function seedProjects(){
     id:uid(), type:"reel", targets:[], date:null, music:"", hook:"", desc:"", notes:"",
     storyCodes:[], image:null, imageName:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[]
   }, o);
-  return [
+  return stampOrder([
     P({title:"Burton dogs", type:"reel", targets:["authority"], date:"2026-06-09",
        music:"This is Halloween", hook:"Bold text / statement",
        desc:"\"When you're a tattoo artist and you get this DM\" → text bubble \"Can we do Tim Burton dogs bracelet?\" → the tattoo. We already did Frankenweenie 6 months ago (you see it healed at the end). My client had the best idea!",
@@ -660,7 +667,7 @@ function seedProjects(){
     P({title:"Portfolio — define my style?", type:"story", targets:["authority","discovery"],
        storyCodes:[3], desc:"Question, then 9 images numbered 1–9 — \"help me define my style\"",
        tasks:[t("Select 9 tattoos","brainstorm")]}),
-  ];
+  ]);
 }
 function t(text,activity){return {id:uid(),text,activity,done:false};}
 function uid(){return "p"+Math.random().toString(36).slice(2,9);}
@@ -670,7 +677,7 @@ const LS_KEY="technicolour_planner_v1";
 const OLD_LS_KEY="sarah_planner_v1";       // prototype key, read once for continuity
 const JSON_NAME="Technicolour-Planner-Data.json";
 const MD_NAME="Technicolour-Planner-Data.md";
-const CURRENT_SCHEMA=2;
+const CURRENT_SCHEMA=3;
 const DEFAULT_WORKDAYS=[true,true,true,true,true,false,true]; // Mon..Sun; Sat off by default (her "NO POST")
 const MAX_BACKUPS=20; // timestamped checkpoints kept in the folder (oldest pruned)
 
@@ -679,13 +686,27 @@ const MAX_BACKUPS=20; // timestamped checkpoints kept in the folder (oldest prun
 const migrations = {
   // From schema 1 → 2: add per-weekday work/posting days (Mon..Sun). Sat off preserves the old "NO POST".
   1: (s)=>{ if(!Array.isArray(s.settings.workdays) || s.settings.workdays.length!==7) s.settings.workdays = DEFAULT_WORKDAYS.slice(); },
+  // From schema 2 → 3: give each piece created/updated timestamps so the Library can sort by "recently
+  // worked on". Backfilled from the existing array order (oldest→newest) so nothing's order is lost.
+  2: (s)=>{ stampOrder(s.projects||[]); },
 };
+// Ensure every piece has monotonic created/updated timestamps, preserving the current array order
+// (oldest first). Only fills what's missing, so it's safe to run on every load.
+function stampOrder(projects){
+  const base = Date.now() - (projects.length||0)*1000;
+  projects.forEach((p,i)=>{ if(!p.createdAt) p.createdAt = new Date(base + i*1000).toISOString(); if(!p.updatedAt) p.updatedAt = p.createdAt; });
+  return projects;
+}
+// Mark a single piece as just-worked-on (drives the "Recently worked on" Library sort).
+function touch(p){ if(p) p.updatedAt = new Date().toISOString(); }
 function migrateState(s){
   s.settings = s.settings || {lang:"en",lowstim:false,colors:{}};
   s.settings.colors = s.settings.colors || {};
   if(!Array.isArray(s.settings.workdays) || s.settings.workdays.length!==7) s.settings.workdays = DEFAULT_WORKDAYS.slice();
   s.weekStart = s.weekStart || isoWeekStart(new Date());
   s.projects = Array.isArray(s.projects) ? s.projects : [];
+  s.settings.libSort = s.settings.libSort || "recent"; // remembered Library sort (autism-safe: it sticks)
+  stampOrder(s.projects); // defensive: every piece carries created/updated timestamps
   s.updatedAt = s.updatedAt || ""; // content timestamp for reconnect conflict-avoidance
   let v = s.schemaVersion || 0;
   while(v < CURRENT_SCHEMA){ const fn = migrations[v]; if(fn) fn(s); v++; }
@@ -693,7 +714,7 @@ function migrateState(s){
   return s;
 }
 function defaultState(){
-  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice()},
+  return { projects:seedProjects(), settings:{lang:"en",lowstim:false,colors:{},workdays:DEFAULT_WORKDAYS.slice(),libSort:"recent"},
            weekStart:isoWeekStart(new Date()), schemaVersion:CURRENT_SCHEMA };
 }
 function nowISO(){ return new Date().toISOString().replace(/[:.]/g,"-"); }
@@ -975,7 +996,7 @@ function isOverdue(p){ return !!p.date && p.date < curWeekStart() && !(p.stages 
 function overduePieces(){ return state.projects.filter(isOverdue)
   .sort((a,b)=> (a.date<b.date?-1:a.date>b.date?1:0)); }
 // Quick reschedule: move a piece to the first working day of a target week (this/next), never before today.
-function rollToWeek(p, weekStart){ p.date = firstWorkday(weekStart, weekStart>=curWeekStart()?TODAY:null); save(); renderAll(); }
+function rollToWeek(p, weekStart){ p.date = firstWorkday(weekStart, weekStart>=curWeekStart()?TODAY:null); touch(p); save(); renderAll(); }
 
 /* ========================= RENDER ========================= */
 function applyColors(){
@@ -1058,7 +1079,7 @@ function renderBoard(){
     col.addEventListener("dragleave",()=>col.classList.remove("dragover"));
     col.addEventListener("drop",e=>{ e.preventDefault(); col.classList.remove("dragover");
       const id=e.dataTransfer.getData("text/plain"); const p=state.projects.find(x=>x.id===id);
-      if(p){ p.date=date; save(); renderAll(); } });
+      if(p){ p.date=date; touch(p); save(); renderAll(); } });
     col.appendChild(bodyEl);
     board.appendChild(col);
   }
@@ -1103,13 +1124,39 @@ function renderCatchup(){
 }
 
 let libStatus="todo"; // todo (default, the focus) | posted | all
+
+// Library sort options. Each is fully deterministic (explicit tiebreaks) so the same data always lays
+// out the same way, because a stable layout matters for Sarah. The chosen sort is remembered in settings.
+const _ts =p=> p.updatedAt||p.createdAt||"";   // last touched
+const _cts=p=> p.createdAt||p.updatedAt||"";   // created
+function _targetRank(p){ const tg=(p.targets&&p.targets.length)?p.targets:["discovery"];
+  for(let i=0;i<TARGET_ORDER.length;i++){ if(tg.includes(TARGET_ORDER[i])) return i; } return TARGET_ORDER.length; }
+const LIB_SORTS = {
+  // Most recently worked on (or created) first, i.e. newest top-left. The default.
+  recent: { label:"Recently worked on", cmp:(a,b)=> _ts(b).localeCompare(_ts(a)) || _cts(b).localeCompare(_cts(a)) || a.id.localeCompare(b.id) },
+  // Scheduled date, soonest first; pieces with no date sink to the bottom.
+  date:   { label:"By date", cmp:(a,b)=>{ const ad=a.date||"", bd=b.date||"";
+              if(ad&&bd){ const c=ad.localeCompare(bd); if(c) return c; } else if(ad!==bd) return ad?-1:1;
+              return _ts(b).localeCompare(_ts(a)) || a.id.localeCompare(b.id); } },
+  // Grouped into colour bands by funnel target (discovery→authority→conversion→retention), then by date.
+  colour: { label:"By colour", cmp:(a,b)=> (_targetRank(a)-_targetRank(b)) ||
+              (a.date||"9999-99-99").localeCompare(b.date||"9999-99-99") || a.id.localeCompare(b.id) },
+  // Plain A→Z by title.
+  title:  { label:"A → Z", cmp:(a,b)=> (a.title||"").localeCompare(b.title||"", undefined, {sensitivity:"base"}) || a.id.localeCompare(b.id) },
+};
+function libSort(){ const k=state.settings&&state.settings.libSort; return LIB_SORTS[k]?k:"recent"; }
+function sortProjects(list){ return list.slice().sort(LIB_SORTS[libSort()].cmp); }
+function syncLibSortButtons(){ const cur=libSort();
+  document.querySelectorAll('#libSort [data-sort]').forEach(b=>b.setAttribute("aria-pressed", b.dataset.sort===cur)); }
+
 function renderLibrary(){
   const grid=document.getElementById("libgrid"); grid.innerHTML="";
   const q=(document.getElementById("libSearch").value||"").toLowerCase();
-  state.projects
+  syncLibSortButtons();
+  const matched=state.projects
     .filter(p=>!q || p.title.toLowerCase().includes(q) || (p.notes||"").toLowerCase().includes(q))
-    .filter(p=> libStatus==="all" ? true : libStatus==="posted" ? !!(p.stages&&p.stages.posted) : !(p.stages&&p.stages.posted))
-    .forEach(p=>grid.appendChild(projectCard(p,{})));
+    .filter(p=> libStatus==="all" ? true : libStatus==="posted" ? !!(p.stages&&p.stages.posted) : !(p.stages&&p.stages.posted));
+  sortProjects(matched).forEach(p=>grid.appendChild(projectCard(p,{})));
 }
 
 function renderBalance(){
@@ -1247,7 +1294,8 @@ function renderAll(){
 
 /* ========================= DETAIL DRAWER ========================= */
 function newProject(type){
-  const p={ id:uid(), title:"", type, targets:[], date:null, music:"", hook:"", desc:"", notes:"",
+  const now=new Date().toISOString();
+  const p={ id:uid(), createdAt:now, updatedAt:now, title:"", type, targets:[], date:null, music:"", hook:"", desc:"", notes:"",
     storyCodes:[], image:null, imageName:null, stages:{prep:false,shot:false,edited:false,posted:false}, tasks:[] };
   if(type==="reel"){ p.title="New reel"; p.music=""; p.hook="";
     p.tasks=[t("Brainstorm","brainstorm"),t("Shoot","shoot"),t("Edit","edit")]; }
@@ -1419,7 +1467,7 @@ function openBigEditor(title,sourceTextarea,on){
   m.classList.add("open"); area.focus();
 }
 let softTimer=null;
-function softSave(){ clearTimeout(softTimer); softTimer=setTimeout(()=>{save();if(currentView!=="turnover")renderAll();},200); }
+function softSave(){ touch(state.projects.find(x=>x.id===openId)); clearTimeout(softTimer); softTimer=setTimeout(()=>{save();if(currentView!=="turnover")renderAll();},200); }
 
 function openDrawer(){ document.getElementById("scrim").classList.add("open"); document.getElementById("drawer").classList.add("open"); }
 function closeDrawer(){ document.getElementById("scrim").classList.remove("open"); document.getElementById("drawer").classList.remove("open"); openId=null; save(); renderAll(); }
@@ -1501,6 +1549,9 @@ document.querySelectorAll('#libFilter [data-status]').forEach(b=>b.onclick=()=>{
   libStatus=b.dataset.status;
   document.querySelectorAll('#libFilter [data-status]').forEach(x=>x.setAttribute("aria-pressed", x.dataset.status===libStatus));
   renderLibrary();
+});
+document.querySelectorAll('#libSort [data-sort]').forEach(b=>b.onclick=()=>{
+  state.settings.libSort=b.dataset.sort; save(); renderLibrary();   // remembered across opens
 });
 
 document.getElementById("d-close").onclick=closeDrawer;

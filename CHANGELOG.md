@@ -2,6 +2,15 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [1.4.0], 2026-06-27
+- **Your Library can be sorted now, and it remembers how you like it.** Open the Library and you'll
+  see a **Sort** row next to the filters: **Recently worked on**, **By date**, **By colour**, and
+  **A → Z**. It opens on **Recently worked on**, so the piece you touched last sits top-left, closest
+  to where you're working. Your choice sticks the next time you open the app.
+- **By colour** groups your pieces into colour bands (Discovery, Authority, Conversion, Retention),
+  for when you want to scan by colour. **By date** lines them up by when they go out (undated ones
+  drop to the bottom). Same calm cards, just in the order that helps most right now.
+
 ## [1.3.3], 2026-06-10
 - **The week heading tells you which week you're on.** It now starts with plain words, **This week**,
   **Next week**, **Last week**, **2 weeks from now**, and so on, so you always know where you are.
