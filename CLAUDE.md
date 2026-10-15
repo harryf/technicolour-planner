@@ -6,6 +6,15 @@
 > same change** so the next session starts from the truth. If you only edited content/copy or fixed
 > a small bug, you don't need to touch it. When in doubt, update it.
 
+## Current state: access withdrawn (v3.0.0, 2026-10-15)
+
+On Harry's instruction the published app was replaced by a single "Access Denied" page. `index.html`
+is that notice, `service-worker.js` (cache `technicolour-v3.0.0`) precaches only the notice, the manifest
+and the icons, serves the notice for every navigation and answers every other same-origin request with
+a 403. Installed copies reload onto it through the normal update path (skipWaiting, claim, controllerchange).
+The full app is at tag `v2.0.0`; `src/`, `vendor/` and `tests/` are left in the tree but the test suite no
+longer passes against the notice page. The sections below describe the v2.0.0 app.
+
 ## What this is
 
 A **colour-first content planner** for Sarah, a tattoo artist building an Instagram presence who

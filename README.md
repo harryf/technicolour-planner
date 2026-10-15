@@ -3,7 +3,9 @@
 A colour-first content planner for Sarah, an installable, offline-capable PWA. Her data lives in
 a plain file she owns (in her own folder / cloud drive), so nothing is ever locked in.
 
-> **Status:** live at https://harryf.github.io/technicolour-planner/ (v1.0.3). Verified with jsdom
+> **Status:** ACCESS WITHDRAWN since v3.0.0 (2026-10-15): the live URL shows only "Access Denied" and the
+> service worker refuses every other file. The app source stays in git history (tag v2.0.0).
+> Before v3.0.0: live at https://harryf.github.io/technicolour-planner/. Verified with jsdom
 > plus real-Chrome checks (service worker, offline shell, Office exports, install gate). Build plan:
 > **[`IMPLEMENTATION_PLAN.md`](IMPLEMENTATION_PLAN.md)**; ideal-state + verification record: **[`ISA.md`](ISA.md)**.
 >

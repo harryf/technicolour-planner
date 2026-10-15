@@ -2,6 +2,11 @@
 
 Newest first. The version badge in the app footer shows the latest entry's "what's new."
 
+## [3.0.0], 2026-10-15
+- **Access withdrawn.** Every part of the planner now shows "Access Denied". The page is a single
+  notice, the service worker refuses every other file, and installed copies pick this up on their
+  next open. Your data files in your own folder are untouched.
+
 ## [2.0.0], 2026-06-27
 First batch of changes from Sarah's review: the quick wins. (The bigger pieces, an editable
 tools/hooks library and a lighter Stories area, come next in 2.1 and 2.2.)
